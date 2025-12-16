@@ -1,2 +1,2 @@
-# answer-sheet-omr
+# answer-sheet-studio
 answer-sheet-studio

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>處理完成</h1>
+<p>Job ID：<code>{{ job_id }}</code></p>
+
+<div class="downloads">
+  <a class="download" href="{{ csv_url }}">下載 results.csv</a>
+  <a class="download" href="{{ pdf_url }}">下載 annotated.pdf</a>
+</div>
+
+<p class="hint">如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。</p>
+{% endblock %}

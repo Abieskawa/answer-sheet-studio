@@ -1,0 +1,23 @@
+:root { --bg:#0b0e14; --card:#111827; --text:#e5e7eb; --muted:#9ca3af; --line:#243244; }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Arial}
+a{color:var(--text);text-decoration:none}
+.container{max-width:900px;margin:0 auto;padding:20px}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.brand{font-weight:700;letter-spacing:0.4px}
+.nav a{margin-left:12px;color:var(--muted)}
+.nav a:hover{color:var(--text)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+h1{margin:0 0 14px 0;font-size:22px}
+.form{display:flex;flex-direction:column;gap:12px}
+label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:14px}
+input[type="text"], input[type="number"], input[type="file"]{padding:10px;border-radius:10px;border:1px solid var(--line);background:#0f172a;color:var(--text)}
+button{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#1f2937;color:var(--text);font-weight:600;cursor:pointer}
+button:hover{background:#263244}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.footer{margin-top:14px;color:var(--muted);font-size:12px;text-align:center}
+.downloads{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+.download{display:inline-block;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#0f172a}
+.download:hover{background:#111f3a}
+code{background:#0f172a;border:1px solid var(--line);padding:2px 6px;border-radius:8px}

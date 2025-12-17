@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>下載答案卡</h1>
+<form class="form" action="/api/generate" method="post">
+  <label>標題（預設：定期評量 答案卷）
+    <input type="text" name="title_text" placeholder="例如：第一次段考" />
+  </label>
+
+  <label>科目（可留空）
+    <input type="text" name="subject" placeholder="例如：數學" />
+  </label>
+
+  <label>班級（可留空）
+    <input type="text" name="class_name" placeholder="例如：701" />
+  </label>
+
+  <label>題數（1–100）
+    <input type="number" name="num_questions" min="1" max="100" value="50" />
+  </label>
+
+  <button type="submit">產生並下載 PDF</button>
+
+  <p class="hint">下載後由瀏覽器決定儲存位置（會跳出「儲存」視窗或下載到預設資料夾）。</p>
+  <p class="hint">年級欄位支援 7–12（含 10/11/12），座號支援 00–99，選擇題 A–D，最多 100 題。</p>
+</form>
+{% endblock %}

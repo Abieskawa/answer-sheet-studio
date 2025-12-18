@@ -13,9 +13,11 @@ from .config import (
     PAGE_W_PT, PAGE_H_PT,
     CORNER_MARK_MARGIN, CORNER_MARK_SIZE,
     GRADE_VALUES, GRADE_CIRCLE_XS, GRADE_CIRCLE_Y, GRADE_CIRCLE_RADIUS,
+    CLASS_VALUES, CLASS_CIRCLE_XS, CLASS_CIRCLE_Y, CLASS_CIRCLE_RADIUS,
     SEAT_START_X, SEAT_STEP_X, SEAT_TOP_ROW_Y, SEAT_BOTTOM_ROW_Y, SEAT_CIRCLE_RADIUS,
     MAX_QUESTIONS, CHOICES,
-    BUBBLE_RADIUS, ROW_STEP_Y, COLS, Q_START_Y, Q_NUM_X_OFF, CHOICE_STEP_X
+    BUBBLE_RADIUS, COL_COUNT,
+    compute_answer_layout,
 )
 
 @dataclass
@@ -165,6 +167,19 @@ def process_page(warped: np.ndarray, zoom: float, num_questions: int) -> Tuple[D
     results["grade_status"] = g_status
     marks.append((grade_bboxes[g_idx], f"G:{g_val or ''}", g_status))
 
+    # Class (single row digits 0-9)
+    class_scores = []
+    class_bboxes = []
+    for x in CLASS_CIRCLE_XS:
+        bbox = bubble_bbox_px(x, CLASS_CIRCLE_Y, CLASS_CIRCLE_RADIUS, zoom)
+        class_bboxes.append(bbox)
+        class_scores.append(score_bubble(gray, bbox))
+    c_label = [str(v) for v in CLASS_VALUES]
+    c_val, c_status, c_best, c_idx = pick_one(class_scores, c_label, min_score=0.12, amb_delta=0.02)
+    results["class_no"] = c_val
+    results["class_status"] = c_status
+    marks.append((class_bboxes[c_idx], f"C:{c_val or ''}", c_status))
+
     # Seat number (00-99): top row = tens, bottom row = ones
     digit_labels = [str(d) for d in range(10)]
     def pick_digit(y_pt: float) -> Tuple[Optional[str], str, float, int, List[Tuple[int,int,int,int]]]:
@@ -190,22 +205,30 @@ def process_page(warped: np.ndarray, zoom: float, num_questions: int) -> Tuple[D
 
     # Questions
     answers = []
-    for start_q, count, base_x in COLS:
-        for i in range(count):
-            q = start_q + i
+    layout = compute_answer_layout(num_questions)
+    rows = layout["rows_per_col"]
+    first_y = layout["first_row_y"]
+    row_step = layout["row_step"]
+    bubble_xs = layout["bubble_xs"]
+
+    q = 1
+    for col in range(COL_COUNT):
+        for row in range(rows):
             if q > num_questions:
-                continue
-            y_pt = Q_START_Y - i*ROW_STEP_Y
+                break
+            y_pt = first_y - (row * row_step)
             bboxes = []
             scores = []
+            xs = bubble_xs[col]
             for j, ch in enumerate(CHOICES):
-                x_pt = base_x + j*CHOICE_STEP_X
+                x_pt = xs[j]
                 bbox = bubble_bbox_px(x_pt, y_pt, BUBBLE_RADIUS, zoom)
                 bboxes.append(bbox)
                 scores.append(score_bubble(gray, bbox))
             val, status, best, idx = pick_one(scores, CHOICES, min_score=0.18, amb_delta=0.03)
             answers.append(val if val is not None else "")
             marks.append((bboxes[idx], f"{q}:{val or ''}", status))
+            q += 1
 
     results["answers"] = "".join(answers)
     # also keep per-question list

@@ -1,53 +1,116 @@
-from dataclasses import dataclass
-from typing import Dict, List, Tuple
+import math
+from typing import Dict, List
 
-# PDF coordinates are in "points" (1/72 inch). We render at DPI and scale points->pixels by dpi/72.
+# PDF coordinates are in "points" (1/72 inch). All layout constants mirror omr.generator.
 
 PAGE_W_PT = 595  # A4 width in points
 PAGE_H_PT = 842  # A4 height in points
 
-# Layout parameters (points)
-CORNER_MARK_SIZE = 14
+# Corner marks (alignment markers)
 CORNER_MARK_MARGIN = 18
+CORNER_MARK_SIZE = 24
 
-TITLE_Y = 805
+# Identity area
+LEFT_X = 45
+RIGHT_X = PAGE_W_PT - 45
 
-NAME_LINE_Y = 735
-NAME_LINE_X0 = 70
-NAME_LINE_X1 = 250
+NAME_LINE_Y = PAGE_H_PT - 145
+NAME_LINE_X0 = LEFT_X + 40
+NAME_LINE_X1 = LEFT_X + 195
 
-GRADE_LABEL_X = 270
-GRADE_CIRCLE_Y = 737
-GRADE_CIRCLE_RADIUS = 6
-# grade options (7-12)
 GRADE_VALUES = [7, 8, 9, 10, 11, 12]
-GRADE_CIRCLE_XS = [280, 305, 330, 360, 390, 420]
+GRADE_CIRCLE_RADIUS = 6.2
+GRADE_CIRCLE_Y = PAGE_H_PT - 174
+GRADE_STEP_X = 26
+GRADE_CIRCLE_XS = [NAME_LINE_X0 + i * GRADE_STEP_X for i in range(len(GRADE_VALUES))]
 
-SEAT_BOX_X0 = 350
-SEAT_BOX_Y0 = 705
-SEAT_BOX_W = 220
-SEAT_BOX_H = 60
+CLASS_VALUES = list(range(10))  # 0-9
+CLASS_CIRCLE_RADIUS = 6.2
+CLASS_CIRCLE_Y = PAGE_H_PT - 199
+CLASS_STEP_X = 21
+CLASS_CIRCLE_XS = [NAME_LINE_X0 + i * CLASS_STEP_X for i in range(len(CLASS_VALUES))]
 
-SEAT_DIGITS = list(range(10))  # 0-9
-SEAT_CIRCLE_RADIUS = 6
-SEAT_TOP_ROW_Y = 744
-SEAT_BOTTOM_ROW_Y = 724
-SEAT_START_X = 405
+# Seat box
+SEAT_BOX_W = 200
+SEAT_BOX_H = 62
+SEAT_BOX_X0 = RIGHT_X - SEAT_BOX_W
+SEAT_BOX_Y0 = PAGE_H_PT - 205
+SEAT_CIRCLE_RADIUS = 6.0
+SEAT_DIGITS = list(range(10))
 SEAT_STEP_X = 16
+SEAT_START_X = SEAT_BOX_X0 + 26
+SEAT_TOP_ROW_Y = SEAT_BOX_Y0 + 40
+SEAT_BOTTOM_ROW_Y = SEAT_BOX_Y0 + 18
 
-# Questions
-MAX_QUESTIONS = 50
-CHOICES = ["A","B","C","D"]
-BUBBLE_RADIUS = 7
-ROW_STEP_Y = 20
+DIVIDER_Y = PAGE_H_PT - 220
 
-# Column definitions: (start_question_index, count, base_x)
-# base_x is where choice bubbles start
-COL1 = (1, 17, 95)
-COL2 = (18, 17, 285)
-COL3 = (35, 16, 445)
-COLS = [COL1, COL2, COL3]
+# Answer box
+BOX_X0 = 25
+BOX_X1 = PAGE_W_PT - 25
+BOX_Y0 = 55
+BOX_Y1 = DIVIDER_Y - 12
+BOX_PAD = 10
 
-Q_START_Y = 665
-Q_NUM_X_OFF = -30  # relative to base_x
-CHOICE_STEP_X = 40  # distance between A,B,C,D centers in points
+CHOICES = ["A", "B", "C", "D"]
+BUBBLE_RADIUS = 6.5
+COL_COUNT = 3
+MAX_QUESTIONS = 100
+
+# Layout helpers (match omr.generator)
+Q_NUM_AREA_W = 30
+GAP_AFTER_NUM = 10
+
+
+def compute_answer_layout(num_questions: int) -> Dict:
+    """Mirror omr.generator.compute_question_layout for recognizer."""
+    num_questions = max(1, min(MAX_QUESTIONS, int(num_questions)))
+    box_w = BOX_X1 - BOX_X0
+    col_w = box_w / COL_COUNT
+    rows_per_col = int(math.ceil(num_questions / COL_COUNT))
+
+    inner_x0 = BOX_X0 + BOX_PAD
+    inner_x1 = BOX_X1 - BOX_PAD
+    inner_y0 = BOX_Y0 + BOX_PAD
+    inner_y1 = BOX_Y1 - BOX_PAD
+
+    header_y = inner_y1 - 10
+    first_row_y = inner_y1 - 30
+
+    bottom_limit = inner_y0 + BUBBLE_RADIUS
+    usable_height = first_row_y - bottom_limit
+    if rows_per_col > 1:
+        row_step = usable_height / (rows_per_col - 1)
+    else:
+        row_step = 0.0
+
+    min_step = 2 * BUBBLE_RADIUS + 1.0
+    if rows_per_col > 1 and row_step < min_step:
+        raise ValueError(
+            f"Row spacing too small: {row_step:.2f} < {min_step:.2f}. "
+            "Adjust box height/cols."
+        )
+
+    col_x0s = [BOX_X0 + i * col_w for i in range(COL_COUNT)]
+    bubble_xs: List[List[float]] = []
+    q_num_right_x: List[float] = []
+
+    for cx0 in col_x0s:
+        inner_left = cx0 + BOX_PAD
+        inner_right = cx0 + col_w - BOX_PAD
+
+        q_right = inner_left + Q_NUM_AREA_W
+        xA = q_right + GAP_AFTER_NUM + BUBBLE_RADIUS
+        xD = inner_right - BUBBLE_RADIUS
+        step = (xD - xA) / (len(CHOICES) - 1)
+        xs = [xA + i * step for i in range(len(CHOICES))]
+
+        bubble_xs.append(xs)
+        q_num_right_x.append(q_right)
+
+    return {
+        "rows_per_col": rows_per_col,
+        "first_row_y": first_row_y,
+        "row_step": row_step,
+        "bubble_xs": bubble_xs,
+        "q_num_right_x": q_num_right_x,
+    }

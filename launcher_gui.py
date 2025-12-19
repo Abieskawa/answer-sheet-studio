@@ -10,6 +10,7 @@ import zipfile
 import socket
 import time
 from pathlib import Path
+from typing import List, Optional, Tuple
 import tkinter as tk
 from tkinter import messagebox
 
@@ -19,6 +20,10 @@ APP_URL = f"http://{APP_HOST}:{APP_PORT}"
 DEFAULT_ZIP_NAME = "answer-sheet-studio.zip"
 
 SKIP_DIR_NAMES = {".git", ".venv", "__pycache__", "_incoming", "node_modules"}
+
+SUPPORTED_PYTHON_MIN = (3, 10)
+SUPPORTED_PYTHON_MAX_EXCLUSIVE = (3, 14)  # 3.14+ often lacks wheels for numpy/opencv/pandas
+PREFERRED_PYTHON_MINORS = (13, 12, 11, 10)
 
 WINDOW_BG = "#f5f5f7"
 CARD_BG = "#ffffff"
@@ -41,6 +46,118 @@ def is_port_open(host: str, port: int, timeout=0.25) -> bool:
             return True
     except OSError:
         return False
+
+def _format_py_version(v: Tuple[int, int]) -> str:
+    return f"{v[0]}.{v[1]}"
+
+def _is_supported_python(v: Tuple[int, int]) -> bool:
+    return SUPPORTED_PYTHON_MIN <= v < SUPPORTED_PYTHON_MAX_EXCLUSIVE
+
+def _read_venv_version(venv_dir: Path) -> Optional[Tuple[int, int]]:
+    cfg = venv_dir / "pyvenv.cfg"
+    if not cfg.exists():
+        return None
+    try:
+        raw = cfg.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return None
+    for line in raw.splitlines():
+        if line.lower().startswith("version"):
+            parts = line.split("=", 1)
+            if len(parts) != 2:
+                continue
+            v_str = parts[1].strip()
+            segs = v_str.split(".")
+            if len(segs) < 2:
+                continue
+            try:
+                return int(segs[0]), int(segs[1])
+            except ValueError:
+                return None
+    return None
+
+def _probe_python_cmd(cmd_prefix: List[str]) -> Optional[Tuple[Tuple[int, int], str]]:
+    probe_code = (
+        "import sys; "
+        "print('PYVER=%d.%d' % (sys.version_info[0], sys.version_info[1])); "
+        "print('PYEXE=' + sys.executable)"
+    )
+    try:
+        out = subprocess.check_output(
+            cmd_prefix + ["-c", probe_code],
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+    except Exception:
+        return None
+
+    ver_line = None
+    exe_line = None
+    for line in out.splitlines():
+        if line.startswith("PYVER="):
+            ver_line = line
+        elif line.startswith("PYEXE="):
+            exe_line = line
+    if not ver_line or not exe_line:
+        return None
+
+    v_str = ver_line.split("=", 1)[1].strip()
+    segs = v_str.split(".")
+    if len(segs) < 2:
+        return None
+    try:
+        v = (int(segs[0]), int(segs[1]))
+    except ValueError:
+        return None
+    exe = exe_line.split("=", 1)[1].strip()
+    return v, exe
+
+def _select_venv_builder_cmd() -> Optional[Tuple[List[str], Tuple[int, int], str]]:
+    """
+    Return (cmd_prefix, (major, minor), executable_path) for creating a venv.
+    Preference:
+      1) current interpreter if supported
+      2) Windows: `py -3.13`/`py -3.12`/... if available
+      3) macOS/Linux: `python3.13`/`python3.12`/... if available
+      4) `python3`/`python` if supported
+    """
+    cur = (sys.version_info[0], sys.version_info[1])
+    if _is_supported_python(cur):
+        return [sys.executable], cur, sys.executable
+
+    if os.name == "nt" and shutil.which("py"):
+        for minor in PREFERRED_PYTHON_MINORS:
+            cmd = ["py", f"-3.{minor}"]
+            probe = _probe_python_cmd(cmd)
+            if probe is None:
+                continue
+            v, exe = probe
+            if _is_supported_python(v):
+                return cmd, v, exe
+
+    for minor in PREFERRED_PYTHON_MINORS:
+        exe = shutil.which(f"python3.{minor}")
+        if not exe:
+            continue
+        probe = _probe_python_cmd([exe])
+        if probe is None:
+            continue
+        v, exe_path = probe
+        if _is_supported_python(v):
+            return [exe], v, exe_path
+
+    for exe_name in ("python3", "python"):
+        exe = shutil.which(exe_name)
+        if not exe:
+            continue
+        probe = _probe_python_cmd([exe])
+        if probe is None:
+            continue
+        v, exe_path = probe
+        if _is_supported_python(v):
+            return [exe], v, exe_path
+
+    return None
 
 def check_port_available(host: str, port: int):
     """Return (True, None) if port can be bound, otherwise (False, reason)."""
@@ -347,6 +464,9 @@ class LauncherApp(tk.Tk):
 
     def _run_cmd_stream(self, cmd, cwd=None):
         self.log_q.put(f"$ {' '.join(cmd)}")
+        creationflags = 0
+        if os.name == "nt" and hasattr(subprocess, "CREATE_NO_WINDOW"):
+            creationflags = subprocess.CREATE_NO_WINDOW
         p = subprocess.Popen(
             cmd,
             cwd=str(cwd) if cwd else None,
@@ -354,6 +474,7 @@ class LauncherApp(tk.Tk):
             stderr=subprocess.STDOUT,
             text=True,
             shell=False,
+            creationflags=creationflags,
         )
         for line in p.stdout:
             self.log_q.put(line.rstrip("\n"))
@@ -387,6 +508,7 @@ class LauncherApp(tk.Tk):
     def on_install_and_run(self):
         def task():
             self.log_q.put("Clicked: Install & Run")
+            self.log_q.put(f"Launcher Python: {sys.executable} (Python {_format_py_version((sys.version_info[0], sys.version_info[1]))})")
             # If port already open, just open browser (server might already be running)
             if is_port_open(APP_HOST, APP_PORT):
                 self._update_status("Server already running. Opening browser...", "success")
@@ -439,13 +561,41 @@ class LauncherApp(tk.Tk):
                 messagebox.showerror("Port unavailable", reason)
                 return
 
+            venv_builder = _select_venv_builder_cmd()
+            if venv_builder is None:
+                detected = _format_py_version((sys.version_info[0], sys.version_info[1]))
+                supported = f"{_format_py_version(SUPPORTED_PYTHON_MIN)}–3.{SUPPORTED_PYTHON_MAX_EXCLUSIVE[1] - 1}"
+                messagebox.showerror(
+                    "Unsupported Python",
+                    "This project uses packages (NumPy/OpenCV/pandas/ReportLab) that require prebuilt wheels.\n\n"
+                    f"Detected Python {detected}.\n"
+                    f"Supported Python versions: {supported}.\n\n"
+                    "Install Python 3.13 (recommended) or 3.12 from python.org, then re-run the launcher."
+                )
+                self._update_status("Unsupported Python version.", "error")
+                return
+            venv_builder_cmd, venv_builder_ver, venv_builder_exe = venv_builder
+            self.log_q.put(f"Selected venv Python: {venv_builder_exe} (Python {_format_py_version(venv_builder_ver)})")
+
             # Create venv
             self._update_status("Creating virtual environment (if needed)...", "pending")
             venv_dir = self.repo_dir / ".venv"
             py = self._venv_python()
 
+            existing_ver = _read_venv_version(venv_dir) if venv_dir.exists() else None
+            if venv_dir.exists() and existing_ver and not _is_supported_python(existing_ver):
+                do_recreate = messagebox.askyesno(
+                    "Recreate virtual environment?",
+                    f"Your existing .venv uses Python {_format_py_version(existing_ver)}, which is not supported.\n\n"
+                    "Recreate .venv using a supported Python version now? (This will delete .venv and reinstall packages.)"
+                )
+                if not do_recreate:
+                    self._update_status("Install canceled (unsupported .venv).", "warning")
+                    return
+                shutil.rmtree(venv_dir, ignore_errors=True)
+
             if not venv_dir.exists() or not py.exists():
-                rc = self._run_cmd_stream([sys.executable, "-m", "venv", str(venv_dir)], cwd=self.repo_dir)
+                rc = self._run_cmd_stream(venv_builder_cmd + ["-m", "venv", str(venv_dir)], cwd=self.repo_dir)
                 if rc != 0:
                     messagebox.showerror("Venv failed", "Failed to create virtual environment (.venv). Check log.")
                     self._update_status("Failed to create virtual environment.", "error")
@@ -464,7 +614,7 @@ class LauncherApp(tk.Tk):
                 self._update_status("pip upgrade failed.", "error")
                 return
 
-            rc = self._run_cmd_stream([str(py), "-m", "pip", "install", "-r", str(req_path)], cwd=self.repo_dir)
+            rc = self._run_cmd_stream([str(py), "-m", "pip", "install", "--only-binary=:all:", "-r", str(req_path)], cwd=self.repo_dir)
             if rc != 0:
                 messagebox.showerror("pip failed", "pip install failed. Check log for the error.")
                 self._update_status("pip install failed.", "error")

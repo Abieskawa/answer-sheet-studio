@@ -9,7 +9,8 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 ## Requirements
 
 - macOS ≥ 13 or Windows 11
-- Python 3.10+ pre-installed (system Python on macOS, python.org build on Windows). On Windows, ensure “Add python.exe to PATH” during installation.
+- Python **3.10–3.13** (3.13 recommended). Python 3.14 preview builds are not supported yet (NumPy/OpenCV/pandas/ReportLab wheels may be missing and pip will try to compile).
+- On Windows, ensure “Add python.exe to PATH” during installation (and keep the `py` launcher enabled if offered).
 - Internet access the first time to download Python packages (FastAPI, PyMuPDF, OpenCV, pandas, etc.).
 
 ## Quick Start
@@ -20,7 +21,7 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 3. Use **Open in Browser** to revisit `http://127.0.0.1:8000`. Use **Stop Server** to terminate.
 
 ### Windows 11
-1. Install Python 3.10+ from python.org and check “Add python.exe to PATH”.
+1. Install Python 3.13 (recommended) or 3.12/3.11/3.10 from python.org and check “Add python.exe to PATH”.
 2. Double-click `start_windows.vbs`. The launcher GUI will open using `pythonw`.
 3. Click **Install & Run**. If Windows Defender prompts for network access, allow it so the server can bind to localhost.
 
@@ -43,7 +44,7 @@ Generated files are written under `outputs/`.
 
 ## Troubleshooting
 
-- **pip install failed** – Check the launcher log; ensure network access and Python 3.10+. On macOS, NumPy wheels require arm64 (or install x86 brew Python).
+- **pip install failed** – Check the launcher log; ensure network access and Python 3.10–3.13. If you’re on Python 3.14, install Python 3.13 and re-run.
 - **Port already in use / permission denied** – The launcher checks port availability. If macOS firewall blocks Python, allow incoming connections in System Settings → Network → Firewall.
 - **Server not opening** – Use the launcher log to identify crashes; you can also run `python run_app.py` inside `.venv` manually for debugging.
 

@@ -380,6 +380,8 @@ class LauncherApp(tk.Tk):
         self._in_thread(task)
 
     def _venv_python(self) -> Path:
+        if os.name == "nt":
+            return self.repo_dir / ".venv" / "Scripts" / "python.exe"
         return self.repo_dir / ".venv" / "bin" / "python"
 
     def on_install_and_run(self):

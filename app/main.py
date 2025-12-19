@@ -2,7 +2,7 @@ import os
 import uuid
 from pathlib import Path
 from fastapi import FastAPI, Request, UploadFile, File, Form
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -18,6 +18,13 @@ templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 
 app = FastAPI(title="Answer Sheet Studio")
 app.mount("/static", StaticFiles(directory=str(APP_DIR / "static")), name="static")
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    icon = APP_DIR / "static" / "favicon.ico"
+    if icon.exists():
+        return FileResponse(path=str(icon), media_type="image/x-icon")
+    return Response(status_code=204)
 
 
 @app.get("/", response_class=HTMLResponse)

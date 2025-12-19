@@ -1,4 +1,6 @@
 import errno
+import hashlib
+import json
 import os
 import sys
 import shutil
@@ -19,11 +21,12 @@ APP_PORT = int(os.environ.get("ANSWER_SHEET_PORT", "8000")) if "ANSWER_SHEET_POR
 APP_URL = f"http://{APP_HOST}:{APP_PORT}"
 DEFAULT_ZIP_NAME = "answer-sheet-studio.zip"
 
-SKIP_DIR_NAMES = {".git", ".venv", "__pycache__", "_incoming", "node_modules"}
+SKIP_DIR_NAMES = {".git", ".venv", "__pycache__", "_incoming", "node_modules", "outputs", ".DS_Store", "Thumbs.db"}
 
 SUPPORTED_PYTHON_MIN = (3, 10)
-SUPPORTED_PYTHON_MAX_EXCLUSIVE = (3, 14)  # 3.14+ may lack wheels for numpy/opencv/pandas on some platforms
+SUPPORTED_PYTHON_MAX_EXCLUSIVE = (3, 14)  # 3.14+ may lack wheels for numpy/opencv on some platforms
 PREFERRED_PYTHON_MINORS = (10, 11, 12, 13)
+INSTALL_MARKER_NAME = ".answer_sheet_studio_install.json"
 
 WINDOW_BG = "#f5f5f7"
 CARD_BG = "#ffffff"
@@ -75,6 +78,24 @@ def _read_venv_version(venv_dir: Path) -> Optional[Tuple[int, int]]:
             except ValueError:
                 return None
     return None
+
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+def _load_install_marker(path: Path) -> Optional[dict]:
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+def _write_install_marker(path: Path, data: dict) -> bool:
+    try:
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        return True
+    except Exception:
+        return False
 
 def _probe_python_cmd(cmd_prefix: List[str]) -> Optional[Tuple[Tuple[int, int], str]]:
     probe_code = (
@@ -462,7 +483,7 @@ class LauncherApp(tk.Tk):
     def _in_thread(self, fn):
         threading.Thread(target=fn, daemon=True).start()
 
-    def _run_cmd_stream(self, cmd, cwd=None):
+    def _run_cmd_stream(self, cmd, cwd=None, env=None):
         self.log_q.put(f"$ {' '.join(cmd)}")
         creationflags = 0
         if os.name == "nt" and hasattr(subprocess, "CREATE_NO_WINDOW"):
@@ -475,6 +496,7 @@ class LauncherApp(tk.Tk):
             text=True,
             shell=False,
             creationflags=creationflags,
+            env=env,
         )
         for line in p.stdout:
             self.log_q.put(line.rstrip("\n"))
@@ -484,19 +506,63 @@ class LauncherApp(tk.Tk):
         def task():
             self._update_status("Running git pull...", "pending")
             if not (self.repo_dir / ".git").exists():
-                messagebox.showerror("Not a git repo", "No .git folder found in this directory.")
-                self._update_status("Not a git repository (no .git folder).", "warning")
+                messagebox.showinfo(
+                    "Update not available",
+                    "This folder is not a git clone (no .git folder).\n\n"
+                    "If you downloaded a ZIP, re-download the latest ZIP to update.\n"
+                    "If you want one-click updates, clone the repo with Git."
+                )
+                self._update_status("Update not available (not a git clone).", "warning")
                 return
-            if shutil.which("git") is None:
+
+            git_exe = shutil.which("git")
+            if git_exe is None:
                 messagebox.showerror("Git not found", "Git is not installed or not in PATH.")
                 self._update_status("Git not found in PATH.", "error")
                 return
 
-            rc = self._run_cmd_stream(["git", "pull"], cwd=self.repo_dir)
+            env = os.environ.copy()
+            env["GIT_TERMINAL_PROMPT"] = "0"
+            if os.name == "nt":
+                userprofile = env.get("USERPROFILE")
+                if userprofile:
+                    try:
+                        userprofile_ok = Path(userprofile).exists()
+                    except Exception:
+                        userprofile_ok = False
+                    if userprofile_ok:
+                        home = env.get("HOME")
+                        try:
+                            home_ok = bool(home) and Path(home).exists()
+                        except Exception:
+                            home_ok = False
+                        if not home_ok:
+                            env["HOME"] = userprofile
+
+                        homedrive = env.get("HOMEDRIVE")
+                        homepath = env.get("HOMEPATH")
+                        if homedrive and homepath:
+                            try:
+                                if not Path(homedrive + homepath).exists():
+                                    env["HOMEDRIVE"] = userprofile[:2]
+                                    env["HOMEPATH"] = userprofile[2:]
+                            except Exception:
+                                pass
+
+            self.log_q.put(f"Using git: {git_exe}")
+            rc = self._run_cmd_stream([git_exe, "-C", str(self.repo_dir), "pull"], env=env)
             if rc == 0:
                 self._update_status("git pull completed.", "success")
             else:
                 self._update_status(f"git pull failed (code {rc}).", "error")
+                messagebox.showerror(
+                    "git pull failed",
+                    "git pull failed. Check the Command log for details.\n\n"
+                    "Common fixes:\n"
+                    "- Make sure you have internet access.\n"
+                    "- If you have local edits, commit/stash them first.\n"
+                    "- If the error mentions a missing drive, move the folder to a normal path like C:\\Users\\... and retry."
+                )
 
         self._in_thread(task)
 
@@ -567,7 +633,7 @@ class LauncherApp(tk.Tk):
                 supported = f"{_format_py_version(SUPPORTED_PYTHON_MIN)}–3.{SUPPORTED_PYTHON_MAX_EXCLUSIVE[1] - 1}"
                 messagebox.showerror(
                     "Unsupported Python",
-                    "This project uses packages (NumPy/OpenCV/pandas/ReportLab) that require prebuilt wheels.\n\n"
+                    "This project uses packages (NumPy/OpenCV/PyMuPDF/ReportLab) that require prebuilt wheels.\n\n"
                     f"Detected Python {detected}.\n"
                     f"Supported Python versions: {supported}.\n\n"
                     "Install Python 3.10 (recommended) or 3.11/3.12/3.13 from python.org, then re-run the launcher."
@@ -606,19 +672,55 @@ class LauncherApp(tk.Tk):
                 self._update_status("Virtual environment is incomplete.", "error")
                 return
 
-            # Install deps
-            self._update_status("Installing dependencies (this can take a few minutes)...", "pending")
-            rc = self._run_cmd_stream([str(py), "-m", "pip", "install", "--upgrade", "pip"], cwd=self.repo_dir)
-            if rc != 0:
-                messagebox.showerror("pip failed", "pip upgrade failed. Check log.")
-                self._update_status("pip upgrade failed.", "error")
-                return
+            # Install deps (only when needed)
+            self._update_status("Checking dependencies...", "pending")
+            marker_path = venv_dir / INSTALL_MARKER_NAME
+            req_sha = _sha256_file(req_path)
+            venv_ver = _read_venv_version(venv_dir)
+            venv_ver_str = _format_py_version(venv_ver) if venv_ver else None
 
-            rc = self._run_cmd_stream([str(py), "-m", "pip", "install", "--only-binary=:all:", "-r", str(req_path)], cwd=self.repo_dir)
-            if rc != 0:
-                messagebox.showerror("pip failed", "pip install failed. Check log for the error.")
-                self._update_status("pip install failed.", "error")
-                return
+            marker = _load_install_marker(marker_path)
+            marker_ok = (
+                bool(marker)
+                and marker.get("requirements_sha256") == req_sha
+                and marker.get("python_version") == venv_ver_str
+            )
+
+            if marker_ok:
+                self.log_q.put("Dependencies already installed (requirements unchanged).")
+                rc = self._run_cmd_stream(
+                    [str(py), "-c", "import fastapi, uvicorn, fitz, cv2, numpy, reportlab; print('deps ok')"],
+                    cwd=self.repo_dir,
+                )
+                if rc != 0:
+                    marker_ok = False
+                    self.log_q.put("Dependency import check failed; reinstalling...")
+
+            if not marker_ok:
+                self._update_status("Installing dependencies (this can take a few minutes)...", "pending")
+                rc = self._run_cmd_stream([str(py), "-m", "pip", "install", "--upgrade", "pip"], cwd=self.repo_dir)
+                if rc != 0:
+                    messagebox.showerror("pip failed", "pip upgrade failed. Check log.")
+                    self._update_status("pip upgrade failed.", "error")
+                    return
+
+                rc = self._run_cmd_stream(
+                    [str(py), "-m", "pip", "install", "--only-binary=:all:", "-r", str(req_path)],
+                    cwd=self.repo_dir,
+                )
+                if rc != 0:
+                    messagebox.showerror("pip failed", "pip install failed. Check log for the error.")
+                    self._update_status("pip install failed.", "error")
+                    return
+
+                marker_data = {
+                    "python_version": venv_ver_str or _format_py_version(venv_builder_ver),
+                    "requirements_sha256": req_sha,
+                    "requirements_file": str(req_path.name),
+                    "installed_at": int(time.time()),
+                }
+                if not _write_install_marker(marker_path, marker_data):
+                    self.log_q.put("WARNING: Failed to write install marker; next run may reinstall dependencies.")
 
             # Start server
             self._update_status("Starting server...", "pending")

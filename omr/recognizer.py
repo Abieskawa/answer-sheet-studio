@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import os
+import csv
 from dataclasses import dataclass
 from typing import List, Tuple, Dict, Optional
 
 import fitz  # PyMuPDF
 import numpy as np
-import pandas as pd
 import cv2
 
 from .config import (
@@ -291,7 +290,23 @@ def process_pdf_to_csv_and_annotated_pdf(
         rows.append(result)
         annotated_images.append(annotated)
 
-    df = pd.DataFrame(rows)
-    df.to_csv(out_csv_path, index=False, encoding="utf-8-sig")
+    base_fields = [
+        "page",
+        "grade", "grade_status",
+        "class_no", "class_status",
+        "seat_no", "seat_status",
+        "answers",
+    ]
+    q_fields = [f"Q{i+1}" for i in range(num_questions)]
+    fieldnames = base_fields + q_fields
+    extra_keys = sorted({k for row in rows for k in row.keys()} - set(fieldnames))
+    fieldnames += extra_keys
+
+    with open(out_csv_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({k: ("" if row.get(k) is None else row.get(k)) for k in fieldnames})
+
     images_to_pdf(annotated_images, out_annotated_pdf_path, dpi=dpi)
     doc.close()

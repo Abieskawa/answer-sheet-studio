@@ -1,0 +1,18 @@
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# App-generated output
+outputs/
+_incoming/
+
+# Editor/OS cruft
+.idea/
+.vscode/

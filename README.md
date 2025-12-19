@@ -11,19 +11,19 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 - macOS ≥ 13 or Windows 11
 - Python **3.10+** (3.10–3.13 recommended). If you’re on Python 3.14 and installs fail, use Python 3.10–3.13.
 - On Windows, ensure “Add python.exe to PATH” during installation (and keep the `py` launcher enabled if offered).
-- Internet access the first time to download Python packages (FastAPI, PyMuPDF, OpenCV, pandas, etc.).
+- Internet access the first time to download Python packages (FastAPI, PyMuPDF, OpenCV, NumPy, etc.).
 
 ## Quick Start
 
 ### macOS
 1. Double-click `start_mac.command` (or run `chmod +x start_mac.command` once if prompted).
-2. The Tk launcher appears; click **Install & Run**. It creates `.venv`, installs requirements, starts uvicorn, and opens the browser automatically.
+2. The Tk launcher appears; click **Install & Run**. First run creates `.venv` and installs requirements; later runs reuse the existing `.venv` and start immediately (unless requirements changed).
 3. Use **Open in Browser** to revisit `http://127.0.0.1:8000`. Use **Stop Server** to terminate.
 
 ### Windows 11
 1. Install Python 3.10+ (3.10–3.13 recommended) from python.org and check “Add python.exe to PATH”.
 2. Double-click `start_windows.vbs`. The launcher GUI will open using `pythonw`.
-3. Click **Install & Run**. If Windows Defender prompts for network access, allow it so the server can bind to localhost.
+3. Click **Install & Run**. First run installs requirements; later runs reuse the existing `.venv` (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
 
 ## Repository Layout
 

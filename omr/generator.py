@@ -37,6 +37,8 @@ from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 
 PAGE_W, PAGE_H = A4
 
+DEFAULT_TITLE = "定期評量 答案卷"
+
 # Corner alignment squares
 CORNER_MARK_MARGIN = 18
 CORNER_MARK_SIZE = 24
@@ -348,7 +350,7 @@ def generate_answer_sheet_pdf(
     subject: str,
     num_questions: int,
     out_pdf_path: str | Path,
-    title_text: str = "定期評量 答案卷",
+    title_text: str = DEFAULT_TITLE,
     subject_label: str = "科目：",
     footer_text: str = "請使用 2B 鉛筆或深色原子筆將圓圈塗滿",
 ) -> Path:
@@ -368,7 +370,7 @@ def generate_answer_sheet_pdf(
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--title", default="定期評量 答案卷")
+    ap.add_argument("--title", default=DEFAULT_TITLE)
     ap.add_argument("--subject_label", default="科目：")
     ap.add_argument("--subject", default="國文")
     ap.add_argument("--questions", type=int, default=100)

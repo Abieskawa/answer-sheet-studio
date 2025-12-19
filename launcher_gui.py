@@ -22,8 +22,8 @@ DEFAULT_ZIP_NAME = "answer-sheet-studio.zip"
 SKIP_DIR_NAMES = {".git", ".venv", "__pycache__", "_incoming", "node_modules"}
 
 SUPPORTED_PYTHON_MIN = (3, 10)
-SUPPORTED_PYTHON_MAX_EXCLUSIVE = (3, 14)  # 3.14+ often lacks wheels for numpy/opencv/pandas
-PREFERRED_PYTHON_MINORS = (13, 12, 11, 10)
+SUPPORTED_PYTHON_MAX_EXCLUSIVE = (3, 14)  # 3.14+ may lack wheels for numpy/opencv/pandas on some platforms
+PREFERRED_PYTHON_MINORS = (10, 11, 12, 13)
 
 WINDOW_BG = "#f5f5f7"
 CARD_BG = "#ffffff"
@@ -117,8 +117,8 @@ def _select_venv_builder_cmd() -> Optional[Tuple[List[str], Tuple[int, int], str
     Return (cmd_prefix, (major, minor), executable_path) for creating a venv.
     Preference:
       1) current interpreter if supported
-      2) Windows: `py -3.13`/`py -3.12`/... if available
-      3) macOS/Linux: `python3.13`/`python3.12`/... if available
+      2) Windows: `py -3.10`/`py -3.11`/... if available
+      3) macOS/Linux: `python3.10`/`python3.11`/... if available
       4) `python3`/`python` if supported
     """
     cur = (sys.version_info[0], sys.version_info[1])
@@ -570,7 +570,7 @@ class LauncherApp(tk.Tk):
                     "This project uses packages (NumPy/OpenCV/pandas/ReportLab) that require prebuilt wheels.\n\n"
                     f"Detected Python {detected}.\n"
                     f"Supported Python versions: {supported}.\n\n"
-                    "Install Python 3.13 (recommended) or 3.12 from python.org, then re-run the launcher."
+                    "Install Python 3.10 (recommended) or 3.11/3.12/3.13 from python.org, then re-run the launcher."
                 )
                 self._update_status("Unsupported Python version.", "error")
                 return

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass
-from typing import List, Tuple, Dict, Optional
+from pathlib import Path
+from typing import List, Tuple, Dict, Optional, Any
 
 import fitz  # PyMuPDF
 import numpy as np
@@ -129,29 +130,46 @@ def score_bubble(gray: np.ndarray, bbox: Tuple[int,int,int,int]) -> float:
     return float(1.0 - (roi.mean() / 255.0))
 
 
-def pick_one(scores: List[float], labels: List[str], min_score: float = 0.18, amb_delta: float = 0.03) -> Tuple[Optional[str], str, float, int]:
+def pick_one(
+    scores: List[float],
+    labels: List[str],
+    min_score: float = 0.18,
+    amb_delta: float = 0.03,
+) -> Tuple[Optional[str], str, float, int, Optional[str], float]:
     """Pick one label based on scores.
     - If max < min_score -> BLANK
     - If top1 - top2 < amb_delta -> AMBIGUOUS
+    Returns: (value, status, best_score, best_idx, second_label, second_score)
     """
     idxs = np.argsort(scores)[::-1]
     top = int(idxs[0])
     best = scores[top]
     if best < min_score:
-        return None, "BLANK", best, top
+        second_label = labels[int(idxs[1])] if len(scores) >= 2 else None
+        second_score = float(scores[int(idxs[1])]) if len(scores) >= 2 else 0.0
+        return None, "BLANK", float(best), top, second_label, second_score
     if len(scores) >= 2:
         second = scores[int(idxs[1])]
         if (best - second) < amb_delta:
-            return labels[top], "AMBIGUOUS", best, top
-    return labels[top], "OK", best, top
+            second_label = labels[int(idxs[1])]
+            second_score = float(second)
+            return labels[top], "AMBIGUOUS", float(best), top, second_label, second_score
+    second_label = labels[int(idxs[1])] if len(scores) >= 2 else None
+    second_score = float(scores[int(idxs[1])]) if len(scores) >= 2 else 0.0
+    return labels[top], "OK", float(best), top, second_label, second_score
 
 
-def process_page(warped: np.ndarray, zoom: float, num_questions: int) -> Tuple[Dict, np.ndarray]:
+def process_page(
+    warped: np.ndarray,
+    zoom: float,
+    num_questions: int,
+) -> Tuple[Dict[str, Any], np.ndarray, List[Dict[str, Any]]]:
     can = warped.copy()
     gray = cv2.cvtColor(can, cv2.COLOR_BGR2GRAY)
 
-    results: Dict = {}
+    results: Dict[str, Any] = {}
     marks: List[Tuple[Tuple[int,int,int,int], str, str]] = []  # bbox, text, status
+    flags: List[Dict[str, Any]] = []
 
     # Grade (7-12)
     grade_scores = []
@@ -161,10 +179,25 @@ def process_page(warped: np.ndarray, zoom: float, num_questions: int) -> Tuple[D
         grade_bboxes.append(bbox)
         grade_scores.append(score_bubble(gray, bbox))
     g_label = [str(v) for v in GRADE_VALUES]
-    g_val, g_status, g_best, g_idx = pick_one(grade_scores, g_label, min_score=0.12, amb_delta=0.02)
-    results["grade"] = g_val
+    g_val, g_status, g_best, g_idx, g_second_label, g_second_score = pick_one(
+        grade_scores, g_label, min_score=0.12, amb_delta=0.02
+    )
+    results["grade"] = g_val if g_status == "OK" else None
     results["grade_status"] = g_status
     marks.append((grade_bboxes[g_idx], f"G:{g_val or ''}", g_status))
+    if g_status != "OK":
+        flags.append(
+            {
+                "field": "grade",
+                "question": "",
+                "status": g_status,
+                "best_label": g_label[g_idx],
+                "best_score": float(g_best),
+                "second_label": g_second_label or "",
+                "second_score": float(g_second_score),
+                "delta": float(g_best - g_second_score),
+            }
+        )
 
     # Class (single row digits 0-9)
     class_scores = []
@@ -174,14 +207,31 @@ def process_page(warped: np.ndarray, zoom: float, num_questions: int) -> Tuple[D
         class_bboxes.append(bbox)
         class_scores.append(score_bubble(gray, bbox))
     c_label = [str(v) for v in CLASS_VALUES]
-    c_val, c_status, c_best, c_idx = pick_one(class_scores, c_label, min_score=0.12, amb_delta=0.02)
-    results["class_no"] = c_val
+    c_val, c_status, c_best, c_idx, c_second_label, c_second_score = pick_one(
+        class_scores, c_label, min_score=0.12, amb_delta=0.02
+    )
+    results["class_no"] = c_val if c_status == "OK" else None
     results["class_status"] = c_status
     marks.append((class_bboxes[c_idx], f"C:{c_val or ''}", c_status))
+    if c_status != "OK":
+        flags.append(
+            {
+                "field": "class_no",
+                "question": "",
+                "status": c_status,
+                "best_label": c_label[c_idx],
+                "best_score": float(c_best),
+                "second_label": c_second_label or "",
+                "second_score": float(c_second_score),
+                "delta": float(c_best - c_second_score),
+            }
+        )
 
     # Seat number (00-99): top row = tens, bottom row = ones
     digit_labels = [str(d) for d in range(10)]
-    def pick_digit(y_pt: float) -> Tuple[Optional[str], str, float, int, List[Tuple[int,int,int,int]]]:
+    def pick_digit(
+        y_pt: float,
+    ) -> Tuple[Optional[str], str, float, int, Optional[str], float, List[Tuple[int, int, int, int]]]:
         bboxes = []
         scores = []
         for i in range(10):
@@ -189,18 +239,50 @@ def process_page(warped: np.ndarray, zoom: float, num_questions: int) -> Tuple[D
             bbox = bubble_bbox_px(x_pt, y_pt, SEAT_CIRCLE_RADIUS, zoom)
             bboxes.append(bbox)
             scores.append(score_bubble(gray, bbox))
-        val, status, best, idx = pick_one(scores, digit_labels, min_score=0.14, amb_delta=0.02)
-        return val, status, best, idx, bboxes
+        val, status, best, idx, second_label, second_score = pick_one(
+            scores, digit_labels, min_score=0.14, amb_delta=0.02
+        )
+        return val, status, best, idx, second_label, second_score, bboxes
 
-    tens, t_status, t_best, t_idx, t_bboxes = pick_digit(SEAT_TOP_ROW_Y)
-    ones, o_status, o_best, o_idx, o_bboxes = pick_digit(SEAT_BOTTOM_ROW_Y)
-    seat = (tens or "") + (ones or "")
-    seat = seat if seat != "" else None
-    results["seat_no"] = seat
+    tens, t_status, t_best, t_idx, t_second_label, t_second_score, t_bboxes = pick_digit(SEAT_TOP_ROW_Y)
+    ones, o_status, o_best, o_idx, o_second_label, o_second_score, o_bboxes = pick_digit(SEAT_BOTTOM_ROW_Y)
+
+    tens_out = tens if t_status == "OK" else None
+    ones_out = ones if o_status == "OK" else None
+    if tens_out is not None and ones_out is not None:
+        results["seat_no"] = f"{tens_out}{ones_out}"
+    else:
+        results["seat_no"] = None
     results["seat_status"] = "OK" if (t_status=="OK" and o_status=="OK") else ("AMBIGUOUS" if ("AMBIGUOUS" in [t_status,o_status]) else "BLANK")
 
     marks.append((t_bboxes[t_idx], f"T:{tens or ''}", t_status))
     marks.append((o_bboxes[o_idx], f"O:{ones or ''}", o_status))
+    if t_status != "OK":
+        flags.append(
+            {
+                "field": "seat_tens",
+                "question": "",
+                "status": t_status,
+                "best_label": digit_labels[t_idx],
+                "best_score": float(t_best),
+                "second_label": t_second_label or "",
+                "second_score": float(t_second_score),
+                "delta": float(t_best - t_second_score),
+            }
+        )
+    if o_status != "OK":
+        flags.append(
+            {
+                "field": "seat_ones",
+                "question": "",
+                "status": o_status,
+                "best_label": digit_labels[o_idx],
+                "best_score": float(o_best),
+                "second_label": o_second_label or "",
+                "second_score": float(o_second_score),
+                "delta": float(o_best - o_second_score),
+            }
+        )
 
     # Questions
     answers = []
@@ -224,9 +306,24 @@ def process_page(warped: np.ndarray, zoom: float, num_questions: int) -> Tuple[D
                 bbox = bubble_bbox_px(x_pt, y_pt, BUBBLE_RADIUS, zoom)
                 bboxes.append(bbox)
                 scores.append(score_bubble(gray, bbox))
-            val, status, best, idx = pick_one(scores, CHOICES, min_score=0.18, amb_delta=0.03)
-            answers.append(val if val is not None else "")
+            val, status, best, idx, second_label, second_score = pick_one(
+                scores, CHOICES, min_score=0.18, amb_delta=0.03
+            )
+            answers.append(val if status == "OK" and val is not None else "")
             marks.append((bboxes[idx], f"{q}:{val or ''}", status))
+            if status != "OK":
+                flags.append(
+                    {
+                        "field": f"Q{q}",
+                        "question": q,
+                        "status": status,
+                        "best_label": CHOICES[idx],
+                        "best_score": float(best),
+                        "second_label": second_label or "",
+                        "second_score": float(second_score),
+                        "delta": float(best - second_score),
+                    }
+                )
             q += 1
 
     results["answers"] = "".join(answers)
@@ -247,7 +344,7 @@ def process_page(warped: np.ndarray, zoom: float, num_questions: int) -> Tuple[D
         cv2.rectangle(annotated, (x0,y0), (x1,y1), color, 2)
         cv2.putText(annotated, text, (x0, max(10,y0-4)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv2.LINE_AA)
 
-    return results, annotated
+    return results, annotated, flags
 
 
 def images_to_pdf(images: List[np.ndarray], out_pdf_path: str, dpi: int = 200):
@@ -274,39 +371,125 @@ def process_pdf_to_csv_and_annotated_pdf(
     out_csv_path: str,
     out_annotated_pdf_path: str,
     dpi: int = 200,
+    out_ambiguity_csv_path: Optional[str] = None,
 ):
     num_questions = max(1, min(MAX_QUESTIONS, int(num_questions)))
+    out_ambiguity_csv_path = out_ambiguity_csv_path or str(Path(out_csv_path).with_name("ambiguity.csv"))
 
     doc = fitz.open(input_pdf_path)
-    rows = []
+    people: List[Dict[str, Any]] = []
+    flags: List[Dict[str, Any]] = []
     annotated_images = []
 
     for idx in range(doc.page_count):
         page = doc.load_page(idx)
         img, zoom = render_page(page, dpi=dpi)
         warped, _ = warp_to_canonical(img, zoom)
-        result, annotated = process_page(warped, zoom, num_questions=num_questions)
+        result, annotated, page_flags = process_page(warped, zoom, num_questions=num_questions)
         result["page"] = idx + 1
-        rows.append(result)
+        people.append(result)
+        for flag in page_flags:
+            flags.append({"page": idx + 1, **flag})
         annotated_images.append(annotated)
 
-    base_fields = [
-        "page",
-        "grade", "grade_status",
-        "class_no", "class_status",
-        "seat_no", "seat_status",
-        "answers",
-    ]
-    q_fields = [f"Q{i+1}" for i in range(num_questions)]
-    fieldnames = base_fields + q_fields
-    extra_keys = sorted({k for row in rows for k in row.keys()} - set(fieldnames))
-    fieldnames += extra_keys
+    def normalize_person_id(seat_no: Optional[str]) -> Optional[str]:
+        if seat_no is None:
+            return None
+        seat = str(seat_no).strip()
+        if not seat:
+            return None
+        if seat.isdigit():
+            return str(int(seat))
+        return seat
 
+    used_person_ids: set[str] = set()
+    for row in people:
+        base_id = normalize_person_id(row.get("seat_no")) or f"page_{row['page']}"
+        person_id = base_id
+        suffix = 2
+        while person_id in used_person_ids:
+            person_id = f"{base_id}_{suffix}"
+            suffix += 1
+        used_person_ids.add(person_id)
+        row["person_id"] = person_id
+
+    def person_sort_key(person_id: str) -> Tuple[int, int, int, str]:
+        def parse_numeric_with_suffix(value: str) -> Optional[Tuple[int, int]]:
+            parts = value.split("_", 1)
+            if not parts or not parts[0].isdigit():
+                return None
+            base = int(parts[0])
+            suffix = int(parts[1]) if len(parts) == 2 and parts[1].isdigit() else 0
+            return base, suffix
+
+        parsed = parse_numeric_with_suffix(person_id)
+        if parsed is not None:
+            base, suffix = parsed
+            return (0, base, suffix, person_id)
+
+        if person_id.startswith("page_"):
+            parsed = parse_numeric_with_suffix(person_id[5:])
+            if parsed is not None:
+                base, suffix = parsed
+                return (1, base, suffix, person_id)
+
+        return (2, 0, 0, person_id)
+
+    people_sorted = sorted(people, key=lambda row: person_sort_key(str(row.get("person_id", ""))))
+    person_ids = [str(row.get("person_id", "")) for row in people_sorted]
+
+    # Transposed output: columns=people, rows=questions
+    results_fields = ["number", "correct_answer", *person_ids]
     with open(out_csv_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=results_fields)
         writer.writeheader()
-        for row in rows:
-            writer.writerow({k: ("" if row.get(k) is None else row.get(k)) for k in fieldnames})
+        for q in range(1, num_questions + 1):
+            out_row: Dict[str, Any] = {"number": q, "correct_answer": ""}
+            for person in people_sorted:
+                pid = str(person.get("person_id", ""))
+                out_row[pid] = person.get(f"Q{q}", "") or ""
+            writer.writerow(out_row)
+
+    # Ambiguity/blank report
+    people_by_page = {int(row["page"]): row for row in people if "page" in row}
+    amb_fields = [
+        "page",
+        "person_id",
+        "seat_no",
+        "grade",
+        "class_no",
+        "field",
+        "question",
+        "status",
+        "best_label",
+        "best_score",
+        "second_label",
+        "second_score",
+        "delta",
+    ]
+    with open(out_ambiguity_csv_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=amb_fields)
+        writer.writeheader()
+        for flag in flags:
+            page_no = int(flag.get("page", 0) or 0)
+            person = people_by_page.get(page_no, {})
+            writer.writerow(
+                {
+                    "page": page_no or "",
+                    "person_id": person.get("person_id", ""),
+                    "seat_no": person.get("seat_no", "") or "",
+                    "grade": person.get("grade", "") or "",
+                    "class_no": person.get("class_no", "") or "",
+                    "field": flag.get("field", ""),
+                    "question": flag.get("question", ""),
+                    "status": flag.get("status", ""),
+                    "best_label": flag.get("best_label", ""),
+                    "best_score": flag.get("best_score", ""),
+                    "second_label": flag.get("second_label", ""),
+                    "second_score": flag.get("second_score", ""),
+                    "delta": flag.get("delta", ""),
+                }
+            )
 
     images_to_pdf(annotated_images, out_annotated_pdf_path, dpi=dpi)
     doc.close()

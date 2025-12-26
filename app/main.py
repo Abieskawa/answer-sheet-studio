@@ -99,6 +99,7 @@ async def api_process(
         f.write(await pdf.read())
 
     csv_path = job_dir / "results.csv"
+    ambiguity_csv_path = job_dir / "ambiguity.csv"
     annotated_pdf_path = job_dir / "annotated.pdf"
 
     # Main processing
@@ -106,6 +107,7 @@ async def api_process(
         input_pdf_path=str(input_pdf),
         num_questions=num_questions,
         out_csv_path=str(csv_path),
+        out_ambiguity_csv_path=str(ambiguity_csv_path),
         out_annotated_pdf_path=str(annotated_pdf_path),
     )
 
@@ -115,6 +117,7 @@ async def api_process(
             "request": request,
             "job_id": job_id,
             "csv_url": f"/outputs/{job_id}/results.csv",
+            "ambiguity_url": f"/outputs/{job_id}/ambiguity.csv",
             "pdf_url": f"/outputs/{job_id}/annotated.pdf",
         },
     )

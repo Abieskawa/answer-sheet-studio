@@ -52,7 +52,7 @@ BOX_Y1 = DIVIDER_Y - 12
 BOX_PAD = 10
 
 CHOICES = ["A", "B", "C", "D"]
-BUBBLE_RADIUS = 6.5
+BUBBLE_RADIUS = 6.0
 COL_COUNT = 3
 MAX_QUESTIONS = 100
 
@@ -78,13 +78,14 @@ def compute_answer_layout(num_questions: int) -> Dict:
 
     bottom_limit = inner_y0 + BUBBLE_RADIUS
     usable_height = first_row_y - bottom_limit
-    if rows_per_col > 1:
-        row_step = usable_height / (rows_per_col - 1)
+    full_rows_per_col = int(math.ceil(MAX_QUESTIONS / COL_COUNT))
+    if full_rows_per_col > 1:
+        row_step = usable_height / (full_rows_per_col - 1)
     else:
         row_step = 0.0
 
     min_step = 2 * BUBBLE_RADIUS + 1.0
-    if rows_per_col > 1 and row_step < min_step:
+    if full_rows_per_col > 1 and row_step < min_step:
         raise ValueError(
             f"Row spacing too small: {row_step:.2f} < {min_step:.2f}. "
             "Adjust box height/cols."

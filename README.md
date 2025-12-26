@@ -3,7 +3,7 @@
 Answer Sheet Studio lets teachers generate printable answer sheets and run local OMR recognition:
 
 - **Download page** – choose title, subject, class and number of questions (up to 100). Generates a single-page PDF template (macOS/Windows compatible).
-- **Upload page** – drop a multi-page PDF scan. Recognition exports `results.csv` plus `annotated.pdf` that visualizes detections (grade, class, seat, answers).
+- **Upload page** – drop a multi-page PDF scan. Recognition exports `results.csv` (questions as rows, students as columns), `ambiguity.csv` (blank/ambiguous picks), plus `annotated.pdf` that visualizes detections.
 - **Launcher** – double-click launcher (`start_mac.command` or `start_windows.vbs`) to create a virtual env, install dependencies, start the FastAPI server, and open `http://127.0.0.1:8000`.
 
 ## Requirements

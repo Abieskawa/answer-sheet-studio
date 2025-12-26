@@ -16,7 +16,7 @@ Your requested layout tweaks:
 
 Notes:
 - Single-page output (generator no longer cares about people/pages).
-- Bubble radius kept large (6.5pt).
+- Bubble radius slightly smaller (6.0pt).
 - Strict assertions ensure no bubble can ever be outside the inner padded box.
 
 CLI:
@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import math
 from pathlib import Path
+from typing import Union
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
@@ -122,9 +123,10 @@ BOX_Y0 = 55
 
 BOX_PAD = 10
 
-BUBBLE_RADIUS = 6.5
+BUBBLE_RADIUS = 6.0
 CHOICES = ["A", "B", "C", "D"]
 COLS = 3
+MAX_QUESTIONS = 100
 
 
 # -----------------------------
@@ -142,8 +144,9 @@ def compute_question_layout(num_questions: int):
     """
     Compute positions so that the black rectangle "fits" the answer grid more tightly:
     - Bubbles spread to near left/right usable edges in each column.
-    - Vertical spacing fills the usable height.
+    - Vertical spacing is fixed (based on MAX_QUESTIONS) so smaller exams look compact.
     """
+    num_questions = int(max(1, min(MAX_QUESTIONS, num_questions)))
     box_w = BOX_X1 - BOX_X0
     col_w = box_w / COLS
     rows_per_col = int(math.ceil(num_questions / COLS))
@@ -159,10 +162,11 @@ def compute_question_layout(num_questions: int):
 
     bottom_limit = inner_y0_all + BUBBLE_RADIUS
     usable = first_row_y - bottom_limit
-    row_step = 0 if rows_per_col <= 1 else usable / (rows_per_col - 1)
+    full_rows_per_col = int(math.ceil(MAX_QUESTIONS / COLS))
+    row_step = 0.0 if full_rows_per_col <= 1 else usable / (full_rows_per_col - 1)
 
     min_step = 2 * BUBBLE_RADIUS + 1.0
-    if row_step < min_step:
+    if full_rows_per_col > 1 and row_step < min_step:
         raise ValueError(
             f"Row spacing too small: {row_step:.2f} < {min_step:.2f}. "
             "Increase BOX height, reduce bubble size, or increase columns."
@@ -349,12 +353,12 @@ def draw_footer(c: canvas.Canvas, footer_text: str):
 def generate_answer_sheet_pdf(
     subject: str,
     num_questions: int,
-    out_pdf_path: str | Path,
+    out_pdf_path: Union[str, Path],
     title_text: str = DEFAULT_TITLE,
     subject_label: str = "科目：",
     footer_text: str = "請使用 2B 鉛筆或深色原子筆將圓圈塗滿",
 ) -> Path:
-    num_questions = int(max(1, min(100, num_questions)))
+    num_questions = int(max(1, min(MAX_QUESTIONS, num_questions)))
     out_pdf_path = Path(out_pdf_path)
 
     c = canvas.Canvas(str(out_pdf_path), pagesize=A4)

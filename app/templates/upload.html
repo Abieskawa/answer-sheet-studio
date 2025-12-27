@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>上傳處理</h1>
+<h1>{{ t.upload_title }}</h1>
 <form class="form" action="/api/process" method="post" enctype="multipart/form-data">
-  <label>題數（1–100）
-    <input type="number" name="num_questions" min="1" max="100" value="50" />
+  <label>{{ t.upload_label_num_questions }}
+    <input type="number" name="num_questions" min="1" max="100" placeholder="{{ t.upload_ph_num_questions }}" required />
   </label>
 
-  <label>上傳多頁 PDF（每頁一位）
+  <label>{{ t.upload_label_pdf }}
     <input type="file" name="pdf" accept="application/pdf" required />
   </label>
 
-  <button type="submit">開始辨識</button>
+  <button type="submit">{{ t.upload_btn_process }}</button>
 
-  <p class="hint">完成後會輸出 results.csv 與 annotated.pdf。</p>
+  <p class="hint">{{ t.upload_hint_output }}</p>
 </form>
 {% endblock %}

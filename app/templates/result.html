@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>處理完成</h1>
-<p>Job ID：<code>{{ job_id }}</code></p>
+<h1>{{ t.result_title }}</h1>
+<p>{{ t.result_job_id }}<code>{{ job_id }}</code></p>
 
 <div class="downloads">
-  <a class="download" href="{{ csv_url }}">下載 results.csv</a>
-  <a class="download" href="{{ ambiguity_url }}">下載 ambiguity.csv</a>
-  <a class="download" href="{{ pdf_url }}">下載 annotated.pdf</a>
+  <a class="download" href="{{ csv_url }}">{{ t.result_download_results }}</a>
+  <a class="download" href="{{ pdf_url }}">{{ t.result_download_annotated }}</a>
 </div>
 
-<p class="hint">如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。</p>
+<p class="hint">{{ t.result_hint_unstable }}</p>
+<p class="hint">{{ t.result_debug_hint }} <a href="/debug?job_id={{ job_id }}">{{ t.result_debug_open }}</a></p>
 {% endblock %}

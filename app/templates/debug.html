@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ t.debug_title }}</h1>
+<p class="hint">{{ t.debug_hint }}</p>
+
+<form class="form" action="/debug" method="get">
+  <label>{{ t.debug_label_job_id }}
+    <input type="text" name="job_id" placeholder="{{ t.debug_ph_job_id }}" value="{{ job_id or '' }}" />
+  </label>
+  <button type="submit">{{ t.debug_btn_open }}</button>
+</form>
+
+{% if error %}
+  <p class="hint">{{ error }}</p>
+{% endif %}
+
+{% if job_id and files %}
+  <div class="downloads">
+    {% if files.results %}
+      <a class="download" href="{{ files.results }}">{{ t.debug_dl_results }}</a>
+    {% endif %}
+    {% if files.ambiguity %}
+      <a class="download" href="{{ files.ambiguity }}">{{ t.debug_dl_ambiguity }}</a>
+    {% endif %}
+    {% if files.annotated %}
+      <a class="download" href="{{ files.annotated }}">{{ t.debug_dl_annotated }}</a>
+    {% endif %}
+    {% if files.input %}
+      <a class="download" href="{{ files.input }}">{{ t.debug_dl_input }}</a>
+    {% endif %}
+  </div>
+
+  <p class="hint">{{ t.debug_report_hint }}</p>
+{% endif %}
+{% endblock %}

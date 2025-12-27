@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="{{ 'en' if lang == 'en' else 'zh-Hant' }}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -11,8 +11,14 @@
     <header class="header">
       <div class="brand">Answer Sheet Studio</div>
       <nav class="nav">
-        <a href="/">下載答案卡</a>
-        <a href="/upload">上傳處理</a>
+        <div class="nav-links">
+          <a href="/">{{ t.nav_download }}</a>
+          <a href="/upload">{{ t.nav_upload }}</a>
+        </div>
+        <div class="lang-switch" aria-label="Language">
+          <button type="button" class="lang-tab{% if lang == 'zh-Hant' %} active{% endif %}" data-lang="zh-Hant">{{ t.lang_zh }}</button>
+          <button type="button" class="lang-tab{% if lang == 'en' %} active{% endif %}" data-lang="en">{{ t.lang_en }}</button>
+        </div>
       </nav>
     </header>
 
@@ -21,8 +27,24 @@
     </main>
 
     <footer class="footer">
-      <div>本機運行 / 不上傳到雲端</div>
+      <div>{{ t.footer_local }}</div>
     </footer>
   </div>
+
+  <script>
+    (() => {
+      const maxAge = 60 * 60 * 24 * 365;
+      document.querySelectorAll(".lang-tab").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const value = btn.dataset.lang;
+          if (!value) return;
+          document.cookie = `lang=${value}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
+          const url = new URL(window.location.href);
+          url.searchParams.delete("lang");
+          window.location.href = url.toString();
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple, Dict, Optional, Any
 
@@ -19,14 +18,6 @@ from .config import (
     BUBBLE_RADIUS, COL_COUNT,
     compute_answer_layout,
 )
-
-@dataclass
-class PickResult:
-    value: Optional[str]   # "A"/"B"/"C"/"D" or digit or grade, None if blank
-    status: str            # "OK" | "BLANK" | "AMBIGUOUS"
-    score: float
-    bbox: Tuple[int,int,int,int]  # x0,y0,x1,y1 in pixels (canonical)
-
 
 def render_page(page: fitz.Page, dpi: int = 200) -> Tuple[np.ndarray, float]:
     # scale points -> pixels
@@ -179,7 +170,7 @@ def process_page(
         grade_bboxes.append(bbox)
         grade_scores.append(score_bubble(gray, bbox))
     g_label = [str(v) for v in GRADE_VALUES]
-    g_val, g_status, g_best, g_idx, g_second_label, g_second_score = pick_one(
+    g_val, g_status, _, g_idx, g_second_label, _ = pick_one(
         grade_scores, g_label, min_score=0.12, amb_delta=0.02
     )
     results["grade"] = g_val if g_status == "OK" else None
@@ -192,10 +183,7 @@ def process_page(
                 "question": "",
                 "status": g_status,
                 "best_label": g_label[g_idx],
-                "best_score": float(g_best),
                 "second_label": g_second_label or "",
-                "second_score": float(g_second_score),
-                "delta": float(g_best - g_second_score),
             }
         )
 
@@ -207,7 +195,7 @@ def process_page(
         class_bboxes.append(bbox)
         class_scores.append(score_bubble(gray, bbox))
     c_label = [str(v) for v in CLASS_VALUES]
-    c_val, c_status, c_best, c_idx, c_second_label, c_second_score = pick_one(
+    c_val, c_status, _, c_idx, c_second_label, _ = pick_one(
         class_scores, c_label, min_score=0.12, amb_delta=0.02
     )
     results["class_no"] = c_val if c_status == "OK" else None
@@ -220,10 +208,7 @@ def process_page(
                 "question": "",
                 "status": c_status,
                 "best_label": c_label[c_idx],
-                "best_score": float(c_best),
                 "second_label": c_second_label or "",
-                "second_score": float(c_second_score),
-                "delta": float(c_best - c_second_score),
             }
         )
 
@@ -244,8 +229,8 @@ def process_page(
         )
         return val, status, best, idx, second_label, second_score, bboxes
 
-    tens, t_status, t_best, t_idx, t_second_label, t_second_score, t_bboxes = pick_digit(SEAT_TOP_ROW_Y)
-    ones, o_status, o_best, o_idx, o_second_label, o_second_score, o_bboxes = pick_digit(SEAT_BOTTOM_ROW_Y)
+    tens, t_status, _, t_idx, t_second_label, _, t_bboxes = pick_digit(SEAT_TOP_ROW_Y)
+    ones, o_status, _, o_idx, o_second_label, _, o_bboxes = pick_digit(SEAT_BOTTOM_ROW_Y)
 
     tens_out = tens if t_status == "OK" else None
     ones_out = ones if o_status == "OK" else None
@@ -264,10 +249,7 @@ def process_page(
                 "question": "",
                 "status": t_status,
                 "best_label": digit_labels[t_idx],
-                "best_score": float(t_best),
                 "second_label": t_second_label or "",
-                "second_score": float(t_second_score),
-                "delta": float(t_best - t_second_score),
             }
         )
     if o_status != "OK":
@@ -277,10 +259,7 @@ def process_page(
                 "question": "",
                 "status": o_status,
                 "best_label": digit_labels[o_idx],
-                "best_score": float(o_best),
                 "second_label": o_second_label or "",
-                "second_score": float(o_second_score),
-                "delta": float(o_best - o_second_score),
             }
         )
 
@@ -306,7 +285,7 @@ def process_page(
                 bbox = bubble_bbox_px(x_pt, y_pt, BUBBLE_RADIUS, zoom)
                 bboxes.append(bbox)
                 scores.append(score_bubble(gray, bbox))
-            val, status, best, idx, second_label, second_score = pick_one(
+            val, status, _, idx, second_label, _ = pick_one(
                 scores, CHOICES, min_score=0.18, amb_delta=0.03
             )
             answers.append(val if status == "OK" and val is not None else "")
@@ -318,10 +297,7 @@ def process_page(
                         "question": q,
                         "status": status,
                         "best_label": CHOICES[idx],
-                        "best_score": float(best),
                         "second_label": second_label or "",
-                        "second_score": float(second_score),
-                        "delta": float(best - second_score),
                     }
                 )
             q += 1
@@ -439,12 +415,12 @@ def process_pdf_to_csv_and_annotated_pdf(
     person_ids = [str(row.get("person_id", "")) for row in people_sorted]
 
     # Transposed output: columns=people, rows=questions
-    results_fields = ["number", "correct_answer", *person_ids]
+    results_fields = ["number", *person_ids]
     with open(out_csv_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=results_fields)
         writer.writeheader()
         for q in range(1, num_questions + 1):
-            out_row: Dict[str, Any] = {"number": q, "correct_answer": ""}
+            out_row: Dict[str, Any] = {"number": q}
             for person in people_sorted:
                 pid = str(person.get("person_id", ""))
                 out_row[pid] = person.get(f"Q{q}", "") or ""
@@ -462,10 +438,7 @@ def process_pdf_to_csv_and_annotated_pdf(
         "question",
         "status",
         "best_label",
-        "best_score",
         "second_label",
-        "second_score",
-        "delta",
     ]
     with open(out_ambiguity_csv_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.DictWriter(f, fieldnames=amb_fields)
@@ -484,10 +457,7 @@ def process_pdf_to_csv_and_annotated_pdf(
                     "question": flag.get("question", ""),
                     "status": flag.get("status", ""),
                     "best_label": flag.get("best_label", ""),
-                    "best_score": flag.get("best_score", ""),
                     "second_label": flag.get("second_label", ""),
-                    "second_score": flag.get("second_score", ""),
-                    "delta": flag.get("delta", ""),
                 }
             )
 

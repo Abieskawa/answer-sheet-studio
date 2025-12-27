@@ -1,10 +1,13 @@
 # Answer Sheet Studio
 
+English | 繁體中文: `README.zh-Hant.md`
+
 Answer Sheet Studio lets teachers generate printable answer sheets and run local OMR recognition:
 
 - **Download page** – choose title, subject, class and number of questions (up to 100). Generates a single-page PDF template (macOS/Windows compatible).
 - **Upload page** – drop a multi-page PDF scan. Recognition exports `results.csv` (questions as rows, students as columns), `ambiguity.csv` (blank/ambiguous picks), plus `annotated.pdf` that visualizes detections.
 - **Launcher** – double-click launcher (`start_mac.command` or `start_windows.vbs`) to create a virtual env, install dependencies, start the FastAPI server, and open `http://127.0.0.1:8000`.
+- The web UI supports **English** and **Traditional Chinese**. Use the language tabs in the header.
 
 ## Requirements
 
@@ -24,6 +27,17 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 1. Install Python 3.10+ (3.10–3.13 recommended) from python.org and check “Add python.exe to PATH”.
 2. Double-click `start_windows.vbs`. The launcher GUI will open using `pythonw`.
 3. Click **Install & Run**. First run installs requirements; later runs reuse the existing `.venv` (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
+
+## Updating (No Git Required)
+
+- Open the Tk launcher and click **Download/Update (GitHub)**. This downloads the latest ZIP from GitHub and overwrites project files.
+- If download is blocked in your network, download the ZIP in a browser and use **Apply ZIP Update...** in the launcher.
+- If this folder is a git clone and Git is installed, the launcher tries `git pull` first (then falls back to ZIP update if needed).
+- If you changed any project files locally, updating may overwrite your changes. Keep backups of customized files.
+
+## Debug Mode
+
+- Open `http://127.0.0.1:8000/debug` and enter the Job ID from the result page to download diagnostic files (including `ambiguity.csv`).
 
 ## Repository Layout
 
@@ -45,7 +59,15 @@ Generated files are written under `outputs/`.
 ## Troubleshooting
 
 - **pip install failed** – Check the launcher log; ensure network access and Python 3.10+. If you’re on Python 3.14, try Python 3.10–3.13.
-- **Port already in use / permission denied** – The launcher checks port availability. If macOS firewall blocks Python, allow incoming connections in System Settings → Network → Firewall.
+- **Port already in use / permission denied** – The launcher checks port availability. If macOS firewall blocks Python, allow incoming connections in System Settings > Network > Firewall.
 - **Server not opening** – Use the launcher log to identify crashes; you can also run `python run_app.py` inside `.venv` manually for debugging.
+
+## Packaging Notes (for double-click to run)
+
+If you want a distribution that does not require teachers to install Python/Git:
+
+- **Single `.exe`** (recommended UX): build with PyInstaller or Nuitka and ship updates by replacing the `.exe`.
+- **Portable folder**: bundle Python embeddable + the repo + a `.bat` launcher (unzip and run).
+- **Installer**: wrap the portable build with Inno Setup or NSIS (desktop shortcuts, uninstall, etc.).
 
 All processing stays on-device; no data leaves your computer.

@@ -9,17 +9,26 @@ import threading
 import queue
 import webbrowser
 import zipfile
+import urllib.error
+import urllib.request
 import socket
 import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 
 APP_HOST = "127.0.0.1"
 APP_PORT = int(os.environ.get("ANSWER_SHEET_PORT", "8000")) if "ANSWER_SHEET_PORT" in os.environ else 8000
 APP_URL = f"http://{APP_HOST}:{APP_PORT}"
 DEFAULT_ZIP_NAME = "answer-sheet-studio.zip"
+
+DEFAULT_GITHUB_REPO = os.environ.get("ANSWER_SHEET_GITHUB_REPO", "Abieskawa/answer-sheet-studio")
+DEFAULT_GITHUB_ZIP_URLS = [
+    f"https://github.com/{DEFAULT_GITHUB_REPO}/archive/refs/heads/main.zip",
+    f"https://github.com/{DEFAULT_GITHUB_REPO}/archive/refs/heads/master.zip",
+]
+DEFAULT_GITHUB_REPO_URL = f"https://github.com/{DEFAULT_GITHUB_REPO}"
 
 SKIP_DIR_NAMES = {".git", ".venv", "__pycache__", "_incoming", "node_modules", "outputs", ".DS_Store", "Thumbs.db"}
 
@@ -180,6 +189,40 @@ def _select_venv_builder_cmd() -> Optional[Tuple[List[str], Tuple[int, int], str
 
     return None
 
+def _find_git_exe(env: Optional[dict] = None) -> Optional[str]:
+    path = None
+    if env is not None:
+        path = env.get("PATH")
+
+    git = shutil.which("git", path=path)
+    if git:
+        return git
+    if os.name != "nt":
+        return None
+
+    env_map = env or os.environ
+    program_files = env_map.get("ProgramFiles") or env_map.get("PROGRAMFILES")
+    program_files_x86 = env_map.get("ProgramFiles(x86)") or env_map.get("PROGRAMFILES(X86)")
+    local_appdata = env_map.get("LOCALAPPDATA") or env_map.get("LocalAppData")
+
+    candidates: List[Path] = []
+    for base in (program_files, program_files_x86):
+        if base:
+            candidates.append(Path(base) / "Git" / "cmd" / "git.exe")
+            candidates.append(Path(base) / "Git" / "bin" / "git.exe")
+    if local_appdata:
+        candidates.append(Path(local_appdata) / "Programs" / "Git" / "cmd" / "git.exe")
+        candidates.append(Path(local_appdata) / "Programs" / "Git" / "bin" / "git.exe")
+
+    for candidate in candidates:
+        try:
+            if candidate.exists():
+                return str(candidate)
+        except Exception:
+            continue
+
+    return None
+
 def check_port_available(host: str, port: int):
     """Return (True, None) if port can be bound, otherwise (False, reason)."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -244,7 +287,7 @@ def find_project_files(repo_dir: Path, max_depth: int = 4):
         return req_candidates[0], run_candidates[0]
     return None, None
 
-def merge_zip_into_repo(repo_dir: Path, zip_path: Path, log_fn):
+def merge_zip_into_repo(repo_dir: Path, zip_path: Path, log_fn, cleanup: bool = True):
     """
     Extract zip into _incoming, then merge its top-level files into repo_dir.
     If zip contains a single top folder, merge from inside that folder.
@@ -271,6 +314,52 @@ def merge_zip_into_repo(repo_dir: Path, zip_path: Path, log_fn):
             shutil.copytree(item, dest, dirs_exist_ok=True)
         else:
             shutil.copy2(item, dest)
+    if cleanup:
+        shutil.rmtree(incoming, ignore_errors=True)
+
+def _download_file(url: str, dest: Path, log_fn, timeout_s: int = 45):
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_suffix(dest.suffix + ".partial")
+    try:
+        if tmp.exists():
+            tmp.unlink()
+    except Exception:
+        pass
+
+    log_fn(f"Downloading: {url}")
+    req = urllib.request.Request(url, headers={"User-Agent": "answer-sheet-studio-launcher"})
+    with urllib.request.urlopen(req, timeout=timeout_s) as r:
+        total = r.headers.get("Content-Length")
+        total_n = int(total) if total and total.isdigit() else None
+        read_n = 0
+        last_report = 0.0
+        started = time.time()
+        with open(tmp, "wb") as f:
+            while True:
+                chunk = r.read(1024 * 256)
+                if not chunk:
+                    break
+                f.write(chunk)
+                read_n += len(chunk)
+                now = time.time()
+                if now - last_report >= 0.5:
+                    if total_n:
+                        pct = read_n / total_n * 100.0
+                        log_fn(f"  {pct:.1f}% ({read_n/1024/1024:.1f} MB / {total_n/1024/1024:.1f} MB)")
+                    else:
+                        log_fn(f"  {read_n/1024/1024:.1f} MB downloaded")
+                    last_report = now
+        elapsed = max(0.01, time.time() - started)
+        mbps = (read_n / 1024 / 1024) / elapsed
+        log_fn(f"Download complete: {read_n/1024/1024:.1f} MB in {elapsed:.1f}s ({mbps:.1f} MB/s)")
+
+    tmp.replace(dest)
+
+    try:
+        with zipfile.ZipFile(dest, "r") as z:
+            z.namelist()
+    except Exception as e:
+        raise RuntimeError(f"Downloaded file is not a valid ZIP: {dest.name} ({e})")
 
 class LauncherApp(tk.Tk):
     def __init__(self):
@@ -281,6 +370,7 @@ class LauncherApp(tk.Tk):
         self.repo_dir = Path(__file__).resolve().parent
         self.proc = None
         self.log_q = queue.Queue()
+        self._ui_thread_id = threading.get_ident()
 
         # surface exceptions (avoid "nothing happens")
         self.report_callback_exception = self._report_tk_exception
@@ -292,7 +382,43 @@ class LauncherApp(tk.Tk):
         import traceback
         msg = "".join(traceback.format_exception(exc, val, tb))
         self._append_log("ERROR:\n" + msg)
-        messagebox.showerror("Launcher error", msg)
+        self._msg_error("Launcher error", msg)
+
+    def _ui(self, fn, *args, **kwargs):
+        self.after(0, lambda: fn(*args, **kwargs))
+
+    def _ui_sync(self, fn, *args, **kwargs):
+        if threading.get_ident() == self._ui_thread_id:
+            return fn(*args, **kwargs)
+
+        done = threading.Event()
+        result = {"value": None, "exc": None}
+
+        def wrapper():
+            try:
+                result["value"] = fn(*args, **kwargs)
+            except Exception as e:
+                result["exc"] = e
+            finally:
+                done.set()
+
+        self.after(0, wrapper)
+        done.wait()
+        if result["exc"] is not None:
+            raise result["exc"]
+        return result["value"]
+
+    def _msg_info(self, title: str, message: str):
+        self._ui_sync(messagebox.showinfo, title, message)
+
+    def _msg_warning(self, title: str, message: str):
+        self._ui_sync(messagebox.showwarning, title, message)
+
+    def _msg_error(self, title: str, message: str):
+        self._ui_sync(messagebox.showerror, title, message)
+
+    def _msg_askyesno(self, title: str, message: str) -> bool:
+        return bool(self._ui_sync(messagebox.askyesno, title, message))
 
     def _build_ui(self):
         self.configure(bg=WINDOW_BG)
@@ -344,7 +470,7 @@ class LauncherApp(tk.Tk):
 
         tk.Label(
             info_card,
-            text="Tip: 'Install & Run' creates .venv, installs requirements, and launches run_app.py. Re-run it after pulling updates.",
+            text="Tip: 'Install & Run' creates .venv, installs requirements, and launches run_app.py. Re-run it after updating.",
             font=("Helvetica", 11),
             fg=SUBTEXT_FG,
             bg=CARD_BG,
@@ -365,7 +491,9 @@ class LauncherApp(tk.Tk):
                 pady=8,
             ).pack(side="left", padx=(0, 10))
 
-        add_btn("Update (git pull)", self.on_git_pull)
+        add_btn("Download/Update (GitHub)", self.on_update)
+        add_btn("Apply ZIP Update...", self.on_apply_zip_update)
+        add_btn("Open GitHub", lambda: webbrowser.open(DEFAULT_GITHUB_REPO_URL))
         add_btn("Install & Run", self.on_install_and_run)
         add_btn("Open in Browser", lambda: webbrowser.open(APP_URL))
         add_btn("Stop Server", self.on_stop)
@@ -454,6 +582,9 @@ class LauncherApp(tk.Tk):
         self.log.configure(state="disabled")
 
     def _update_status(self, text: str, tone: str = "info"):
+        if threading.get_ident() != self._ui_thread_id:
+            self._ui(self._update_status, text, tone)
+            return
         style = STATUS_STYLES.get(tone, STATUS_STYLES["info"])
         self.status_var.set(text)
         self.status_label.configure(bg=style["bg"], fg=style["fg"])
@@ -481,7 +612,20 @@ class LauncherApp(tk.Tk):
         self.after(120, self._drain_log_queue)
 
     def _in_thread(self, fn):
-        threading.Thread(target=fn, daemon=True).start()
+        def runner():
+            try:
+                fn()
+            except Exception as exc:
+                import traceback
+                msg = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+                self.log_q.put("ERROR:\n" + msg)
+                try:
+                    self._msg_error("Launcher error", msg)
+                except Exception:
+                    pass
+                self._update_status("Launcher error. Check log.", "error")
+
+        threading.Thread(target=runner, daemon=True).start()
 
     def _run_cmd_stream(self, cmd, cwd=None, env=None):
         self.log_q.put(f"$ {' '.join(cmd)}")
@@ -502,67 +646,184 @@ class LauncherApp(tk.Tk):
             self.log_q.put(line.rstrip("\n"))
         return p.wait()
 
-    def on_git_pull(self):
+    def _download_latest_zip(self, zip_path: Path):
+        last_err = None
+        for url in DEFAULT_GITHUB_ZIP_URLS:
+            try:
+                _download_file(url, zip_path, self.log_q.put)
+                return
+            except urllib.error.HTTPError as e:
+                last_err = e
+                self.log_q.put(f"Download failed ({e.code}) from: {url}")
+                continue
+            except Exception as e:
+                last_err = e
+                self.log_q.put(f"Download failed from: {url}")
+                self.log_q.put(f"ERROR: {e}")
+                break
+
+        msg = str(last_err) if last_err is not None else "Unknown error"
+        raise RuntimeError(f"Failed to download update from GitHub: {msg}")
+
+    def on_apply_zip_update(self):
         def task():
-            self._update_status("Running git pull...", "pending")
-            if not (self.repo_dir / ".git").exists():
-                messagebox.showinfo(
-                    "Update not available",
-                    "This folder is not a git clone (no .git folder).\n\n"
-                    "If you downloaded a ZIP, re-download the latest ZIP to update.\n"
-                    "If you want one-click updates, clone the repo with Git."
+            self.log_q.put("Clicked: Apply ZIP update")
+
+            if self.proc and self.proc.poll() is None:
+                do_stop = self._msg_askyesno(
+                    "Server running",
+                    "The server appears to be running.\n\n"
+                    "Stop it before updating? (Recommended)"
                 )
-                self._update_status("Update not available (not a git clone).", "warning")
+                if do_stop:
+                    self.on_stop()
+                    for _ in range(40):
+                        if self.proc.poll() is not None:
+                            break
+                        time.sleep(0.1)
+
+            zip_file = self._ui_sync(
+                filedialog.askopenfilename,
+                title="Select update ZIP",
+                filetypes=[("ZIP files", "*.zip"), ("All files", "*.*")],
+            )
+            if not zip_file:
+                self._update_status("Update canceled.", "warning")
                 return
 
-            git_exe = shutil.which("git")
-            if git_exe is None:
-                messagebox.showerror("Git not found", "Git is not installed or not in PATH.")
-                self._update_status("Git not found in PATH.", "error")
+            zip_path = Path(zip_file)
+            if not zip_path.exists():
+                self._update_status("ZIP not found.", "error")
+                self._msg_error("ZIP not found", str(zip_path))
                 return
 
+            do_apply = self._msg_askyesno(
+                "Apply update now?",
+                f"Apply this ZIP to the current folder?\n\n{zip_path}\n\n"
+                "This will overwrite existing project files."
+            )
+            if not do_apply:
+                self._update_status("Update canceled.", "warning")
+                return
+
+            self._update_status("Applying update...", "pending")
+            try:
+                merge_zip_into_repo(self.repo_dir, zip_path, self.log_q.put, cleanup=True)
+            except Exception as e:
+                self.log_q.put(f"ERROR: {e}")
+                self._update_status("Update failed.", "error")
+                self._msg_error("Update failed", str(e))
+                return
+
+            self._update_status("Update completed.", "success")
+            self._msg_info("Updated", "Update completed.\n\nNow click 'Install & Run' to refresh dependencies if needed.")
+
+        self._in_thread(task)
+
+    def on_update(self):
+        def task():
+            self.log_q.put("Clicked: Update (GitHub)")
+
+            if self.proc and self.proc.poll() is None:
+                do_stop = self._msg_askyesno(
+                    "Server running",
+                    "The server appears to be running.\n\n"
+                    "Stop it before updating? (Recommended)"
+                )
+                if do_stop:
+                    self.on_stop()
+                    for _ in range(40):
+                        if self.proc.poll() is not None:
+                            break
+                        time.sleep(0.1)
+
+            repo_has_git = (self.repo_dir / ".git").exists()
             env = os.environ.copy()
             env["GIT_TERMINAL_PROMPT"] = "0"
-            if os.name == "nt":
-                userprofile = env.get("USERPROFILE")
-                if userprofile:
-                    try:
-                        userprofile_ok = Path(userprofile).exists()
-                    except Exception:
-                        userprofile_ok = False
-                    if userprofile_ok:
-                        home = env.get("HOME")
+            git_exe = _find_git_exe(env)
+
+            if repo_has_git and git_exe:
+                self._update_status("Updating via git pull...", "pending")
+                if os.name == "nt":
+                    userprofile = env.get("USERPROFILE")
+                    if userprofile:
                         try:
-                            home_ok = bool(home) and Path(home).exists()
+                            userprofile_ok = Path(userprofile).exists()
                         except Exception:
-                            home_ok = False
-                        if not home_ok:
-                            env["HOME"] = userprofile
-
-                        homedrive = env.get("HOMEDRIVE")
-                        homepath = env.get("HOMEPATH")
-                        if homedrive and homepath:
+                            userprofile_ok = False
+                        if userprofile_ok:
+                            home = env.get("HOME")
                             try:
-                                if not Path(homedrive + homepath).exists():
-                                    env["HOMEDRIVE"] = userprofile[:2]
-                                    env["HOMEPATH"] = userprofile[2:]
+                                home_ok = bool(home) and Path(home).exists()
                             except Exception:
-                                pass
+                                home_ok = False
+                            if not home_ok:
+                                env["HOME"] = userprofile
 
-            self.log_q.put(f"Using git: {git_exe}")
-            rc = self._run_cmd_stream([git_exe, "-C", str(self.repo_dir), "pull"], env=env)
-            if rc == 0:
-                self._update_status("git pull completed.", "success")
-            else:
-                self._update_status(f"git pull failed (code {rc}).", "error")
-                messagebox.showerror(
+                            homedrive = env.get("HOMEDRIVE")
+                            homepath = env.get("HOMEPATH")
+                            if homedrive and homepath:
+                                try:
+                                    if not Path(homedrive + homepath).exists():
+                                        env["HOMEDRIVE"] = userprofile[:2]
+                                        env["HOMEPATH"] = userprofile[2:]
+                                except Exception:
+                                    pass
+
+                self.log_q.put(f"Using git: {git_exe}")
+                rc = self._run_cmd_stream([git_exe, "-C", str(self.repo_dir), "pull"], env=env)
+                if rc == 0:
+                    self._update_status("Update completed.", "success")
+                    self._msg_info("Updated", "Update completed.\n\nIf something fails, click 'Install & Run' again.")
+                    return
+                self.log_q.put(f"git pull failed (code {rc}).")
+                do_fallback = self._msg_askyesno(
                     "git pull failed",
-                    "git pull failed. Check the Command log for details.\n\n"
-                    "Common fixes:\n"
-                    "- Make sure you have internet access.\n"
-                    "- If you have local edits, commit/stash them first.\n"
-                    "- If the error mentions a missing drive, move the folder to a normal path like C:\\Users\\... and retry."
+                    "git pull failed.\n\n"
+                    "Try GitHub ZIP update instead? (This will overwrite project files.)"
                 )
+                if not do_fallback:
+                    self._update_status("Update canceled.", "warning")
+                    return
+
+            self._update_status("Downloading latest ZIP from GitHub...", "pending")
+            zip_path = self.repo_dir / DEFAULT_ZIP_NAME
+            try:
+                self._download_latest_zip(zip_path)
+            except Exception:
+                self._update_status("Download failed.", "error")
+                self._msg_error(
+                    "Update failed",
+                    "Failed to download the latest version from GitHub.\n\n"
+                    "Check your internet connection and retry.\n\n"
+                    f"You can also open GitHub and download manually:\n{DEFAULT_GITHUB_REPO_URL}"
+                )
+                return
+
+            do_apply = self._msg_askyesno(
+                "Apply update now?",
+                "Downloaded the latest ZIP from GitHub.\n\n"
+                "Apply it to this folder now? (This will overwrite existing project files.)"
+            )
+            if not do_apply:
+                self._update_status("Update canceled.", "warning")
+                return
+
+            self._update_status("Applying update...", "pending")
+            try:
+                merge_zip_into_repo(self.repo_dir, zip_path, self.log_q.put, cleanup=True)
+            except Exception as e:
+                self.log_q.put(f"ERROR: {e}")
+                self._update_status("Update failed.", "error")
+                self._msg_error(
+                    "Update failed",
+                    f"Failed to apply update:\n{e}\n\n"
+                    "Tip: Move the folder to a normal path like C:\\Users\\... and retry."
+                )
+                return
+
+            self._update_status("Update completed.", "success")
+            self._msg_info("Updated", "Update completed.\n\nNow click 'Install & Run' to refresh dependencies if needed.")
 
         self._in_thread(task)
 
@@ -589,7 +850,7 @@ class LauncherApp(tk.Tk):
                 zip_path = self.repo_dir / DEFAULT_ZIP_NAME
                 if zip_path.exists():
                     self.log_q.put("App code not found in folder.")
-                    do_extract = messagebox.askyesno(
+                    do_extract = self._msg_askyesno(
                         "App code not found",
                         "I cannot find requirements.txt and run_app.py in this folder.\n\n"
                         "But I found answer-sheet-studio.zip.\n"
@@ -599,15 +860,36 @@ class LauncherApp(tk.Tk):
                         try:
                             merge_zip_into_repo(self.repo_dir, zip_path, self.log_q.put)
                         except Exception as e:
-                            messagebox.showerror("Extract failed", str(e))
+                            self._msg_error("Extract failed", str(e))
                             self._update_status("Zip extraction failed.", "error")
+                            return
+                        # re-scan
+                        req_path, run_path = find_project_files(self.repo_dir)
+                else:
+                    self.log_q.put("App code not found in folder.")
+                    do_download = self._msg_askyesno(
+                        "App code not found",
+                        "I cannot find requirements.txt and run_app.py in this folder.\n\n"
+                        "Do you want me to download the latest ZIP from GitHub and extract it into this folder now?\n"
+                        "(Internet required)"
+                    )
+                    if do_download:
+                        try:
+                            self._update_status("Downloading app ZIP from GitHub...", "pending")
+                            self._download_latest_zip(zip_path)
+                            self._update_status("Extracting app ZIP...", "pending")
+                            merge_zip_into_repo(self.repo_dir, zip_path, self.log_q.put)
+                        except Exception as e:
+                            self.log_q.put(f"ERROR: {e}")
+                            self._msg_error("Download/extract failed", str(e))
+                            self._update_status("Download/extract failed.", "error")
                             return
                         # re-scan
                         req_path, run_path = find_project_files(self.repo_dir)
 
             if not req_path or not run_path:
                 self.log_q.put("Missing project files after auto-fix attempt.")
-                messagebox.showerror(
+                self._msg_error(
                     "Missing files",
                     "Still cannot find BOTH requirements.txt and run_app.py.\n\n"
                     "Make sure your repo folder contains the app code.\n"
@@ -624,14 +906,14 @@ class LauncherApp(tk.Tk):
             ok, reason = check_port_available(APP_HOST, APP_PORT)
             if not ok:
                 self._update_status("Cannot use the selected port.", "error")
-                messagebox.showerror("Port unavailable", reason)
+                self._msg_error("Port unavailable", reason)
                 return
 
             venv_builder = _select_venv_builder_cmd()
             if venv_builder is None:
                 detected = _format_py_version((sys.version_info[0], sys.version_info[1]))
                 supported = f"{_format_py_version(SUPPORTED_PYTHON_MIN)}–3.{SUPPORTED_PYTHON_MAX_EXCLUSIVE[1] - 1}"
-                messagebox.showerror(
+                self._msg_error(
                     "Unsupported Python",
                     "This project uses packages (NumPy/OpenCV/PyMuPDF/ReportLab) that require prebuilt wheels.\n\n"
                     f"Detected Python {detected}.\n"
@@ -650,7 +932,7 @@ class LauncherApp(tk.Tk):
 
             existing_ver = _read_venv_version(venv_dir) if venv_dir.exists() else None
             if venv_dir.exists() and existing_ver and not _is_supported_python(existing_ver):
-                do_recreate = messagebox.askyesno(
+                do_recreate = self._msg_askyesno(
                     "Recreate virtual environment?",
                     f"Your existing .venv uses Python {_format_py_version(existing_ver)}, which is not supported.\n\n"
                     "Recreate .venv using a supported Python version now? (This will delete .venv and reinstall packages.)"
@@ -663,12 +945,12 @@ class LauncherApp(tk.Tk):
             if not venv_dir.exists() or not py.exists():
                 rc = self._run_cmd_stream(venv_builder_cmd + ["-m", "venv", str(venv_dir)], cwd=self.repo_dir)
                 if rc != 0:
-                    messagebox.showerror("Venv failed", "Failed to create virtual environment (.venv). Check log.")
+                    self._msg_error("Venv failed", "Failed to create virtual environment (.venv). Check log.")
                     self._update_status("Failed to create virtual environment.", "error")
                     return
 
             if not py.exists():
-                messagebox.showerror("Venv error", f"Venv python not found: {py}")
+                self._msg_error("Venv error", f"Venv python not found: {py}")
                 self._update_status("Virtual environment is incomplete.", "error")
                 return
 
@@ -700,7 +982,7 @@ class LauncherApp(tk.Tk):
                 self._update_status("Installing dependencies (this can take a few minutes)...", "pending")
                 rc = self._run_cmd_stream([str(py), "-m", "pip", "install", "--upgrade", "pip"], cwd=self.repo_dir)
                 if rc != 0:
-                    messagebox.showerror("pip failed", "pip upgrade failed. Check log.")
+                    self._msg_error("pip failed", "pip upgrade failed. Check log.")
                     self._update_status("pip upgrade failed.", "error")
                     return
 
@@ -709,7 +991,7 @@ class LauncherApp(tk.Tk):
                     cwd=self.repo_dir,
                 )
                 if rc != 0:
-                    messagebox.showerror("pip failed", "pip install failed. Check log for the error.")
+                    self._msg_error("pip failed", "pip install failed. Check log for the error.")
                     self._update_status("pip install failed.", "error")
                     return
 
@@ -749,12 +1031,12 @@ class LauncherApp(tk.Tk):
                 if self.proc.poll() is not None:
                     self._update_status("Server exited (failed).", "error")
                     self.log_q.put(f"Server process exited with code {self.proc.returncode}")
-                    messagebox.showerror("Server failed", "Server exited immediately. Check log for details.")
+                    self._msg_error("Server failed", "Server exited immediately. Check log for details.")
                     return
                 time.sleep(0.5)
 
             self._update_status("Server not reachable yet.", "warning")
-            messagebox.showwarning(
+            self._msg_warning(
                 "Not reachable",
                 f"Server did not become reachable at {APP_URL}.\n"
                 "Check log output to see what it is doing."
@@ -763,15 +1045,15 @@ class LauncherApp(tk.Tk):
         self._in_thread(task)
 
     def on_stop(self):
-        if self.proc and self.proc.poll() is None:
-            try:
-                self.proc.terminate()
-                self._update_status("Server stopped.", "info")
-                self.log_q.put("Server stopped.")
-            except Exception as e:
-                messagebox.showerror("Stop failed", str(e))
-        else:
-            self._update_status("No server running.", "warning")
+            if self.proc and self.proc.poll() is None:
+                try:
+                    self.proc.terminate()
+                    self._update_status("Server stopped.", "info")
+                    self.log_q.put("Server stopped.")
+                except Exception as e:
+                    self._msg_error("Stop failed", str(e))
+            else:
+                self._update_status("No server running.", "warning")
 
 if __name__ == "__main__":
     LauncherApp().mainloop()

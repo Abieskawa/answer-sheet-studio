@@ -72,7 +72,8 @@ def _write_marker(data: dict) -> None:
 
 def _venv_python() -> Path:
     if os.name == "nt":
-        return VENV_DIR / "Scripts" / "python.exe"
+        pyw = VENV_DIR / "Scripts" / "pythonw.exe"
+        return pyw if pyw.exists() else (VENV_DIR / "Scripts" / "python.exe")
     py3 = VENV_DIR / "bin" / "python3"
     return py3 if py3.exists() else (VENV_DIR / "bin" / "python")
 

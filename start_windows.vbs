@@ -48,10 +48,4 @@ If CanRun("pythonw -c " & probe) Then
     WScript.Quit
 End If
 
-' Last resort: python (hidden by windowstyle=0)
-If CanRun("python -c " & probe) Then
-    RunAsync "python " & q & launcher & q
-    WScript.Quit
-End If
-
 WshShell.Popup "Python not found. Please install Python 3.10+ from python.org.", 0, "Answer Sheet Studio", 48

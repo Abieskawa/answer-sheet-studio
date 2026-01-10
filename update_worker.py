@@ -78,6 +78,12 @@ def _spawn_launcher_headless() -> None:
     env = os.environ.copy()
     env["ANSWER_SHEET_OPEN_BROWSER"] = "0"
 
+    exe = sys.executable
+    if os.name == "nt":
+        pyw = Path(sys.executable).with_name("pythonw.exe")
+        if pyw.exists():
+            exe = str(pyw)
+
     kwargs: dict = {"cwd": str(REPO_DIR), "env": env}
     if os.name == "nt":
         creationflags = 0
@@ -88,7 +94,7 @@ def _spawn_launcher_headless() -> None:
     else:
         kwargs["start_new_session"] = True
 
-    subprocess.Popen([sys.executable, str(launcher)], **kwargs)
+    subprocess.Popen([exe, str(launcher)], **kwargs)
 
 
 def main() -> None:
@@ -130,4 +136,3 @@ if __name__ == "__main__":
     except Exception as exc:
         _log(f"ERROR: {exc!r}")
         raise
-

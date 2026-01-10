@@ -1,9 +1,11 @@
 # Answer Sheet Studio（繁體中文）
 
+線上文件（Read the Docs）：https://answer-sheet-studio.readthedocs.io/zh-tw/latest/
+
 Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進行 OMR 辨識：
 
-- **下載答案卡**：輸入標題、科目、班級、題數（最多 100 題），產生單頁 PDF。
-- **上傳辨識**：上傳多頁 PDF（每頁一位學生）。會輸出 `results.csv`（題號為列、學生為欄）與 `annotated.pdf`（標註辨識結果）。
+- **下載答案卡**：輸入標題、科目、班級、題數（最多 100 題）、每題選項（`ABC` / `ABCD` / `ABCDE`），產生單頁 PDF。
+- **上傳辨識**：上傳多頁 PDF（每頁一位學生）。會輸出 `results.csv`（題號為列、學生為欄）、`ambiguity.csv`（空白/模稜兩可/多選）與 `annotated.pdf`（標註辨識結果）。
 - **Launcher**：雙擊啟動器（`start_mac.command` 或 `start_windows.vbs`）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 `http://127.0.0.1:8000`。
 
 網頁介面支援 **English / 繁體中文**，可用頁首的語言切換。
@@ -11,7 +13,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 ## 系統需求
 
 - macOS 13+ 或 Windows 11
-- Python 3.10+（建議 3.10–3.13）
+- Python 3.10+（建議 3.11；支援 3.10–3.13）
 - Windows 安裝 Python 時請勾選「Add python.exe to PATH」（並保留 `py` launcher）
 - 第一次安裝需要網路下載 Python 套件（FastAPI、PyMuPDF、OpenCV、NumPy 等）
 
@@ -23,14 +25,27 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 3. 瀏覽器會自動開啟 `http://127.0.0.1:8000`。用完關閉瀏覽器即可；伺服器會在一段時間無操作後自動結束。
 
 ### Windows 11
-1. 從 python.org 安裝 Python 3.10+（建議 3.10–3.13），並勾選「Add python.exe to PATH」。
+1. 從 python.org 安裝 Python 3.10+（建議 3.11；支援 3.10–3.13），並勾選「Add python.exe to PATH」。
 2. 雙擊 `start_windows.vbs`。
 3. 第一次會安裝依賴套件；之後會重用既有 `.venv`（除非 `requirements.txt` 有變更）。若 Windows Defender 詢問是否允許網路連線，請允許（只會綁定 localhost）。
 
-## 更新（不需要 Git）
+## 使用注意事項
+
+- 進行辨識時，**題數** 與 **每題選項（ABC/ABCD/ABCDE）** 必須與答案卡一致。
+- 想要結果更穩定：建議用較深的筆、掃描 **300dpi**，並避免歪斜/旋轉。
+
+## 輸出檔案
+
+辨識完成後，檔案會寫入 `outputs/<job_id>/`：
+
+- `results.csv`
+- `ambiguity.csv`
+- `annotated.pdf`
+- `input.pdf`（原始上傳檔）
+
+## 更新
 
 - 開啟 `http://127.0.0.1:8000/update`，上傳最新 ZIP（GitHub Releases 或 `main.zip`）。更新後會自動重新啟動。
-- 若你本機有改過專案檔案，更新可能會覆蓋你的修改，建議先備份。
 
 ## Debug Mode（回報問題用）
 
@@ -38,25 +53,3 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 - 開啟 `http://127.0.0.1:8000/debug`，輸入 Job ID（`outputs/` 底下的資料夾名稱）。
 - 下載 `results.csv`、`ambiguity.csv`、`annotated.pdf`（必要時再下載 `input.pdf`），提供給開發者協助排查。
-
-## 專案結構
-
-```
-app/            FastAPI app（路由、模板、靜態檔）
-omr/            產生與辨識流程（ReportLab + OpenCV/PyMuPDF）
-launcher_headless.py 無介面啟動器（不會跳出視窗）
-update_worker.py 更新輔助程式（/update 會用到）
-start_mac.command / start_windows.vbs  OS 啟動器
-```
-
-產生的檔案會寫入 `outputs/`。
-
-## 打包建議（給「非技術使用者」）
-
-如果希望達到「下載後點兩下就能跑」，不需要安裝 Python/Git，可考慮：
-
-- **單一執行檔 `.exe`**：用 PyInstaller 或 Nuitka 打包；更新時直接提供新版 `.exe` 覆蓋即可。
-- **免安裝資料夾（Portable）**：把 Python embeddable + 專案放同一資料夾，用 `.bat` 啟動。
-- **安裝精靈**：用 Inno Setup 或 NSIS 包成安裝程式，並建立桌面捷徑。
-
-所有處理都在本機完成，不會上傳資料到雲端。

@@ -22,7 +22,7 @@ Sub RunAsync(cmd)
     WshShell.Run cmd, 0, False
 End Sub
 
-probe = q & "import sys; raise SystemExit(0)" & q
+probe = q & "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" & q
 
 ' Prefer supported Python versions (3.10+) via the Windows py launcher (pyw) if available.
 If CanRun("pyw -3.10 -c " & probe) Then
@@ -48,4 +48,6 @@ If CanRun("pythonw -c " & probe) Then
     WScript.Quit
 End If
 
-WshShell.Popup "Python not found. Please install Python 3.10+ from python.org.", 0, "Answer Sheet Studio", 48
+WshShell.Popup "Python 3.10+ was not found." & vbCrLf & vbCrLf & "Please install Python 3.11 (recommended) from python.org, then run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 48
+On Error Resume Next
+WshShell.Run "https://www.python.org/downloads/windows/", 1, False

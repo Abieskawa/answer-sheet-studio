@@ -328,7 +328,9 @@ def update_page(request: Request):
 
 
 def _sanitize_token(value: str, fallback: str) -> str:
-    token = "".join(ch if ch.isalnum() else "_" for ch in value).strip("_")
+    token = (value or "").strip().replace("\x00", "")
+    token = re.sub(r"[^A-Za-z0-9-]+", "_", token)
+    token = re.sub(r"_+", "_", token).strip("_.-")
     return token or fallback
 
 
@@ -605,17 +607,20 @@ def download_output(job_id: str, filename: str):
     if not file_path.exists():
         return RedirectResponse(url="/upload", status_code=302)
 
+    job_tag = (str(job_id).split("-", 1)[0] or "")[:8] or "job"
     meta = _read_job_meta(job_dir)
     upload_base = _sanitize_download_component(str(meta.get("upload_base") or ""), "upload")
-    original_filename = _sanitize_download_component(str(meta.get("original_filename") or ""), "upload.pdf")
+    upload_base_ascii = _sanitize_token(upload_base, "upload")
 
     download_name = filename
     if filename == "results.csv":
-        download_name = f"{upload_base}_結果.csv"
+        download_name = f"{upload_base_ascii}_{job_tag}_results.csv"
+    elif filename == "ambiguity.csv":
+        download_name = f"{upload_base_ascii}_{job_tag}_ambiguity.csv"
     elif filename == "annotated.pdf":
-        download_name = f"{upload_base}_標記.pdf"
+        download_name = f"{upload_base_ascii}_{job_tag}_annotated.pdf"
     elif filename == "input.pdf":
-        download_name = original_filename
+        download_name = f"{upload_base_ascii}_{job_tag}_input.pdf"
 
     media = "application/octet-stream"
     if filename.lower().endswith(".pdf"):

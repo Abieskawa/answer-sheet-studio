@@ -44,6 +44,7 @@
               <!-- Local TOC -->
               <div class="local-toc"><ul>
 <li><a class="reference internal" href="#">Answer Sheet Studio</a><ul>
+<li><a class="reference internal" href="#english">English</a><ul>
 <li><a class="reference internal" href="#requirements">Requirements</a></li>
 <li><a class="reference internal" href="#quick-start">Quick Start</a><ul>
 <li><a class="reference internal" href="#macos">macOS</a></li>
@@ -56,6 +57,23 @@
 <li><a class="reference internal" href="#customization">Customization</a></li>
 <li><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
 <li><a class="reference internal" href="#packaging-notes-for-double-click-to-run">Packaging Notes (for double-click to run)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#zh-hant">繁體中文</a><ul>
+<li><a class="reference internal" href="#id3">系統需求</a></li>
+<li><a class="reference internal" href="#id4">快速開始</a><ul>
+<li><a class="reference internal" href="#id5">macOS</a></li>
+<li><a class="reference internal" href="#id6">Windows 11</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#git">更新（不需要 Git）</a></li>
+<li><a class="reference internal" href="#id7">Debug Mode（回報問題用）</a></li>
+<li><a class="reference internal" href="#id8">專案結構</a></li>
+<li><a class="reference internal" href="#id9">自訂</a></li>
+<li><a class="reference internal" href="#id10">排除問題</a></li>
+<li><a class="reference internal" href="#id11">打包建議（給「非技術使用者」）</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -86,7 +104,9 @@
              
   <section id="answer-sheet-studio">
 <h1>Answer Sheet Studio<a class="headerlink" href="#answer-sheet-studio" title="連結到這個標頭"></a></h1>
-<p>English | 繁體中文: <code class="docutils literal notranslate"><span class="pre">README.zh-Hant.md</span></code></p>
+<p><a class="reference internal" href="#english"><span class="std std-ref">English</span></a> | <a class="reference internal" href="#zh-hant"><span class="std std-ref">繁體中文</span></a></p>
+<section id="english">
+<span id="id1"></span><h2>English<a class="headerlink" href="#english" title="連結到這個標頭"></a></h2>
 <p>Answer Sheet Studio lets teachers generate printable answer sheets and run local OMR recognition:</p>
 <ul class="simple">
 <li><p><strong>Download page</strong> – choose title, subject, class, number of questions (up to 100), and choices per question (ABC/ABCD/ABCDE). Generates a single-page PDF template (macOS/Windows compatible).</p></li>
@@ -95,7 +115,7 @@
 <li><p>The web UI supports <strong>English</strong> and <strong>Traditional Chinese</strong>. Use the language tabs in the header.</p></li>
 </ul>
 <section id="requirements">
-<h2>Requirements<a class="headerlink" href="#requirements" title="連結到這個標頭"></a></h2>
+<h3>Requirements<a class="headerlink" href="#requirements" title="連結到這個標頭"></a></h3>
 <ul class="simple">
 <li><p>macOS ≥ 13 or Windows 11</p></li>
 <li><p>Python <strong>3.10+</strong> (3.10–3.13 recommended). If you’re on Python 3.14 and installs fail, use Python 3.10–3.13.</p></li>
@@ -104,9 +124,9 @@
 </ul>
 </section>
 <section id="quick-start">
-<h2>Quick Start<a class="headerlink" href="#quick-start" title="連結到這個標頭"></a></h2>
+<h3>Quick Start<a class="headerlink" href="#quick-start" title="連結到這個標頭"></a></h3>
 <section id="macos">
-<h3>macOS<a class="headerlink" href="#macos" title="連結到這個標頭"></a></h3>
+<h4>macOS<a class="headerlink" href="#macos" title="連結到這個標頭"></a></h4>
 <ol class="arabic simple">
 <li><p>Double-click <code class="docutils literal notranslate"><span class="pre">start_mac.command</span></code> (or run <code class="docutils literal notranslate"><span class="pre">chmod</span> <span class="pre">+x</span> <span class="pre">start_mac.command</span></code> once if prompted).</p></li>
 <li><p>First run creates <code class="docutils literal notranslate"><span class="pre">.venv</span></code> and installs requirements; later runs reuse the existing <code class="docutils literal notranslate"><span class="pre">.venv</span></code> (unless requirements changed).</p></li>
@@ -114,7 +134,7 @@
 </ol>
 </section>
 <section id="windows-11">
-<h3>Windows 11<a class="headerlink" href="#windows-11" title="連結到這個標頭"></a></h3>
+<h4>Windows 11<a class="headerlink" href="#windows-11" title="連結到這個標頭"></a></h4>
 <ol class="arabic simple">
 <li><p>Install Python 3.10+ (3.10–3.13 recommended) from python.org and check “Add python.exe to PATH”.</p></li>
 <li><p>Double-click <code class="docutils literal notranslate"><span class="pre">start_windows.vbs</span></code>.</p></li>
@@ -123,20 +143,20 @@
 </section>
 </section>
 <section id="updating-no-git-required">
-<h2>Updating (No Git Required)<a class="headerlink" href="#updating-no-git-required" title="連結到這個標頭"></a></h2>
+<h3>Updating (No Git Required)<a class="headerlink" href="#updating-no-git-required" title="連結到這個標頭"></a></h3>
 <ul class="simple">
 <li><p>Open <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/update</span></code> and upload the latest ZIP (from GitHub Releases or <code class="docutils literal notranslate"><span class="pre">main.zip</span></code>). The app will restart automatically.</p></li>
 <li><p>If you changed any project files locally, updating may overwrite your changes. Keep backups of customized files.</p></li>
 </ul>
 </section>
 <section id="debug-mode">
-<h2>Debug Mode<a class="headerlink" href="#debug-mode" title="連結到這個標頭"></a></h2>
+<h3>Debug Mode<a class="headerlink" href="#debug-mode" title="連結到這個標頭"></a></h3>
 <ul class="simple">
 <li><p>Open <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/debug</span></code> and enter the Job ID (the folder name under <code class="docutils literal notranslate"><span class="pre">outputs/</span></code>) to download diagnostic files (including <code class="docutils literal notranslate"><span class="pre">ambiguity.csv</span></code>).</p></li>
 </ul>
 </section>
 <section id="repository-layout">
-<h2>Repository Layout<a class="headerlink" href="#repository-layout" title="連結到這個標頭"></a></h2>
+<h3>Repository Layout<a class="headerlink" href="#repository-layout" title="連結到這個標頭"></a></h3>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>app/            FastAPI app (routes, templates, static)
 omr/            Generator + recognition pipeline (ReportLab + OpenCV/PyMuPDF)
 launcher_headless.py Headless launcher (no GUI)
@@ -147,7 +167,7 @@ start_mac.command / start_windows.vbs  OS-specific launchers
 <p>Generated files are written under <code class="docutils literal notranslate"><span class="pre">outputs/</span></code>.</p>
 </section>
 <section id="customization">
-<h2>Customization<a class="headerlink" href="#customization" title="連結到這個標頭"></a></h2>
+<h3>Customization<a class="headerlink" href="#customization" title="連結到這個標頭"></a></h3>
 <ul class="simple">
 <li><p>Modify <code class="docutils literal notranslate"><span class="pre">omr/generator.py</span></code> to adjust layout (title, subject label, footer, coordinates).</p></li>
 <li><p>Update recognition thresholds or geometry in <code class="docutils literal notranslate"><span class="pre">omr/recognizer.py</span></code> / <code class="docutils literal notranslate"><span class="pre">omr/config.py</span></code>.</p></li>
@@ -155,7 +175,7 @@ start_mac.command / start_windows.vbs  OS-specific launchers
 </ul>
 </section>
 <section id="troubleshooting">
-<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="連結到這個標頭"></a></h2>
+<h3>Troubleshooting<a class="headerlink" href="#troubleshooting" title="連結到這個標頭"></a></h3>
 <ul class="simple">
 <li><p><strong>pip install failed</strong> – Check the launcher log; ensure network access and Python 3.10+. If you’re on Python 3.14, try Python 3.10–3.13.</p></li>
 <li><p><strong>Port already in use / permission denied</strong> – The launcher checks port availability. If macOS firewall blocks Python, allow incoming connections in System Settings &gt; Network &gt; Firewall.</p></li>
@@ -163,7 +183,7 @@ start_mac.command / start_windows.vbs  OS-specific launchers
 </ul>
 </section>
 <section id="packaging-notes-for-double-click-to-run">
-<h2>Packaging Notes (for double-click to run)<a class="headerlink" href="#packaging-notes-for-double-click-to-run" title="連結到這個標頭"></a></h2>
+<h3>Packaging Notes (for double-click to run)<a class="headerlink" href="#packaging-notes-for-double-click-to-run" title="連結到這個標頭"></a></h3>
 <p>If you want a distribution that does not require teachers to install Python/Git:</p>
 <ul class="simple">
 <li><p><strong>Single</strong> <code class="docutils literal notranslate"><span class="pre">.exe</span></code> <strong>(recommended UX)</strong>: build with PyInstaller or Nuitka and ship updates by replacing the <code class="docutils literal notranslate"><span class="pre">.exe</span></code>.</p></li>
@@ -171,6 +191,97 @@ start_mac.command / start_windows.vbs  OS-specific launchers
 <li><p><strong>Installer</strong>: wrap the portable build with Inno Setup or NSIS (desktop shortcuts, uninstall, etc.).</p></li>
 </ul>
 <p>All processing stays on-device; no data leaves your computer.</p>
+</section>
+</section>
+<section id="zh-hant">
+<span id="id2"></span><h2>繁體中文<a class="headerlink" href="#zh-hant" title="連結到這個標頭"></a></h2>
+<p>Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進行 OMR 辨識：</p>
+<ul class="simple">
+<li><p><strong>下載答案卡</strong>：輸入標題、科目、班級、題數（最多 100 題）、每題選項（ABC / ABCD / ABCDE），產生單頁 PDF。</p></li>
+<li><p><strong>上傳辨識</strong>：上傳多頁 PDF（每頁一位學生）。會輸出 <code class="docutils literal notranslate"><span class="pre">results.csv</span></code> （題號為列、學生為欄）、<code class="docutils literal notranslate"><span class="pre">ambiguity.csv</span></code> （空白/模稜兩可/多選）、以及 <code class="docutils literal notranslate"><span class="pre">annotated.pdf</span></code> （標註辨識結果）。</p></li>
+<li><p><strong>Launcher</strong>：雙擊啟動器（<code class="docutils literal notranslate"><span class="pre">start_mac.command</span></code> 或 <code class="docutils literal notranslate"><span class="pre">start_windows.vbs</span></code>）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000</span></code>。</p></li>
+<li><p>網頁介面支援 <strong>English / 繁體中文</strong>，可用頁首的語言切換。</p></li>
+</ul>
+<section id="id3">
+<h3>系統需求<a class="headerlink" href="#id3" title="連結到這個標頭"></a></h3>
+<ul class="simple">
+<li><p>macOS 13+ 或 Windows 11</p></li>
+<li><p>Python 3.10+（建議 3.10–3.13）</p></li>
+<li><p>Windows 安裝 Python 時請勾選「Add python.exe to PATH」（並保留 <code class="docutils literal notranslate"><span class="pre">py</span></code> launcher）</p></li>
+<li><p>第一次安裝需要網路下載 Python 套件（FastAPI、PyMuPDF、OpenCV、NumPy 等）</p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>快速開始<a class="headerlink" href="#id4" title="連結到這個標頭"></a></h3>
+<section id="id5">
+<h4>macOS<a class="headerlink" href="#id5" title="連結到這個標頭"></a></h4>
+<ol class="arabic simple">
+<li><p>雙擊 <code class="docutils literal notranslate"><span class="pre">start_mac.command</span></code> （若提示權限，先執行一次 <code class="docutils literal notranslate"><span class="pre">chmod</span> <span class="pre">+x</span> <span class="pre">start_mac.command</span></code>）。</p></li>
+<li><p>第一次會建立 <code class="docutils literal notranslate"><span class="pre">.venv</span></code> 並安裝依賴套件；之後會重用既有 <code class="docutils literal notranslate"><span class="pre">.venv</span></code> （除非 <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> 有變更）。</p></li>
+<li><p>瀏覽器會自動開啟 <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000</span></code>。用完關閉瀏覽器即可；伺服器會在一段時間無操作後自動結束。</p></li>
+</ol>
+</section>
+<section id="id6">
+<h4>Windows 11<a class="headerlink" href="#id6" title="連結到這個標頭"></a></h4>
+<ol class="arabic simple">
+<li><p>從 python.org 安裝 Python 3.10+（建議 3.10–3.13），並勾選「Add python.exe to PATH」。</p></li>
+<li><p>雙擊 <code class="docutils literal notranslate"><span class="pre">start_windows.vbs</span></code>。</p></li>
+<li><p>第一次會安裝依賴套件；之後會重用既有 <code class="docutils literal notranslate"><span class="pre">.venv</span></code> （除非 <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> 有變更）。若 Windows Defender 詢問是否允許網路連線，請允許（只會綁定 localhost）。</p></li>
+</ol>
+</section>
+</section>
+<section id="git">
+<h3>更新（不需要 Git）<a class="headerlink" href="#git" title="連結到這個標頭"></a></h3>
+<ul class="simple">
+<li><p>開啟 <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/update</span></code>，上傳最新 ZIP（GitHub Releases 或 <code class="docutils literal notranslate"><span class="pre">main.zip</span></code>）。更新後會自動重新啟動。</p></li>
+<li><p>若你本機有改過專案檔案，更新可能會覆蓋你的修改，建議先備份。</p></li>
+</ul>
+</section>
+<section id="id7">
+<h3>Debug Mode（回報問題用）<a class="headerlink" href="#id7" title="連結到這個標頭"></a></h3>
+<p>一般使用者不需要使用 Debug Mode。</p>
+<ul class="simple">
+<li><p>開啟 <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/debug</span></code>，輸入 Job ID（<code class="docutils literal notranslate"><span class="pre">outputs/</span></code> 底下的資料夾名稱）。</p></li>
+<li><p>下載 <code class="docutils literal notranslate"><span class="pre">results.csv</span></code>、<code class="docutils literal notranslate"><span class="pre">ambiguity.csv</span></code>、<code class="docutils literal notranslate"><span class="pre">annotated.pdf</span></code> （必要時再下載 <code class="docutils literal notranslate"><span class="pre">input.pdf</span></code>），提供給開發者協助排查。</p></li>
+</ul>
+</section>
+<section id="id8">
+<h3>專案結構<a class="headerlink" href="#id8" title="連結到這個標頭"></a></h3>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>app/            FastAPI app（路由、模板、靜態檔）
+omr/            產生與辨識流程（ReportLab + OpenCV/PyMuPDF）
+launcher_headless.py 無介面啟動器（不會跳出視窗）
+update_worker.py 更新輔助程式（/update 會用到）
+start_mac.command / start_windows.vbs  OS 啟動器
+</pre></div>
+</div>
+<p>產生的檔案會寫入 <code class="docutils literal notranslate"><span class="pre">outputs/</span></code>。</p>
+</section>
+<section id="id9">
+<h3>自訂<a class="headerlink" href="#id9" title="連結到這個標頭"></a></h3>
+<ul class="simple">
+<li><p>修改 <code class="docutils literal notranslate"><span class="pre">omr/generator.py</span></code> 可調整版面（標題/科目/頁尾/座標）。</p></li>
+<li><p>辨識相關的門檻或幾何參數可在 <code class="docutils literal notranslate"><span class="pre">omr/recognizer.py</span></code> / <code class="docutils literal notranslate"><span class="pre">omr/config.py</span></code> 調整。</p></li>
+<li><p>前端模板在 <code class="docutils literal notranslate"><span class="pre">app/templates/</span></code>。</p></li>
+</ul>
+</section>
+<section id="id10">
+<h3>排除問題<a class="headerlink" href="#id10" title="連結到這個標頭"></a></h3>
+<ul class="simple">
+<li><p><strong>pip install failed</strong> – 檢查 launcher log，確認有網路、Python 版本為 3.10+；若你是 Python 3.14，建議改用 3.10–3.13。</p></li>
+<li><p><strong>Port already in use / permission denied</strong> – 啟動器會檢查 port；若 macOS 防火牆阻擋 Python，請到 System Settings &gt; Network &gt; Firewall 放行。</p></li>
+<li><p><strong>Server not opening</strong> – 先看 launcher log 找出錯誤；也可以在 <code class="docutils literal notranslate"><span class="pre">.venv</span></code> 裡直接跑 <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">run_app.py</span></code> 方便除錯。</p></li>
+</ul>
+</section>
+<section id="id11">
+<h3>打包建議（給「非技術使用者」）<a class="headerlink" href="#id11" title="連結到這個標頭"></a></h3>
+<p>如果希望達到「下載後點兩下就能跑」，不需要安裝 Python/Git，可考慮：</p>
+<ul class="simple">
+<li><p><strong>單一執行檔</strong> <code class="docutils literal notranslate"><span class="pre">.exe</span></code>：用 PyInstaller 或 Nuitka 打包；更新時直接提供新版 <code class="docutils literal notranslate"><span class="pre">.exe</span></code> 覆蓋即可。</p></li>
+<li><p><strong>免安裝資料夾（Portable）</strong>：把 Python embeddable + 專案放同一資料夾，用 <code class="docutils literal notranslate"><span class="pre">.bat</span></code> 啟動。</p></li>
+<li><p><strong>安裝精靈</strong>：用 Inno Setup 或 NSIS 包成安裝程式，並建立桌面捷徑。</p></li>
+</ul>
+<p>所有處理都在本機完成，不會上傳資料到雲端。</p>
+</section>
 </section>
 </section>
 

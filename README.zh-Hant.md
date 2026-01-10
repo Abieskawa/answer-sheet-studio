@@ -29,7 +29,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 ## 更新（不需要 Git）
 
-- 執行 `python launcher_gui.py` 可使用（選用的）GUI 更新功能：**Download/Update (GitHub)** / **Apply ZIP Update...**。
+- 開啟 `http://127.0.0.1:8000/update`，上傳最新 ZIP（GitHub Releases 或 `main.zip`）。更新後會自動重新啟動。
 - 若你本機有改過專案檔案，更新可能會覆蓋你的修改，建議先備份。
 
 ## Debug Mode（回報問題用）
@@ -44,7 +44,8 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 ```
 app/            FastAPI app（路由、模板、靜態檔）
 omr/            產生與辨識流程（ReportLab + OpenCV/PyMuPDF）
-launcher_gui.py 跨平台 Tk Launcher
+launcher_headless.py 無介面啟動器（不會跳出視窗）
+update_worker.py 更新輔助程式（/update 會用到）
 start_mac.command / start_windows.vbs  OS 啟動器
 ```
 

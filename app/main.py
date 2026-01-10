@@ -6,7 +6,7 @@ import time
 import threading
 from typing import Optional
 from pathlib import Path
-from fastapi import FastAPI, Request, UploadFile, File, Form
+from fastapi import FastAPI, Request, UploadFile, File, Form, BackgroundTasks
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -36,6 +36,7 @@ I18N = {
         "lang_en": "English",
         "nav_download": "下載答案卡",
         "nav_upload": "上傳處理",
+        "nav_update": "更新",
         "footer_local": "本機運行 / 不上傳到雲端",
         "footer_docs": "說明文件",
         "footer_download": "下載",
@@ -56,6 +57,15 @@ I18N = {
         "upload_label_pdf": "上傳多頁 PDF（每頁一位）",
         "upload_btn_process": "開始辨識",
         "upload_hint_output": "完成後會輸出 results.csv 與 annotated.pdf。",
+        "update_title": "更新",
+        "update_hint": "下載最新 ZIP 後在此上傳套用更新。更新過程會短暫重新啟動。",
+        "update_open_releases": "開啟下載頁（GitHub Releases）",
+        "update_open_zip": "開啟 ZIP 下載（main.zip）",
+        "update_label_zip": "上傳更新 ZIP",
+        "update_btn_apply": "套用更新並重新啟動",
+        "update_started": "已開始更新，請稍候（會短暫重新啟動）。",
+        "update_local_only": "只允許在本機（localhost）進行更新。",
+        "update_invalid_zip": "請上傳有效的 ZIP 檔（.zip）。",
         "result_title": "處理完成",
         "result_file": "檔案：",
         "result_job_id": "Job ID：",
@@ -82,6 +92,7 @@ I18N = {
         "lang_en": "English",
         "nav_download": "Download",
         "nav_upload": "Upload",
+        "nav_update": "Update",
         "footer_local": "Runs locally / no cloud upload",
         "footer_docs": "Docs",
         "footer_download": "Download",
@@ -102,6 +113,15 @@ I18N = {
         "upload_label_pdf": "Upload multi-page PDF (one student per page)",
         "upload_btn_process": "Start Recognition",
         "upload_hint_output": "Outputs results.csv and annotated.pdf.",
+        "update_title": "Update",
+        "update_hint": "Download the latest ZIP and upload it here. The app will restart briefly.",
+        "update_open_releases": "Open download page (GitHub Releases)",
+        "update_open_zip": "Open ZIP download (main.zip)",
+        "update_label_zip": "Upload update ZIP",
+        "update_btn_apply": "Apply update & restart",
+        "update_started": "Update started. Please wait (the app will restart briefly).",
+        "update_local_only": "Updates are allowed only from localhost.",
+        "update_invalid_zip": "Please upload a valid .zip file.",
         "result_title": "Done",
         "result_file": "File:",
         "result_job_id": "Job ID:",
@@ -233,6 +253,21 @@ def template_response(request: Request, name: str, ctx: Optional[dict] = None):
     return resp
 
 
+def _is_local_request(request: Request) -> bool:
+    host = (request.client.host if request.client else "") or ""
+    return host in {"127.0.0.1", "::1"}
+
+
+def _get_bind_host_port() -> tuple[str, int]:
+    host = os.environ.get("ANSWER_SHEET_HOST", os.environ.get("HOST", "127.0.0.1"))
+    port_str = os.environ.get("ANSWER_SHEET_PORT", os.environ.get("PORT", "8000"))
+    try:
+        port = int(port_str)
+    except ValueError:
+        port = 8000
+    return host, port
+
+
 @app.middleware("http")
 async def _activity_middleware(request: Request, call_next):
     _touch_activity()
@@ -260,6 +295,11 @@ def home(request: Request):
 @app.get("/upload", response_class=HTMLResponse)
 def upload_page(request: Request):
     return template_response(request, "upload.html")
+
+
+@app.get("/update", response_class=HTMLResponse)
+def update_page(request: Request):
+    return template_response(request, "update.html")
 
 
 def _sanitize_token(value: str, fallback: str) -> str:
@@ -365,6 +405,54 @@ async def api_process(
     )
 
 
+@app.post("/api/update/apply_zip", response_class=HTMLResponse)
+async def api_update_apply_zip(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    zip_file: UploadFile = File(...),
+):
+    lang = resolve_lang(request)
+    t = I18N.get(lang, I18N[DEFAULT_LANG])
+    if not _is_local_request(request):
+        return template_response(request, "update.html", {"error": t["update_local_only"]})
+
+    filename = (zip_file.filename or "").strip()
+    if not filename.lower().endswith(".zip"):
+        return template_response(request, "update.html", {"error": t["update_invalid_zip"]})
+
+    updates_dir = OUTPUTS_DIR / "_updates"
+    updates_dir.mkdir(parents=True, exist_ok=True)
+    zip_path = updates_dir / f"update_{int(time.time())}.zip"
+    with open(zip_path, "wb") as f:
+        f.write(await zip_file.read())
+
+    host, port = _get_bind_host_port()
+    worker = ROOT_DIR / "update_worker.py"
+    if not worker.exists():
+        return template_response(request, "update.html", {"error": "update_worker.py not found."})
+
+    import subprocess
+    import sys
+
+    kwargs: dict = {"cwd": str(ROOT_DIR)}
+    if os.name == "nt":
+        creationflags = 0
+        creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        creationflags |= getattr(subprocess, "DETACHED_PROCESS", 0)
+        creationflags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        kwargs["creationflags"] = creationflags
+    else:
+        kwargs["start_new_session"] = True
+
+    subprocess.Popen(
+        [sys.executable, str(worker), "--zip", str(zip_path), "--host", host, "--port", str(port)],
+        **kwargs,
+    )
+
+    background_tasks.add_task(_shutdown_server)
+    return template_response(request, "update.html", {"updating": True, "message": t["update_started"]})
+
+
 @app.get("/debug", response_class=HTMLResponse)
 def debug_page(request: Request, job_id: str = ""):
     lang = resolve_lang(request)
@@ -427,12 +515,7 @@ def download_output(job_id: str, filename: str):
 def run():
     import uvicorn
 
-    host = os.environ.get("ANSWER_SHEET_HOST", os.environ.get("HOST", "127.0.0.1"))
-    port_str = os.environ.get("ANSWER_SHEET_PORT", os.environ.get("PORT", "8000"))
-    try:
-        port = int(port_str)
-    except ValueError:
-        port = 8000
+    host, port = _get_bind_host_port()
 
     try:
         config = uvicorn.Config(app, host=host, port=port, reload=False)

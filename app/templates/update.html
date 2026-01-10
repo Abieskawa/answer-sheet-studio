@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ t.update_title }}</h1>
+<p class="hint">{{ t.update_hint }}</p>
+
+<div class="downloads">
+  <a class="download" href="https://github.com/Abieskawa/answer-sheet-studio/releases/latest" target="_blank" rel="noopener noreferrer">{{ t.update_open_releases }}</a>
+  <a class="download" href="https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer">{{ t.update_open_zip }}</a>
+</div>
+
+{% if error %}
+  <p class="hint" style="color:#fca5a5">{{ error }}</p>
+{% endif %}
+{% if message %}
+  <p class="hint">{{ message }}</p>
+{% endif %}
+
+<form class="form" action="/api/update/apply_zip" method="post" enctype="multipart/form-data">
+  <label>{{ t.update_label_zip }}
+    <input type="file" name="zip_file" accept=".zip,application/zip" required />
+  </label>
+  <button type="submit">{{ t.update_btn_apply }}</button>
+</form>
+
+{% if updating %}
+  <script>
+    (() => {
+      const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+      const ping = async () => {
+        await fetch("/api/heartbeat", { method: "POST", cache: "no-store" });
+      };
+      (async () => {
+        let wentDown = false;
+        while (true) {
+          try {
+            await ping();
+            if (wentDown) {
+              window.location.href = "/";
+              return;
+            }
+          } catch (e) {
+            wentDown = true;
+          }
+          await sleep(1500);
+        }
+      })();
+    })();
+  </script>
+{% endif %}
+{% endblock %}
+

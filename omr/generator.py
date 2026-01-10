@@ -283,7 +283,7 @@ def draw_identity(c: canvas.Canvas):
         x = SEAT_X0 + i * SEAT_STEP
         c.drawCentredString(x, SEAT_TOP_Y + 10, str(d))
         c.circle(x, SEAT_TOP_Y, SEAT_RADIUS, stroke=1, fill=0)
-        c.drawCentredString(x, SEAT_BOTTOM_Y + 10, str(d))
+        c.drawCentredString(x, SEAT_BOTTOM_Y + 7, str(d))
         c.circle(x, SEAT_BOTTOM_Y, SEAT_RADIUS, stroke=1, fill=0)
 
     # Divider aligned with box
@@ -298,9 +298,12 @@ def draw_answer_box(c: canvas.Canvas):
 def draw_questions(c: canvas.Canvas, num_questions: int):
     layout = compute_question_layout(num_questions)
 
+    rows = layout["rows_per_col"]
+    used_cols = min(COLS, int(math.ceil(num_questions / rows)))
+
     # Choice headers
     set_font_lat(c, 10, bold=False)
-    for col in range(COLS):
+    for col in range(used_cols):
         xs = layout["bubble_xs"][col]
         for j, ch in enumerate(CHOICES):
             c.drawCentredString(xs[j], layout["header_y"], ch)
@@ -310,7 +313,6 @@ def draw_questions(c: canvas.Canvas, num_questions: int):
     c.setStrokeColor(colors.black)
     set_font_lat(c, 9, bold=False)
 
-    rows = layout["rows_per_col"]
     first_y = layout["first_row_y"]
     step_y = layout["row_step"]
 
@@ -320,7 +322,7 @@ def draw_questions(c: canvas.Canvas, num_questions: int):
     inner_y1 = layout["inner_y1"]
 
     q = 1
-    for col in range(COLS):
+    for col in range(used_cols):
         for r in range(rows):
             if q > num_questions:
                 break

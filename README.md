@@ -30,8 +30,7 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 
 ## Updating (No Git Required)
 
-- Run `python launcher_gui.py` to use the optional GUI updater (**Download/Update (GitHub)** / **Apply ZIP Update...**).
-- If this folder is a git clone and Git is installed, the GUI launcher tries `git pull` first (then falls back to ZIP update if needed).
+- Open `http://127.0.0.1:8000/update` and upload the latest ZIP (from GitHub Releases or `main.zip`). The app will restart automatically.
 - If you changed any project files locally, updating may overwrite your changes. Keep backups of customized files.
 
 ## Debug Mode
@@ -43,7 +42,8 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 ```
 app/            FastAPI app (routes, templates, static)
 omr/            Generator + recognition pipeline (ReportLab + OpenCV/PyMuPDF)
-launcher_gui.py Cross-platform Tk launcher
+launcher_headless.py Headless launcher (no GUI)
+update_worker.py Update helper (used by /update)
 start_mac.command / start_windows.vbs  OS-specific launchers
 ```
 

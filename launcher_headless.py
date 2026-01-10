@@ -17,6 +17,7 @@ try:
 except ValueError:
     APP_PORT = 8000
 APP_URL = f"http://{APP_HOST}:{APP_PORT}"
+OPEN_BROWSER = os.environ.get("ANSWER_SHEET_OPEN_BROWSER", "1").strip().lower() not in {"0", "false", "no"}
 
 REPO_DIR = Path(__file__).resolve().parent
 VENV_DIR = REPO_DIR / ".venv"
@@ -79,6 +80,9 @@ def _venv_python() -> Path:
 def _run_logged(args: list[str]) -> int:
     _log(f"$ {' '.join(args)}")
     with open(LAUNCHER_LOG, "a", encoding="utf-8") as log:
+        kwargs = {}
+        if os.name == "nt":
+            kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         p = subprocess.run(
             args,
             cwd=str(REPO_DIR),
@@ -86,6 +90,7 @@ def _run_logged(args: list[str]) -> int:
             stderr=subprocess.STDOUT,
             text=True,
             errors="replace",
+            **kwargs,
         )
         return int(p.returncode)
 
@@ -123,7 +128,8 @@ def ensure_requirements(py: Path) -> None:
 def start_server(py: Path) -> None:
     if is_port_open(APP_HOST, APP_PORT):
         _log(f"Server already running at {APP_URL}")
-        webbrowser.open(APP_URL)
+        if OPEN_BROWSER:
+            webbrowser.open(APP_URL)
         return
 
     _log("Starting server ...")
@@ -139,6 +145,7 @@ def start_server(py: Path) -> None:
             creationflags = 0
             creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
             creationflags |= getattr(subprocess, "DETACHED_PROCESS", 0)
+            creationflags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
             kwargs["creationflags"] = creationflags
         else:
             kwargs["start_new_session"] = True
@@ -148,7 +155,8 @@ def start_server(py: Path) -> None:
         for _ in range(60):  # ~30 seconds
             if is_port_open(APP_HOST, APP_PORT):
                 _log(f"Server running at {APP_URL}")
-                webbrowser.open(APP_URL)
+                if OPEN_BROWSER:
+                    webbrowser.open(APP_URL)
                 return
             if proc.poll() is not None:
                 raise SystemExit(f"Server exited (code {proc.returncode}). See {SERVER_LOG}")

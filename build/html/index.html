@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Answer-Sheet-Studio documentation &mdash; Answer-Sheet-Studio 0.0 說明文件</title>
+  <title>Answer Sheet Studio &mdash; Answer-Sheet-Studio 0.0 說明文件</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
 
@@ -43,7 +43,21 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <!-- Local TOC -->
               <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">Answer-Sheet-Studio documentation</a></li>
+<li><a class="reference internal" href="#">Answer Sheet Studio</a><ul>
+<li><a class="reference internal" href="#requirements">Requirements</a></li>
+<li><a class="reference internal" href="#quick-start">Quick Start</a><ul>
+<li><a class="reference internal" href="#macos">macOS</a></li>
+<li><a class="reference internal" href="#windows-11">Windows 11</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#updating-no-git-required">Updating (No Git Required)</a></li>
+<li><a class="reference internal" href="#debug-mode">Debug Mode</a></li>
+<li><a class="reference internal" href="#repository-layout">Repository Layout</a></li>
+<li><a class="reference internal" href="#customization">Customization</a></li>
+<li><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+<li><a class="reference internal" href="#packaging-notes-for-double-click-to-run">Packaging Notes (for double-click to run)</a></li>
+</ul>
+</li>
 </ul>
 </div>
         </div>
@@ -60,7 +74,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Answer-Sheet-Studio documentation</li>
+      <li class="breadcrumb-item active">Answer Sheet Studio</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -70,13 +84,94 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="answer-sheet-studio-documentation">
-<h1>Answer-Sheet-Studio documentation<a class="headerlink" href="#answer-sheet-studio-documentation" title="連結到這個標頭"></a></h1>
-<p>Add your content using <code class="docutils literal notranslate"><span class="pre">reStructuredText</span></code> syntax. See the
-<a class="reference external" href="https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html">reStructuredText</a>
-documentation for details.</p>
-<div class="toctree-wrapper compound">
+  <section id="answer-sheet-studio">
+<h1>Answer Sheet Studio<a class="headerlink" href="#answer-sheet-studio" title="連結到這個標頭"></a></h1>
+<p>English | 繁體中文: <code class="docutils literal notranslate"><span class="pre">README.zh-Hant.md</span></code></p>
+<p>Answer Sheet Studio lets teachers generate printable answer sheets and run local OMR recognition:</p>
+<ul class="simple">
+<li><p><strong>Download page</strong> – choose title, subject, class, number of questions (up to 100), and choices per question (ABC/ABCD/ABCDE). Generates a single-page PDF template (macOS/Windows compatible).</p></li>
+<li><p><strong>Upload page</strong> – drop a multi-page PDF scan. Recognition exports <code class="docutils literal notranslate"><span class="pre">results.csv</span></code> (questions as rows, students as columns), <code class="docutils literal notranslate"><span class="pre">ambiguity.csv</span></code> (blank/ambiguous picks), plus <code class="docutils literal notranslate"><span class="pre">annotated.pdf</span></code> that visualizes detections.</p></li>
+<li><p><strong>Launcher</strong> – double-click (<code class="docutils literal notranslate"><span class="pre">start_mac.command</span></code> or <code class="docutils literal notranslate"><span class="pre">start_windows.vbs</span></code>) to create a virtual env, install dependencies, start the local server, and open <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000</span></code>.</p></li>
+<li><p>The web UI supports <strong>English</strong> and <strong>Traditional Chinese</strong>. Use the language tabs in the header.</p></li>
+</ul>
+<section id="requirements">
+<h2>Requirements<a class="headerlink" href="#requirements" title="連結到這個標頭"></a></h2>
+<ul class="simple">
+<li><p>macOS ≥ 13 or Windows 11</p></li>
+<li><p>Python <strong>3.10+</strong> (3.10–3.13 recommended). If you’re on Python 3.14 and installs fail, use Python 3.10–3.13.</p></li>
+<li><p>On Windows, ensure “Add python.exe to PATH” during installation (and keep the <code class="docutils literal notranslate"><span class="pre">py</span></code> launcher enabled if offered).</p></li>
+<li><p>Internet access the first time to download Python packages (FastAPI, PyMuPDF, OpenCV, NumPy, etc.).</p></li>
+</ul>
+</section>
+<section id="quick-start">
+<h2>Quick Start<a class="headerlink" href="#quick-start" title="連結到這個標頭"></a></h2>
+<section id="macos">
+<h3>macOS<a class="headerlink" href="#macos" title="連結到這個標頭"></a></h3>
+<ol class="arabic simple">
+<li><p>Double-click <code class="docutils literal notranslate"><span class="pre">start_mac.command</span></code> (or run <code class="docutils literal notranslate"><span class="pre">chmod</span> <span class="pre">+x</span> <span class="pre">start_mac.command</span></code> once if prompted).</p></li>
+<li><p>First run creates <code class="docutils literal notranslate"><span class="pre">.venv</span></code> and installs requirements; later runs reuse the existing <code class="docutils literal notranslate"><span class="pre">.venv</span></code> (unless requirements changed).</p></li>
+<li><p>Your browser opens <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000</span></code>. Close the browser when you’re done; the server auto-exits after a period of inactivity.</p></li>
+</ol>
+</section>
+<section id="windows-11">
+<h3>Windows 11<a class="headerlink" href="#windows-11" title="連結到這個標頭"></a></h3>
+<ol class="arabic simple">
+<li><p>Install Python 3.10+ (3.10–3.13 recommended) from python.org and check “Add python.exe to PATH”.</p></li>
+<li><p>Double-click <code class="docutils literal notranslate"><span class="pre">start_windows.vbs</span></code>.</p></li>
+<li><p>First run installs requirements; later runs reuse the existing <code class="docutils literal notranslate"><span class="pre">.venv</span></code> (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.</p></li>
+</ol>
+</section>
+</section>
+<section id="updating-no-git-required">
+<h2>Updating (No Git Required)<a class="headerlink" href="#updating-no-git-required" title="連結到這個標頭"></a></h2>
+<ul class="simple">
+<li><p>Open <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/update</span></code> and upload the latest ZIP (from GitHub Releases or <code class="docutils literal notranslate"><span class="pre">main.zip</span></code>). The app will restart automatically.</p></li>
+<li><p>If you changed any project files locally, updating may overwrite your changes. Keep backups of customized files.</p></li>
+</ul>
+</section>
+<section id="debug-mode">
+<h2>Debug Mode<a class="headerlink" href="#debug-mode" title="連結到這個標頭"></a></h2>
+<ul class="simple">
+<li><p>Open <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000/debug</span></code> and enter the Job ID (the folder name under <code class="docutils literal notranslate"><span class="pre">outputs/</span></code>) to download diagnostic files (including <code class="docutils literal notranslate"><span class="pre">ambiguity.csv</span></code>).</p></li>
+</ul>
+</section>
+<section id="repository-layout">
+<h2>Repository Layout<a class="headerlink" href="#repository-layout" title="連結到這個標頭"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>app/            FastAPI app (routes, templates, static)
+omr/            Generator + recognition pipeline (ReportLab + OpenCV/PyMuPDF)
+launcher_headless.py Headless launcher (no GUI)
+update_worker.py Update helper (used by /update)
+start_mac.command / start_windows.vbs  OS-specific launchers
+</pre></div>
 </div>
+<p>Generated files are written under <code class="docutils literal notranslate"><span class="pre">outputs/</span></code>.</p>
+</section>
+<section id="customization">
+<h2>Customization<a class="headerlink" href="#customization" title="連結到這個標頭"></a></h2>
+<ul class="simple">
+<li><p>Modify <code class="docutils literal notranslate"><span class="pre">omr/generator.py</span></code> to adjust layout (title, subject label, footer, coordinates).</p></li>
+<li><p>Update recognition thresholds or geometry in <code class="docutils literal notranslate"><span class="pre">omr/recognizer.py</span></code> / <code class="docutils literal notranslate"><span class="pre">omr/config.py</span></code>.</p></li>
+<li><p>Front-end templates live in <code class="docutils literal notranslate"><span class="pre">app/templates/</span></code>.</p></li>
+</ul>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="連結到這個標頭"></a></h2>
+<ul class="simple">
+<li><p><strong>pip install failed</strong> – Check the launcher log; ensure network access and Python 3.10+. If you’re on Python 3.14, try Python 3.10–3.13.</p></li>
+<li><p><strong>Port already in use / permission denied</strong> – The launcher checks port availability. If macOS firewall blocks Python, allow incoming connections in System Settings &gt; Network &gt; Firewall.</p></li>
+<li><p><strong>Server not opening</strong> – Use the launcher log to identify crashes; you can also run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">run_app.py</span></code> inside <code class="docutils literal notranslate"><span class="pre">.venv</span></code> manually for debugging.</p></li>
+</ul>
+</section>
+<section id="packaging-notes-for-double-click-to-run">
+<h2>Packaging Notes (for double-click to run)<a class="headerlink" href="#packaging-notes-for-double-click-to-run" title="連結到這個標頭"></a></h2>
+<p>If you want a distribution that does not require teachers to install Python/Git:</p>
+<ul class="simple">
+<li><p><strong>Single</strong> <code class="docutils literal notranslate"><span class="pre">.exe</span></code> <strong>(recommended UX)</strong>: build with PyInstaller or Nuitka and ship updates by replacing the <code class="docutils literal notranslate"><span class="pre">.exe</span></code>.</p></li>
+<li><p><strong>Portable folder</strong>: bundle Python embeddable + the repo + a <code class="docutils literal notranslate"><span class="pre">.bat</span></code> launcher (unzip and run).</p></li>
+<li><p><strong>Installer</strong>: wrap the portable build with Inno Setup or NSIS (desktop shortcuts, uninstall, etc.).</p></li>
+</ul>
+<p>All processing stays on-device; no data leaves your computer.</p>
+</section>
 </section>
 
 

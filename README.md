@@ -2,6 +2,7 @@
 
 English | 繁體中文: `README.zh-Hant.md`
 
+Download (ZIP): https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip
 Docs (Read the Docs): https://answer-sheet-studio.readthedocs.io/zh-tw/latest/
 
 Answer Sheet Studio lets teachers generate printable answer sheets and run local OMR recognition (no cloud upload):

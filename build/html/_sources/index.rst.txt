@@ -1,17 +1,17 @@
 Answer Sheet Studio
 ===================
 
-:ref:`English <english>` | :ref:`繁體中文 <zh-hant>`
+`點此下載程式（ZIP） <https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip>`_ | :ref:`English <english>` | :ref:`繁體中文 <zh-hant>`
 
 .. _english:
 
 English
 -------
 
-Answer Sheet Studio lets teachers generate printable answer sheets and run local OMR recognition:
+Answer Sheet Studio lets teachers generate printable answer sheets and run local OMR recognition (no cloud upload):
 
 - **Download page** – choose title, subject, class, number of questions (up to 100), and choices per question (ABC/ABCD/ABCDE). Generates a single-page PDF template (macOS/Windows compatible).
-- **Upload page** – drop a multi-page PDF scan. Recognition exports ``results.csv`` (questions as rows, students as columns), ``ambiguity.csv`` (blank/ambiguous picks), plus ``annotated.pdf`` that visualizes detections.
+- **Upload page** – drop a multi-page PDF scan. Recognition exports ``results.csv`` (questions as rows, students as columns), ``ambiguity.csv`` (blank/ambiguous/multi picks), plus ``annotated.pdf`` that visualizes detections.
 - **Launcher** – double-click (``start_mac.command`` or ``start_windows.vbs``) to create a virtual env, install dependencies, start the local server, and open ``http://127.0.0.1:8000``.
 - The web UI supports **English** and **Traditional Chinese**. Use the language tabs in the header.
 
@@ -36,7 +36,7 @@ macOS
 Windows 11
 ^^^^^^^^^^
 
-#. Install Python 3.10+ (3.10–3.13 recommended) from python.org and check “Add python.exe to PATH”.
+#. Install Python 3.10+ (3.11 recommended; 3.10–3.13 supported) from python.org and check “Add python.exe to PATH”.
 #. Double-click ``start_windows.vbs``.
 #. First run installs requirements; later runs reuse the existing ``.venv`` (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
 
@@ -78,7 +78,7 @@ Troubleshooting
 繁體中文
 --------
 
-Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進行 OMR 辨識：
+Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進行 OMR 辨識（不上傳到雲端）：
 
 - **下載答案卡**：輸入標題、科目、班級、題數（最多 100 題）、每題選項（ABC / ABCD / ABCDE），產生單頁 PDF。
 - **上傳辨識**：上傳多頁 PDF（每頁一位學生）。會輸出 ``results.csv`` （題號為列、學生為欄）、``ambiguity.csv`` （空白/模稜兩可/多選）、以及 ``annotated.pdf`` （標註辨識結果）。
@@ -106,7 +106,7 @@ macOS
 Windows 11
 ^^^^^^^^^^
 
-#. 從 python.org 安裝 Python 3.10+（建議 3.10–3.13），並勾選「Add python.exe to PATH」。
+#. 從 python.org 安裝 Python 3.10+（建議 3.11；支援 3.10–3.13），並勾選「Add python.exe to PATH」。
 #. 雙擊 ``start_windows.vbs``。
 #. 第一次會安裝依賴套件；之後會重用既有 ``.venv`` （除非 ``requirements.txt`` 有變更）。若 Windows Defender 詢問是否允許網路連線，請允許（只會綁定 localhost）。
 

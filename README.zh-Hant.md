@@ -1,5 +1,6 @@
 # Answer Sheet Studio（繁體中文）
 
+點此下載程式（ZIP）：https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip
 線上文件（Read the Docs）：https://answer-sheet-studio.readthedocs.io/zh-tw/latest/
 
 Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進行 OMR 辨識：

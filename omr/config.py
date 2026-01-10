@@ -62,11 +62,16 @@ GAP_AFTER_NUM = 10
 
 
 def compute_answer_layout(num_questions: int) -> Dict:
-    """Mirror omr.generator.compute_question_layout for recognizer."""
+    """
+    Mirror omr.generator.compute_question_layout for recognizer.
+
+    Note: Question *positions* are fixed (based on MAX_QUESTIONS). Different `num_questions`
+    simply read a prefix subset (e.g., Q1–Q10 positions are identical on 10Q vs 20Q sheets).
+    """
     num_questions = max(1, min(MAX_QUESTIONS, int(num_questions)))
     box_w = BOX_X1 - BOX_X0
     col_w = box_w / COL_COUNT
-    rows_per_col = int(math.ceil(num_questions / COL_COUNT))
+    rows_per_col = int(math.ceil(MAX_QUESTIONS / COL_COUNT))
 
     inner_x0 = BOX_X0 + BOX_PAD
     inner_x1 = BOX_X1 - BOX_PAD
@@ -78,9 +83,9 @@ def compute_answer_layout(num_questions: int) -> Dict:
 
     bottom_limit = inner_y0 + BUBBLE_RADIUS
     usable_height = first_row_y - bottom_limit
-    full_rows_per_col = int(math.ceil(MAX_QUESTIONS / COL_COUNT))
+    full_rows_per_col = rows_per_col
     if full_rows_per_col > 1:
-        row_step = usable_height / (full_rows_per_col - 1)
+        row_step = usable_height / (rows_per_col - 1)
     else:
         row_step = 0.0
 

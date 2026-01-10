@@ -19,25 +19,24 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 ### macOS
 1. 雙擊 `start_mac.command`（若提示權限，先執行一次 `chmod +x start_mac.command`）。
-2. 出現 Launcher 視窗後，按 **Install & Run**。第一次會建立 `.venv` 並安裝依賴套件。
-3. 之後用 **Open in Browser** 開啟 `http://127.0.0.1:8000`，用 **Stop Server** 停止服務。
+2. 第一次會建立 `.venv` 並安裝依賴套件；之後會重用既有 `.venv`（除非 `requirements.txt` 有變更）。
+3. 瀏覽器會自動開啟 `http://127.0.0.1:8000`。用完關閉瀏覽器即可；伺服器會在一段時間無操作後自動結束。
 
 ### Windows 11
 1. 從 python.org 安裝 Python 3.10+（建議 3.10–3.13），並勾選「Add python.exe to PATH」。
-2. 雙擊 `start_windows.vbs` 開啟 Launcher（使用 `pythonw`）。
-3. 按 **Install & Run**。若 Windows Defender 詢問是否允許網路連線，請允許（只會綁定 localhost）。
+2. 雙擊 `start_windows.vbs`。
+3. 第一次會安裝依賴套件；之後會重用既有 `.venv`（除非 `requirements.txt` 有變更）。若 Windows Defender 詢問是否允許網路連線，請允許（只會綁定 localhost）。
 
 ## 更新（不需要 Git）
 
-- 在 Launcher 按 **Download/Update (GitHub)**：會從 GitHub 下載最新 ZIP 並覆蓋更新專案檔案。
-- 若學校網路阻擋下載：可用瀏覽器先下載 ZIP，再用 Launcher 的 **Apply ZIP Update...** 套用更新。
+- 執行 `python launcher_gui.py` 可使用（選用的）GUI 更新功能：**Download/Update (GitHub)** / **Apply ZIP Update...**。
 - 若你本機有改過專案檔案，更新可能會覆蓋你的修改，建議先備份。
 
 ## Debug Mode（回報問題用）
 
 一般使用者不需要使用 Debug Mode。
 
-- 開啟 `http://127.0.0.1:8000/debug`，輸入處理完成頁面顯示的 Job ID。
+- 開啟 `http://127.0.0.1:8000/debug`，輸入 Job ID（`outputs/` 底下的資料夾名稱）。
 - 下載 `results.csv`、`ambiguity.csv`、`annotated.pdf`（必要時再下載 `input.pdf`），提供給開發者協助排查。
 
 ## 專案結構

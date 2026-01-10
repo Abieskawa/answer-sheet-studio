@@ -27,7 +27,12 @@
     </main>
 
     <footer class="footer">
-      <div>{{ t.footer_local }}</div>
+      <div>
+        {{ t.footer_local }} ·
+        <a href="https://answer-sheet-studio.readthedocs.io/" target="_blank" rel="noopener noreferrer">{{ t.footer_docs }}</a>
+        ·
+        <a href="https://github.com/Abieskawa/answer-sheet-studio/releases/latest" target="_blank" rel="noopener noreferrer">{{ t.footer_download }}</a>
+      </div>
     </footer>
   </div>
 
@@ -43,6 +48,19 @@
           url.searchParams.delete("lang");
           window.location.href = url.toString();
         });
+      });
+    })();
+
+    (() => {
+      const intervalSec = Number("{{ heartbeat_interval_sec|default(60) }}") || 60;
+      const ping = () => {
+        fetch("/api/heartbeat", { method: "POST", keepalive: true }).catch(() => {});
+      };
+      ping();
+      window.setInterval(ping, Math.max(15, intervalSec) * 1000);
+      window.addEventListener("pagehide", ping, { capture: true });
+      window.addEventListener("visibilitychange", () => {
+        if (!document.hidden) ping();
       });
     })();
   </script>

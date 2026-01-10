@@ -142,14 +142,15 @@ def _assert_inside_box(x: float, y: float, r: float, x0: float, y0: float, x1: f
 
 def compute_question_layout(num_questions: int):
     """
-    Compute positions so that the black rectangle "fits" the answer grid more tightly:
-    - Bubbles spread to near left/right usable edges in each column.
-    - Vertical spacing is fixed (based on MAX_QUESTIONS) so smaller exams look compact.
+    Compute positions so that the black rectangle "fits" the answer grid more tightly.
+
+    Note: Question *positions* are fixed (based on MAX_QUESTIONS). Different `num_questions`
+    simply render a prefix subset (e.g., Q1–Q10 positions are identical on 10Q vs 20Q sheets).
     """
     num_questions = int(max(1, min(MAX_QUESTIONS, num_questions)))
     box_w = BOX_X1 - BOX_X0
     col_w = box_w / COLS
-    rows_per_col = int(math.ceil(num_questions / COLS))
+    rows_per_col = int(math.ceil(MAX_QUESTIONS / COLS))
 
     inner_x0_all = BOX_X0 + BOX_PAD
     inner_x1_all = BOX_X1 - BOX_PAD
@@ -162,11 +163,10 @@ def compute_question_layout(num_questions: int):
 
     bottom_limit = inner_y0_all + BUBBLE_RADIUS
     usable = first_row_y - bottom_limit
-    full_rows_per_col = int(math.ceil(MAX_QUESTIONS / COLS))
-    row_step = 0.0 if full_rows_per_col <= 1 else usable / (full_rows_per_col - 1)
+    row_step = 0.0 if rows_per_col <= 1 else usable / (rows_per_col - 1)
 
     min_step = 2 * BUBBLE_RADIUS + 1.0
-    if full_rows_per_col > 1 and row_step < min_step:
+    if rows_per_col > 1 and row_step < min_step:
         raise ValueError(
             f"Row spacing too small: {row_step:.2f} < {min_step:.2f}. "
             "Increase BOX height, reduce bubble size, or increase columns."

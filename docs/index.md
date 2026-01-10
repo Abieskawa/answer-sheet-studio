@@ -1,0 +1,20 @@
+# Answer Sheet Studio
+
+Answer Sheet Studio helps teachers generate printable answer sheets and run local OMR recognition (no cloud upload).
+
+## Download
+
+- GitHub Releases (recommended): https://github.com/Abieskawa/answer-sheet-studio/releases/latest
+- ZIP (main branch): https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip
+
+## Quick Start
+
+1. Double-click `start_mac.command` (macOS) or `start_windows.vbs` (Windows).
+2. Your browser opens `http://127.0.0.1:8000`.
+3. Close the browser when finished; the server auto-exits after a period of inactivity.
+
+## Docs / README
+
+- English README: https://github.com/Abieskawa/answer-sheet-studio/blob/main/README.md
+- 繁體中文 README: https://github.com/Abieskawa/answer-sheet-studio/blob/main/README.zh-Hant.md
+

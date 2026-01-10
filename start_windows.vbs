@@ -3,7 +3,7 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 repo = fso.GetParentFolderName(WScript.ScriptFullName)
 
 q = Chr(34)
-launcher = repo & "\launcher_gui.py"
+launcher = repo & "\launcher_headless.py"
 
 ' Prefer supported Python versions (3.10+) via the Windows py launcher if available.
 cmd = "cmd /c " & q & "(" & _

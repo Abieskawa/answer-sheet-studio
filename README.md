@@ -6,7 +6,7 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 
 - **Download page** – choose title, subject, class and number of questions (up to 100). Generates a single-page PDF template (macOS/Windows compatible).
 - **Upload page** – drop a multi-page PDF scan. Recognition exports `results.csv` (questions as rows, students as columns), `ambiguity.csv` (blank/ambiguous picks), plus `annotated.pdf` that visualizes detections.
-- **Launcher** – double-click launcher (`start_mac.command` or `start_windows.vbs`) to create a virtual env, install dependencies, start the FastAPI server, and open `http://127.0.0.1:8000`.
+- **Launcher** – double-click (`start_mac.command` or `start_windows.vbs`) to create a virtual env, install dependencies, start the local server, and open `http://127.0.0.1:8000`.
 - The web UI supports **English** and **Traditional Chinese**. Use the language tabs in the header.
 
 ## Requirements
@@ -20,24 +20,23 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 
 ### macOS
 1. Double-click `start_mac.command` (or run `chmod +x start_mac.command` once if prompted).
-2. The Tk launcher appears; click **Install & Run**. First run creates `.venv` and installs requirements; later runs reuse the existing `.venv` and start immediately (unless requirements changed).
-3. Use **Open in Browser** to revisit `http://127.0.0.1:8000`. Use **Stop Server** to terminate.
+2. First run creates `.venv` and installs requirements; later runs reuse the existing `.venv` (unless requirements changed).
+3. Your browser opens `http://127.0.0.1:8000`. Close the browser when you’re done; the server auto-exits after a period of inactivity.
 
 ### Windows 11
 1. Install Python 3.10+ (3.10–3.13 recommended) from python.org and check “Add python.exe to PATH”.
-2. Double-click `start_windows.vbs`. The launcher GUI will open using `pythonw`.
-3. Click **Install & Run**. First run installs requirements; later runs reuse the existing `.venv` (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
+2. Double-click `start_windows.vbs`.
+3. First run installs requirements; later runs reuse the existing `.venv` (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
 
 ## Updating (No Git Required)
 
-- Open the Tk launcher and click **Download/Update (GitHub)**. This downloads the latest ZIP from GitHub and overwrites project files.
-- If download is blocked in your network, download the ZIP in a browser and use **Apply ZIP Update...** in the launcher.
-- If this folder is a git clone and Git is installed, the launcher tries `git pull` first (then falls back to ZIP update if needed).
+- Run `python launcher_gui.py` to use the optional GUI updater (**Download/Update (GitHub)** / **Apply ZIP Update...**).
+- If this folder is a git clone and Git is installed, the GUI launcher tries `git pull` first (then falls back to ZIP update if needed).
 - If you changed any project files locally, updating may overwrite your changes. Keep backups of customized files.
 
 ## Debug Mode
 
-- Open `http://127.0.0.1:8000/debug` and enter the Job ID from the result page to download diagnostic files (including `ambiguity.csv`).
+- Open `http://127.0.0.1:8000/debug` and enter the Job ID (the folder name under `outputs/`) to download diagnostic files (including `ambiguity.csv`).
 
 ## Repository Layout
 

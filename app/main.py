@@ -1,6 +1,9 @@
 import os
 import uuid
 import re
+import json
+import time
+import threading
 from typing import Optional
 from pathlib import Path
 from fastapi import FastAPI, Request, UploadFile, File, Form
@@ -34,6 +37,8 @@ I18N = {
         "nav_download": "下載答案卡",
         "nav_upload": "上傳處理",
         "footer_local": "本機運行 / 不上傳到雲端",
+        "footer_docs": "說明文件",
+        "footer_download": "下載",
         "download_title": "下載答案卡",
         "download_label_title": "標題（預設：定期評量 答案卷）",
         "download_ph_title": "例如：第一次段考",
@@ -52,6 +57,7 @@ I18N = {
         "upload_btn_process": "開始辨識",
         "upload_hint_output": "完成後會輸出 results.csv 與 annotated.pdf。",
         "result_title": "處理完成",
+        "result_file": "檔案：",
         "result_job_id": "Job ID：",
         "result_download_results": "下載 results.csv",
         "result_download_annotated": "下載 annotated.pdf",
@@ -77,6 +83,8 @@ I18N = {
         "nav_download": "Download",
         "nav_upload": "Upload",
         "footer_local": "Runs locally / no cloud upload",
+        "footer_docs": "Docs",
+        "footer_download": "Download",
         "download_title": "Download Answer Sheet",
         "download_label_title": "Title (default: Exam Answer Sheet)",
         "download_ph_title": "e.g., Midterm 1",
@@ -95,6 +103,7 @@ I18N = {
         "upload_btn_process": "Start Recognition",
         "upload_hint_output": "Outputs results.csv and annotated.pdf.",
         "result_title": "Done",
+        "result_file": "File:",
         "result_job_id": "Job ID:",
         "result_download_results": "Download results.csv",
         "result_download_annotated": "Download annotated.pdf",
@@ -116,6 +125,90 @@ I18N = {
     },
 }
 
+_META_FILENAME = "meta.json"
+
+_HEARTBEAT_INTERVAL_SEC = int(os.environ.get("ANSWER_SHEET_HEARTBEAT_SEC", "60"))
+_IDLE_CHECK_INTERVAL_SEC = int(os.environ.get("ANSWER_SHEET_IDLE_CHECK_SEC", "300"))
+_IDLE_TIMEOUT_SEC = int(os.environ.get("ANSWER_SHEET_IDLE_TIMEOUT_SEC", "600"))
+_AUTO_EXIT_ENABLED = os.environ.get("ANSWER_SHEET_AUTO_EXIT", "1").strip().lower() not in {"0", "false", "no"}
+
+
+def _sanitize_download_component(value: str, fallback: str) -> str:
+    name = (value or "").strip().replace("\x00", "")
+    if not name:
+        return fallback
+    name = name.replace("/", "_").replace("\\", "_")
+    for ch in '<>:"|?*':
+        name = name.replace(ch, "_")
+    name = name.strip().strip(".")
+    return name or fallback
+
+
+def _upload_base_name(upload_filename: str) -> str:
+    safe = (upload_filename or "").replace("\\", "/")
+    name = Path(safe).name
+    if not name:
+        return "upload"
+    base = name.rsplit(".", 1)[0] if "." in name else name
+    return _sanitize_download_component(base, "upload")
+
+
+def _read_job_meta(job_dir: Path) -> dict:
+    meta_path = job_dir / _META_FILENAME
+    if not meta_path.exists():
+        return {}
+    try:
+        return json.loads(meta_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _write_job_meta(job_dir: Path, meta: dict) -> None:
+    meta_path = job_dir / _META_FILENAME
+    try:
+        meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _touch_activity() -> None:
+    app.state.last_heartbeat = time.monotonic()
+
+
+def _shutdown_server() -> None:
+    server = getattr(app.state, "uvicorn_server", None)
+    if server is not None:
+        server.should_exit = True
+        return
+    os._exit(0)
+
+
+def _idle_shutdown_watcher() -> None:
+    while True:
+        time.sleep(max(10, int(_IDLE_CHECK_INTERVAL_SEC)))
+        if not _AUTO_EXIT_ENABLED:
+            continue
+        active_jobs = int(getattr(app.state, "active_jobs", 0) or 0)
+        if active_jobs > 0:
+            continue
+        last = float(getattr(app.state, "last_heartbeat", 0.0) or 0.0)
+        now = time.monotonic()
+        if last and (now - last) >= float(_IDLE_TIMEOUT_SEC):
+            _shutdown_server()
+            return
+
+
+@app.on_event("startup")
+def _startup_idle_shutdown():
+    if not hasattr(app.state, "last_heartbeat"):
+        app.state.last_heartbeat = time.monotonic()
+    if not hasattr(app.state, "active_jobs"):
+        app.state.active_jobs = 0
+    if getattr(app.state, "idle_shutdown_started", False):
+        return
+    app.state.idle_shutdown_started = True
+    threading.Thread(target=_idle_shutdown_watcher, daemon=True).start()
+
 
 def resolve_lang(request: Request) -> str:
     q = (request.query_params.get("lang") or "").strip()
@@ -130,7 +223,7 @@ def resolve_lang(request: Request) -> str:
 def template_response(request: Request, name: str, ctx: Optional[dict] = None):
     lang = resolve_lang(request)
     t = I18N.get(lang, I18N[DEFAULT_LANG])
-    merged = {"request": request, "lang": lang, "t": t}
+    merged = {"request": request, "lang": lang, "t": t, "heartbeat_interval_sec": _HEARTBEAT_INTERVAL_SEC}
     if ctx:
         merged.update(ctx)
     resp = templates.TemplateResponse(name, merged)
@@ -138,6 +231,18 @@ def template_response(request: Request, name: str, ctx: Optional[dict] = None):
     if q in SUPPORTED_LANGS:
         resp.set_cookie(LANG_COOKIE_NAME, q, max_age=31536000, samesite="lax")
     return resp
+
+
+@app.middleware("http")
+async def _activity_middleware(request: Request, call_next):
+    _touch_activity()
+    return await call_next(request)
+
+
+@app.post("/api/heartbeat", include_in_schema=False)
+def api_heartbeat():
+    _touch_activity()
+    return Response(status_code=204)
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
@@ -214,28 +319,46 @@ async def api_process(
     job_dir = OUTPUTS_DIR / job_id
     job_dir.mkdir(parents=True, exist_ok=True)
 
+    original_filename = (pdf.filename or "").strip() or "upload.pdf"
+    original_filename = original_filename.replace("\\", "/")
+    original_filename = _sanitize_download_component(Path(original_filename).name, "upload.pdf")
+
     input_pdf = job_dir / "input.pdf"
     with open(input_pdf, "wb") as f:
         f.write(await pdf.read())
+
+    _write_job_meta(
+        job_dir,
+        {
+            "original_filename": original_filename,
+            "upload_base": _upload_base_name(original_filename),
+            "created_at": int(time.time()),
+        },
+    )
 
     csv_path = job_dir / "results.csv"
     ambiguity_csv_path = job_dir / "ambiguity.csv"
     annotated_pdf_path = job_dir / "annotated.pdf"
 
     # Main processing
-    process_pdf_to_csv_and_annotated_pdf(
-        input_pdf_path=str(input_pdf),
-        num_questions=num_questions,
-        out_csv_path=str(csv_path),
-        out_ambiguity_csv_path=str(ambiguity_csv_path),
-        out_annotated_pdf_path=str(annotated_pdf_path),
-    )
+    app.state.active_jobs = int(getattr(app.state, "active_jobs", 0) or 0) + 1
+    try:
+        process_pdf_to_csv_and_annotated_pdf(
+            input_pdf_path=str(input_pdf),
+            num_questions=num_questions,
+            out_csv_path=str(csv_path),
+            out_ambiguity_csv_path=str(ambiguity_csv_path),
+            out_annotated_pdf_path=str(annotated_pdf_path),
+        )
+    finally:
+        app.state.active_jobs = max(0, int(getattr(app.state, "active_jobs", 1) or 1) - 1)
 
     return template_response(
         request,
         "result.html",
         {
             "job_id": job_id,
+            "display_filename": original_filename,
             "csv_url": f"/outputs/{job_id}/results.csv",
             "pdf_url": f"/outputs/{job_id}/annotated.pdf",
         },
@@ -280,12 +403,25 @@ def download_output(job_id: str, filename: str):
     file_path = job_dir / filename
     if not file_path.exists():
         return RedirectResponse(url="/upload", status_code=302)
+
+    meta = _read_job_meta(job_dir)
+    upload_base = _sanitize_download_component(str(meta.get("upload_base") or ""), "upload")
+    original_filename = _sanitize_download_component(str(meta.get("original_filename") or ""), "upload.pdf")
+
+    download_name = filename
+    if filename == "results.csv":
+        download_name = f"{upload_base}_結果.csv"
+    elif filename == "annotated.pdf":
+        download_name = f"{upload_base}_標記.pdf"
+    elif filename == "input.pdf":
+        download_name = original_filename
+
     media = "application/octet-stream"
     if filename.lower().endswith(".pdf"):
         media = "application/pdf"
     if filename.lower().endswith(".csv"):
         media = "text/csv"
-    return FileResponse(path=str(file_path), media_type=media, filename=filename)
+    return FileResponse(path=str(file_path), media_type=media, filename=download_name)
 
 
 def run():
@@ -299,7 +435,10 @@ def run():
         port = 8000
 
     try:
-        uvicorn.run("app.main:app", host=host, port=port, reload=False)
+        config = uvicorn.Config(app, host=host, port=port, reload=False)
+        server = uvicorn.Server(config)
+        app.state.uvicorn_server = server
+        server.run()
     except PermissionError as exc:
         print(
             f"\nERROR: Permission denied while binding to {host}:{port}.\n"

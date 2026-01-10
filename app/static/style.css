@@ -23,6 +23,8 @@ button:hover{background:#263244}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .hint{color:var(--muted);font-size:13px;margin:0}
 .footer{margin-top:14px;color:var(--muted);font-size:12px;text-align:center}
+.footer a{color:var(--muted)}
+.footer a:hover{color:var(--text)}
 .downloads{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
 .download{display:inline-block;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#0f172a}
 .download:hover{background:#111f3a}

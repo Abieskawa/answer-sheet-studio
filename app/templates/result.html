@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>{{ t.result_title }}</h1>
-<p>{{ t.result_job_id }}<code>{{ job_id }}</code></p>
+<p>{{ t.result_file }}<code>{{ display_filename }}</code></p>
 
 <div class="downloads">
   <a class="download" href="{{ csv_url }}">{{ t.result_download_results }}</a>
@@ -9,5 +9,4 @@
 </div>
 
 <p class="hint">{{ t.result_hint_unstable }}</p>
-<p class="hint">{{ t.result_debug_hint }} <a href="/debug?job_id={{ job_id }}">{{ t.result_debug_open }}</a></p>
 {% endblock %}

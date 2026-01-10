@@ -150,6 +150,40 @@ def pick_one(
     return labels[top], "OK", float(best), top, second_label, second_score
 
 
+def pick_choice_multi(
+    scores: List[float],
+    labels: List[str],
+    min_score: float = 0.18,
+    amb_delta: float = 0.03,
+) -> Tuple[str, str, float, int, Optional[str], float, List[int]]:
+    """
+    Like pick_one, but supports multi-select:
+      - If 2+ bubbles >= min_score => status=MULTI and value is concatenated labels (in label order)
+      - Else fall back to pick_one (OK/AMBIGUOUS/BLANK)
+
+    Returns: (value_str, status, best_score, best_idx, second_label, second_score, picked_indices)
+    """
+    picked = [i for i, s in enumerate(scores) if s >= min_score]
+    if len(picked) >= 2:
+        picked_sorted = sorted(int(i) for i in picked)
+        value = "".join(labels[i] for i in picked_sorted)
+        best_idx = int(max(picked_sorted, key=lambda i: scores[i]))
+        best_score = float(scores[best_idx])
+        # second best among picked (for diagnostics)
+        picked_by_score = sorted(picked_sorted, key=lambda i: scores[i], reverse=True)
+        second_idx = int(picked_by_score[1]) if len(picked_by_score) >= 2 else best_idx
+        second_label = labels[second_idx] if len(labels) > second_idx else None
+        second_score = float(scores[second_idx]) if len(scores) > second_idx else 0.0
+        return value, "MULTI", best_score, best_idx, second_label, second_score, picked_sorted
+
+    val, status, best_score, idx, second_label, second_score = pick_one(
+        scores, labels, min_score=min_score, amb_delta=amb_delta
+    )
+    out = val if status == "OK" and val is not None else ""
+    picked_indices = [int(idx)] if out else []
+    return out, status, float(best_score), int(idx), second_label, float(second_score), picked_indices
+
+
 def process_page(
     warped: np.ndarray,
     zoom: float,
@@ -285,19 +319,24 @@ def process_page(
                 bbox = bubble_bbox_px(x_pt, y_pt, BUBBLE_RADIUS, zoom)
                 bboxes.append(bbox)
                 scores.append(score_bubble(gray, bbox))
-            val, status, _, idx, second_label, _ = pick_one(
+            val, status, _, idx, second_label, _, picked_idxs = pick_choice_multi(
                 scores, CHOICES, min_score=0.18, amb_delta=0.03
             )
-            answers.append(val if status == "OK" and val is not None else "")
-            marks.append((bboxes[idx], f"{q}:{val or ''}", status))
+            answers.append(val if status in {"OK", "MULTI"} and val is not None else "")
+            if status == "MULTI":
+                for j in picked_idxs:
+                    text = f"{q}:{val}" if j == idx else ""
+                    marks.append((bboxes[j], text, status))
+            else:
+                marks.append((bboxes[idx], f"{q}:{val or ''}", status))
             if status != "OK":
                 flags.append(
                     {
                         "field": f"Q{q}",
                         "question": q,
                         "status": status,
-                        "best_label": CHOICES[idx],
-                        "second_label": second_label or "",
+                        "best_label": val if status == "MULTI" else CHOICES[idx],
+                        "second_label": "" if status == "MULTI" else (second_label or ""),
                     }
                 )
             q += 1
@@ -315,10 +354,22 @@ def process_page(
             color = (0,255,0)
         elif status == "AMBIGUOUS":
             color = (0,165,255)
+        elif status == "MULTI":
+            color = (255,0,255)
         else:
             color = (0,0,255)
         cv2.rectangle(annotated, (x0,y0), (x1,y1), color, 2)
-        cv2.putText(annotated, text, (x0, max(10,y0-4)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, color, 1, cv2.LINE_AA)
+        if text:
+            cv2.putText(
+                annotated,
+                text,
+                (x0, max(10, y0 - 4)),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.4,
+                color,
+                1,
+                cv2.LINE_AA,
+            )
 
     return results, annotated, flags
 

@@ -3,6 +3,13 @@
 <h1>{{ t.update_title }}</h1>
 <p class="hint">{{ t.update_hint }}</p>
 
+{% if git_supported %}
+  <form class="form" action="/api/update/git_pull" method="post">
+    <button type="submit">{{ t.update_btn_git }}</button>
+    <p class="hint">{{ t.update_git_hint }}</p>
+  </form>
+{% endif %}
+
 <div class="downloads">
   <a class="download" href="https://github.com/Abieskawa/answer-sheet-studio/releases/latest" target="_blank" rel="noopener noreferrer">{{ t.update_open_releases }}</a>
   <a class="download" href="https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip" target="_blank" rel="noopener noreferrer">{{ t.update_open_zip }}</a>
@@ -48,4 +55,3 @@
   </script>
 {% endif %}
 {% endblock %}
-

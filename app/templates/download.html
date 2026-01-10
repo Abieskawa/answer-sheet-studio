@@ -18,6 +18,14 @@
     <input type="number" name="num_questions" min="1" max="100" value="50" />
   </label>
 
+  <label>{{ t.download_label_choices_count }}
+    <select name="choices_count">
+      <option value="3">ABC</option>
+      <option value="4" selected>ABCD</option>
+      <option value="5">ABCDE</option>
+    </select>
+  </label>
+
   <button type="submit">{{ t.download_btn_generate }}</button>
 
   <p class="hint">{{ t.download_hint_location }}</p>
@@ -32,6 +40,15 @@
     const saved = localStorage.getItem(key);
     if (saved && /^[0-9]+$/.test(saved)) input.value = saved;
     input.addEventListener("input", () => localStorage.setItem(key, input.value));
+  })();
+
+  (() => {
+    const key = "answer_sheet_studio_choices_count";
+    const select = document.querySelector('select[name="choices_count"]');
+    if (!select) return;
+    const saved = localStorage.getItem(key);
+    if (saved && /^(3|4|5)$/.test(saved)) select.value = saved;
+    select.addEventListener("change", () => localStorage.setItem(key, select.value));
   })();
 </script>
 {% endblock %}

@@ -18,6 +18,7 @@ h1{margin:0 0 14px 0;font-size:22px}
 .form{display:flex;flex-direction:column;gap:12px}
 label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:14px}
 input[type="text"], input[type="number"], input[type="file"]{padding:10px;border-radius:10px;border:1px solid var(--line);background:#0f172a;color:var(--text)}
+select{padding:10px;border-radius:10px;border:1px solid var(--line);background:#0f172a;color:var(--text)}
 button{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#1f2937;color:var(--text);font-weight:600;cursor:pointer}
 button:hover{background:#263244}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}

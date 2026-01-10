@@ -52,6 +52,9 @@ BOX_Y1 = DIVIDER_Y - 12
 BOX_PAD = 10
 
 CHOICES = ["A", "B", "C", "D"]
+MIN_CHOICES_COUNT = 3
+MAX_CHOICES_COUNT = 5
+DEFAULT_CHOICES_COUNT = 4
 BUBBLE_RADIUS = 6.0
 COL_COUNT = 3
 MAX_QUESTIONS = 100
@@ -61,7 +64,14 @@ Q_NUM_AREA_W = 30
 GAP_AFTER_NUM = 10
 
 
-def compute_answer_layout(num_questions: int) -> Dict:
+def make_choices(choices_count: int) -> List[str]:
+    choices_count = int(choices_count)
+    if not (MIN_CHOICES_COUNT <= choices_count <= MAX_CHOICES_COUNT):
+        raise ValueError(f"choices_count must be {MIN_CHOICES_COUNT}–{MAX_CHOICES_COUNT}")
+    return [chr(ord("A") + i) for i in range(choices_count)]
+
+
+def compute_answer_layout(num_questions: int, choices_count: int = DEFAULT_CHOICES_COUNT) -> Dict:
     """
     Mirror omr.generator.compute_question_layout for recognizer.
 
@@ -69,6 +79,7 @@ def compute_answer_layout(num_questions: int) -> Dict:
     simply read a prefix subset (e.g., Q1–Q10 positions are identical on 10Q vs 20Q sheets).
     """
     num_questions = max(1, min(MAX_QUESTIONS, int(num_questions)))
+    choices = make_choices(choices_count)
     box_w = BOX_X1 - BOX_X0
     col_w = box_w / COL_COUNT
     rows_per_col = int(math.ceil(MAX_QUESTIONS / COL_COUNT))
@@ -106,9 +117,9 @@ def compute_answer_layout(num_questions: int) -> Dict:
 
         q_right = inner_left + Q_NUM_AREA_W
         xA = q_right + GAP_AFTER_NUM + BUBBLE_RADIUS
-        xD = inner_right - BUBBLE_RADIUS
-        step = (xD - xA) / (len(CHOICES) - 1)
-        xs = [xA + i * step for i in range(len(CHOICES))]
+        x_last = inner_right - BUBBLE_RADIUS
+        step = (x_last - xA) / float(len(choices) - 1)
+        xs = [xA + i * step for i in range(len(choices))]
 
         bubble_xs.append(xs)
         q_num_right_x.append(q_right)

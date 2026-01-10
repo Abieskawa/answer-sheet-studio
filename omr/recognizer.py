@@ -14,7 +14,7 @@ from .config import (
     GRADE_VALUES, GRADE_CIRCLE_XS, GRADE_CIRCLE_Y, GRADE_CIRCLE_RADIUS,
     CLASS_VALUES, CLASS_CIRCLE_XS, CLASS_CIRCLE_Y, CLASS_CIRCLE_RADIUS,
     SEAT_START_X, SEAT_STEP_X, SEAT_TOP_ROW_Y, SEAT_BOTTOM_ROW_Y, SEAT_CIRCLE_RADIUS,
-    MAX_QUESTIONS, CHOICES,
+    MAX_QUESTIONS, DEFAULT_CHOICES_COUNT, make_choices,
     BUBBLE_RADIUS, COL_COUNT,
     compute_answer_layout,
 )
@@ -111,20 +111,66 @@ def bubble_bbox_px(x_pt: float, y_pt: float, r_pt: float, zoom: float) -> Tuple[
 
 
 def score_bubble(gray: np.ndarray, bbox: Tuple[int,int,int,int]) -> float:
-    x0,y0,x1,y1 = bbox
-    x0 = max(0, x0); y0 = max(0, y0)
-    x1 = min(gray.shape[1]-1, x1); y1 = min(gray.shape[0]-1, y1)
-    roi = gray[y0:y1, x0:x1]
+    """
+    Return a fill score in [0, 1], robust to dark/gray scans.
+
+    We measure how much darker the *inner* region of the bubble is compared to the local
+    background *outside* the bubble (annulus). This avoids treating the printed circle border
+    (or uniformly dark scans) as "filled".
+    """
+    x0, y0, x1, y1 = bbox
+    cx = (x0 + x1) / 2.0
+    cy = (y0 + y1) / 2.0
+    r = (min(x1 - x0, y1 - y0) / 2.0) - 2.0
+    if r <= 1.0:
+        return 0.0
+
+    bg_r1 = r * 1.05
+    bg_r2 = r * 1.45
+    x0e = int(cx - bg_r2)
+    y0e = int(cy - bg_r2)
+    x1e = int(cx + bg_r2)
+    y1e = int(cy + bg_r2)
+
+    x0e = max(0, x0e)
+    y0e = max(0, y0e)
+    x1e = min(gray.shape[1], x1e)
+    y1e = min(gray.shape[0], y1e)
+    if x1e <= x0e or y1e <= y0e:
+        return 0.0
+
+    roi = gray[y0e:y1e, x0e:x1e]
     if roi.size == 0:
         return 0.0
-    # invert: darker -> higher score
-    return float(1.0 - (roi.mean() / 255.0))
+
+    ccx = cx - x0e
+    ccy = cy - y0e
+    yy, xx = np.ogrid[: roi.shape[0], : roi.shape[1]]
+    dx = xx - ccx
+    dy = yy - ccy
+    dist2 = dx * dx + dy * dy
+
+    inner_r = max(1.0, r * 0.55)
+    inner_mask = dist2 <= (inner_r * inner_r)
+    bg_mask = (dist2 >= (bg_r1 * bg_r1)) & (dist2 <= (bg_r2 * bg_r2))
+
+    if int(inner_mask.sum()) < 16 or int(bg_mask.sum()) < 16:
+        return 0.0
+
+    inner_mean = float(roi[inner_mask].mean())
+    bg_mean = float(roi[bg_mask].mean())
+    score = (bg_mean - inner_mean) / 255.0
+    if score < 0.0:
+        score = 0.0
+    if score > 1.0:
+        score = 1.0
+    return float(score)
 
 
 def pick_one(
     scores: List[float],
     labels: List[str],
-    min_score: float = 0.18,
+    min_score: float = 0.08,
     amb_delta: float = 0.03,
 ) -> Tuple[Optional[str], str, float, int, Optional[str], float]:
     """Pick one label based on scores.
@@ -153,8 +199,9 @@ def pick_one(
 def pick_choice_multi(
     scores: List[float],
     labels: List[str],
-    min_score: float = 0.18,
+    min_score: float = 0.08,
     amb_delta: float = 0.03,
+    multi_ratio: float = 0.65,
 ) -> Tuple[str, str, float, int, Optional[str], float, List[int]]:
     """
     Like pick_one, but supports multi-select:
@@ -163,7 +210,9 @@ def pick_choice_multi(
 
     Returns: (value_str, status, best_score, best_idx, second_label, second_score, picked_indices)
     """
-    picked = [i for i, s in enumerate(scores) if s >= min_score]
+    best = float(max(scores) if scores else 0.0)
+    multi_cut = max(float(min_score), best * float(multi_ratio))
+    picked = [i for i, s in enumerate(scores) if float(s) >= multi_cut]
     if len(picked) >= 2:
         picked_sorted = sorted(int(i) for i in picked)
         value = "".join(labels[i] for i in picked_sorted)
@@ -188,6 +237,7 @@ def process_page(
     warped: np.ndarray,
     zoom: float,
     num_questions: int,
+    choices_count: int,
 ) -> Tuple[Dict[str, Any], np.ndarray, List[Dict[str, Any]]]:
     can = warped.copy()
     gray = cv2.cvtColor(can, cv2.COLOR_BGR2GRAY)
@@ -205,7 +255,7 @@ def process_page(
         grade_scores.append(score_bubble(gray, bbox))
     g_label = [str(v) for v in GRADE_VALUES]
     g_val, g_status, _, g_idx, g_second_label, _ = pick_one(
-        grade_scores, g_label, min_score=0.12, amb_delta=0.02
+        grade_scores, g_label, min_score=0.05, amb_delta=0.02
     )
     results["grade"] = g_val if g_status == "OK" else None
     results["grade_status"] = g_status
@@ -230,7 +280,7 @@ def process_page(
         class_scores.append(score_bubble(gray, bbox))
     c_label = [str(v) for v in CLASS_VALUES]
     c_val, c_status, _, c_idx, c_second_label, _ = pick_one(
-        class_scores, c_label, min_score=0.12, amb_delta=0.02
+        class_scores, c_label, min_score=0.05, amb_delta=0.02
     )
     results["class_no"] = c_val if c_status == "OK" else None
     results["class_status"] = c_status
@@ -259,7 +309,7 @@ def process_page(
             bboxes.append(bbox)
             scores.append(score_bubble(gray, bbox))
         val, status, best, idx, second_label, second_score = pick_one(
-            scores, digit_labels, min_score=0.14, amb_delta=0.02
+            scores, digit_labels, min_score=0.06, amb_delta=0.02
         )
         return val, status, best, idx, second_label, second_score, bboxes
 
@@ -299,7 +349,8 @@ def process_page(
 
     # Questions
     answers = []
-    layout = compute_answer_layout(num_questions)
+    choices = make_choices(choices_count)
+    layout = compute_answer_layout(num_questions, choices_count=choices_count)
     rows = layout["rows_per_col"]
     first_y = layout["first_row_y"]
     row_step = layout["row_step"]
@@ -314,13 +365,13 @@ def process_page(
             bboxes = []
             scores = []
             xs = bubble_xs[col]
-            for j, ch in enumerate(CHOICES):
+            for j, ch in enumerate(choices):
                 x_pt = xs[j]
                 bbox = bubble_bbox_px(x_pt, y_pt, BUBBLE_RADIUS, zoom)
                 bboxes.append(bbox)
                 scores.append(score_bubble(gray, bbox))
             val, status, _, idx, second_label, _, picked_idxs = pick_choice_multi(
-                scores, CHOICES, min_score=0.18, amb_delta=0.03
+                scores, choices, min_score=0.08, amb_delta=0.03
             )
             answers.append(val if status in {"OK", "MULTI"} and val is not None else "")
             if status == "MULTI":
@@ -335,7 +386,7 @@ def process_page(
                         "field": f"Q{q}",
                         "question": q,
                         "status": status,
-                        "best_label": val if status == "MULTI" else CHOICES[idx],
+                        "best_label": val if status == "MULTI" else choices[idx],
                         "second_label": "" if status == "MULTI" else (second_label or ""),
                     }
                 )
@@ -397,10 +448,12 @@ def process_pdf_to_csv_and_annotated_pdf(
     num_questions: int,
     out_csv_path: str,
     out_annotated_pdf_path: str,
+    choices_count: int = DEFAULT_CHOICES_COUNT,
     dpi: int = 200,
     out_ambiguity_csv_path: Optional[str] = None,
 ):
     num_questions = max(1, min(MAX_QUESTIONS, int(num_questions)))
+    choices_count = max(3, min(5, int(choices_count)))
     out_ambiguity_csv_path = out_ambiguity_csv_path or str(Path(out_csv_path).with_name("ambiguity.csv"))
 
     doc = fitz.open(input_pdf_path)
@@ -412,7 +465,7 @@ def process_pdf_to_csv_and_annotated_pdf(
         page = doc.load_page(idx)
         img, zoom = render_page(page, dpi=dpi)
         warped, _ = warp_to_canonical(img, zoom)
-        result, annotated, page_flags = process_page(warped, zoom, num_questions=num_questions)
+        result, annotated, page_flags = process_page(warped, zoom, num_questions=num_questions, choices_count=choices_count)
         result["page"] = idx + 1
         people.append(result)
         for flag in page_flags:

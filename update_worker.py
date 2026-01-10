@@ -36,6 +36,29 @@ def _log(line: str) -> None:
         pass
 
 
+def _subprocess_kwargs() -> dict:
+    if os.name == "nt":
+        return {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
+    return {}
+
+
+def _run_capture(args: list[str]) -> tuple[int, str]:
+    _log(f"$ {' '.join(args)}")
+    p = subprocess.run(
+        args,
+        cwd=str(REPO_DIR),
+        capture_output=True,
+        text=True,
+        errors="replace",
+        **_subprocess_kwargs(),
+    )
+    out = (p.stdout or "") + (p.stderr or "")
+    if out.strip():
+        for line in out.rstrip("\n").splitlines():
+            _log(line)
+    return int(p.returncode), (p.stdout or "")
+
+
 def is_port_open(host: str, port: int, timeout: float = 0.25) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout):
@@ -99,15 +122,13 @@ def _spawn_launcher_headless() -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--zip", required=True, help="Path to the update ZIP file")
+    mode = ap.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--zip", help="Path to the update ZIP file")
+    mode.add_argument("--git", action="store_true", help="Run git pull in the current repo")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--wait-seconds", type=int, default=120)
     args = ap.parse_args()
-
-    zip_path = Path(args.zip)
-    if not zip_path.exists():
-        raise SystemExit(f"ZIP not found: {zip_path}")
 
     _log("Update worker started.")
     _log(f"Waiting for server to stop at {args.host}:{args.port} ...")
@@ -122,8 +143,34 @@ def main() -> None:
     else:
         _log("Server stopped. Applying update.")
 
-    merge_zip_into_repo(REPO_DIR, zip_path)
-    _log("Update applied. Starting launcher_headless.py ...")
+    try:
+        if args.git:
+            git = shutil.which("git")
+            if not git:
+                _log("ERROR: git not found.")
+            elif not (REPO_DIR / ".git").exists():
+                _log("ERROR: .git not found. This is not a git repository.")
+            else:
+                rc, out = _run_capture([git, "status", "--porcelain"])
+                if rc != 0:
+                    _log("ERROR: git status failed.")
+                elif out.strip():
+                    _log("ERROR: Working tree not clean; aborting git update.")
+                else:
+                    rc, _ = _run_capture([git, "pull", "--ff-only"])
+                    if rc != 0:
+                        _log("ERROR: git pull failed.")
+                    else:
+                        _log("Git update complete.")
+        else:
+            zip_path = Path(args.zip or "")
+            if not zip_path.exists():
+                _log(f"ERROR: ZIP not found: {zip_path}")
+            else:
+                merge_zip_into_repo(REPO_DIR, zip_path)
+                _log("ZIP update complete.")
+    finally:
+        _log("Starting launcher_headless.py ...")
     _spawn_launcher_headless()
     _log("Done.")
 

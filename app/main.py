@@ -4,6 +4,7 @@ import re
 import json
 import time
 import threading
+import shutil
 from typing import Optional
 from pathlib import Path
 from fastapi import FastAPI, Request, UploadFile, File, Form, BackgroundTasks
@@ -48,12 +49,14 @@ I18N = {
         "download_label_class": "班級（可留空）",
         "download_ph_class": "例如：701",
         "download_label_num_questions": "題數（1–100；上傳辨識時也要填一樣）",
+        "download_label_choices_count": "每題選項（ABC/ABCD/ABCDE）",
         "download_btn_generate": "產生並下載 PDF",
         "download_hint_location": "下載後由瀏覽器決定儲存位置（會跳出「儲存」視窗或下載到預設資料夾）。",
-        "download_hint_support": "年級欄位支援 7–12（含 10/11/12），座號支援 00–99，選擇題 A–D，最多 100 題。",
+        "download_hint_support": "年級欄位支援 7–12（含 10/11/12），座號支援 00–99，選擇題支援 ABC / ABCD / ABCDE，最多 100 題。",
         "upload_title": "上傳處理",
         "upload_label_num_questions": "題數（1–100；請依每份掃描檔案輸入，需與答案卡一致）",
         "upload_ph_num_questions": "例如：50",
+        "upload_label_choices_count": "每題選項（ABC/ABCD/ABCDE；需與答案卡一致）",
         "upload_label_pdf": "上傳多頁 PDF（每頁一位）",
         "upload_btn_process": "開始辨識",
         "upload_hint_output": "完成後會輸出 results.csv 與 annotated.pdf。",
@@ -61,6 +64,11 @@ I18N = {
         "update_hint": "下載最新 ZIP 後在此上傳套用更新。更新過程會短暫重新啟動。",
         "update_open_releases": "開啟下載頁（GitHub Releases）",
         "update_open_zip": "開啟 ZIP 下載（main.zip）",
+        "update_btn_git": "用 Git 更新（git pull）",
+        "update_git_hint": "（需要 Git，且此資料夾是 git clone）",
+        "update_git_no_repo": "這個資料夾不是 git repository（沒有 .git），請改用 ZIP 更新。",
+        "update_git_no_git": "找不到 Git，請先安裝 Git 或改用 ZIP 更新。",
+        "update_git_dirty": "偵測到本機有未提交的修改，為避免衝突已停止 Git 更新；請先備份/提交/還原後再試。",
         "update_label_zip": "上傳更新 ZIP",
         "update_btn_apply": "套用更新並重新啟動",
         "update_started": "已開始更新，請稍候（會短暫重新啟動）。",
@@ -104,12 +112,14 @@ I18N = {
         "download_label_class": "Class (optional)",
         "download_ph_class": "e.g., 701",
         "download_label_num_questions": "Number of questions (1–100; must match upload)",
+        "download_label_choices_count": "Choices per question (ABC/ABCD/ABCDE)",
         "download_btn_generate": "Generate & Download PDF",
         "download_hint_location": "Your browser decides where the file is saved (Save dialog or default Downloads folder).",
-        "download_hint_support": "Grade supports 7–12 (including 10/11/12). Seat No supports 00–99. Choices A–D. Up to 100 questions.",
+        "download_hint_support": "Grade supports 7–12 (including 10/11/12). Seat No supports 00–99. Choices support ABC / ABCD / ABCDE. Up to 100 questions.",
         "upload_title": "Upload for Recognition",
         "upload_label_num_questions": "Number of questions (1–100; enter per PDF and must match the sheet)",
         "upload_ph_num_questions": "e.g., 50",
+        "upload_label_choices_count": "Choices per question (ABC/ABCD/ABCDE; must match the sheet)",
         "upload_label_pdf": "Upload multi-page PDF (one student per page)",
         "upload_btn_process": "Start Recognition",
         "upload_hint_output": "Outputs results.csv and annotated.pdf.",
@@ -117,6 +127,11 @@ I18N = {
         "update_hint": "Download the latest ZIP and upload it here. The app will restart briefly.",
         "update_open_releases": "Open download page (GitHub Releases)",
         "update_open_zip": "Open ZIP download (main.zip)",
+        "update_btn_git": "Update via Git (git pull)",
+        "update_git_hint": "(Requires Git and a git clone)",
+        "update_git_no_repo": "This folder is not a git repository (missing .git). Please use ZIP update instead.",
+        "update_git_no_git": "Git not found. Please install Git or use ZIP update instead.",
+        "update_git_dirty": "Uncommitted local changes detected. Git update is disabled to avoid conflicts; please commit/stash/revert and retry.",
         "update_label_zip": "Upload update ZIP",
         "update_btn_apply": "Apply update & restart",
         "update_started": "Update started. Please wait (the app will restart briefly).",
@@ -257,6 +272,16 @@ def _is_local_request(request: Request) -> bool:
     host = (request.client.host if request.client else "") or ""
     return host in {"127.0.0.1", "::1"}
 
+def _update_git_supported() -> bool:
+    return (ROOT_DIR / ".git").exists() and (shutil.which("git") is not None)
+
+
+def _update_page_ctx(extra: Optional[dict] = None) -> dict:
+    ctx = {"git_supported": _update_git_supported()}
+    if extra:
+        ctx.update(extra)
+    return ctx
+
 
 def _get_bind_host_port() -> tuple[str, int]:
     host = os.environ.get("ANSWER_SHEET_HOST", os.environ.get("HOST", "127.0.0.1"))
@@ -299,7 +324,7 @@ def upload_page(request: Request):
 
 @app.get("/update", response_class=HTMLResponse)
 def update_page(request: Request):
-    return template_response(request, "update.html")
+    return template_response(request, "update.html", _update_page_ctx())
 
 
 def _sanitize_token(value: str, fallback: str) -> str:
@@ -313,8 +338,10 @@ def api_generate(
     subject: str = Form(""),
     class_name: str = Form(""),
     num_questions: int = Form(50),
+    choices_count: int = Form(4),
 ):
     num_questions = max(1, min(100, int(num_questions)))
+    choices_count = max(3, min(5, int(choices_count)))
 
     out_id = str(uuid.uuid4())[:8]
     out_path = OUTPUTS_DIR / f"answer_sheets_{out_id}.pdf"
@@ -326,6 +353,7 @@ def api_generate(
     generate_answer_sheet_pdf(
         subject=subject,
         num_questions=num_questions,
+        choices_count=choices_count,
         out_pdf_path=str(out_path),
         title_text=title_text,
     )
@@ -333,10 +361,12 @@ def api_generate(
     subject_token = _sanitize_token(subject, "subject") if subject else "subject"
     class_token = _sanitize_token(class_name, "class") if class_name else None
     title_token = _sanitize_token(title_text, "exam")
+    choices_token = "".join(chr(ord("A") + i) for i in range(choices_count))
     filename_bits = ["answer_sheets", subject_token]
     if class_token:
         filename_bits.append(class_token)
     filename_bits.append(title_token)
+    filename_bits.append(choices_token)
     filename_bits.append(f"{num_questions}q")
     filename = "_".join(filename_bits) + ".pdf"
 
@@ -352,8 +382,10 @@ async def api_process(
     request: Request,
     pdf: UploadFile = File(...),
     num_questions: int = Form(50),
+    choices_count: int = Form(4),
 ):
     num_questions = max(1, min(100, int(num_questions)))
+    choices_count = max(3, min(5, int(choices_count)))
 
     job_id = str(uuid.uuid4())
     job_dir = OUTPUTS_DIR / job_id
@@ -373,6 +405,8 @@ async def api_process(
             "original_filename": original_filename,
             "upload_base": _upload_base_name(original_filename),
             "created_at": int(time.time()),
+            "num_questions": num_questions,
+            "choices_count": choices_count,
         },
     )
 
@@ -386,6 +420,7 @@ async def api_process(
         process_pdf_to_csv_and_annotated_pdf(
             input_pdf_path=str(input_pdf),
             num_questions=num_questions,
+            choices_count=choices_count,
             out_csv_path=str(csv_path),
             out_ambiguity_csv_path=str(ambiguity_csv_path),
             out_annotated_pdf_path=str(annotated_pdf_path),
@@ -414,11 +449,11 @@ async def api_update_apply_zip(
     lang = resolve_lang(request)
     t = I18N.get(lang, I18N[DEFAULT_LANG])
     if not _is_local_request(request):
-        return template_response(request, "update.html", {"error": t["update_local_only"]})
+        return template_response(request, "update.html", _update_page_ctx({"error": t["update_local_only"]}))
 
     filename = (zip_file.filename or "").strip()
     if not filename.lower().endswith(".zip"):
-        return template_response(request, "update.html", {"error": t["update_invalid_zip"]})
+        return template_response(request, "update.html", _update_page_ctx({"error": t["update_invalid_zip"]}))
 
     updates_dir = OUTPUTS_DIR / "_updates"
     updates_dir.mkdir(parents=True, exist_ok=True)
@@ -429,10 +464,16 @@ async def api_update_apply_zip(
     host, port = _get_bind_host_port()
     worker = ROOT_DIR / "update_worker.py"
     if not worker.exists():
-        return template_response(request, "update.html", {"error": "update_worker.py not found."})
+        return template_response(request, "update.html", _update_page_ctx({"error": "update_worker.py not found."}))
 
     import subprocess
     import sys
+
+    exe = sys.executable
+    if os.name == "nt":
+        pyw = Path(sys.executable).with_name("pythonw.exe")
+        if pyw.exists():
+            exe = str(pyw)
 
     kwargs: dict = {"cwd": str(ROOT_DIR)}
     if os.name == "nt":
@@ -445,12 +486,84 @@ async def api_update_apply_zip(
         kwargs["start_new_session"] = True
 
     subprocess.Popen(
-        [sys.executable, str(worker), "--zip", str(zip_path), "--host", host, "--port", str(port)],
+        [exe, str(worker), "--zip", str(zip_path), "--host", host, "--port", str(port)],
         **kwargs,
     )
 
     background_tasks.add_task(_shutdown_server)
-    return template_response(request, "update.html", {"updating": True, "message": t["update_started"]})
+    return template_response(
+        request,
+        "update.html",
+        _update_page_ctx({"updating": True, "message": t["update_started"]}),
+    )
+
+
+@app.post("/api/update/git_pull", response_class=HTMLResponse)
+async def api_update_git_pull(
+    request: Request,
+    background_tasks: BackgroundTasks,
+):
+    lang = resolve_lang(request)
+    t = I18N.get(lang, I18N[DEFAULT_LANG])
+    if not _is_local_request(request):
+        return template_response(request, "update.html", _update_page_ctx({"error": t["update_local_only"]}))
+
+    if not (ROOT_DIR / ".git").exists():
+        return template_response(request, "update.html", _update_page_ctx({"error": t["update_git_no_repo"]}))
+    if shutil.which("git") is None:
+        return template_response(request, "update.html", _update_page_ctx({"error": t["update_git_no_git"]}))
+
+    import subprocess
+
+    if os.name == "nt":
+        status_kwargs = {"creationflags": getattr(subprocess, "CREATE_NO_WINDOW", 0)}
+    else:
+        status_kwargs = {}
+    status = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=str(ROOT_DIR),
+        capture_output=True,
+        text=True,
+        errors="replace",
+        **status_kwargs,
+    )
+    if status.returncode == 0 and (status.stdout or "").strip():
+        return template_response(request, "update.html", _update_page_ctx({"error": t["update_git_dirty"]}))
+
+    host, port = _get_bind_host_port()
+    worker = ROOT_DIR / "update_worker.py"
+    if not worker.exists():
+        return template_response(request, "update.html", _update_page_ctx({"error": "update_worker.py not found."}))
+
+    import sys
+
+    exe = sys.executable
+    if os.name == "nt":
+        pyw = Path(sys.executable).with_name("pythonw.exe")
+        if pyw.exists():
+            exe = str(pyw)
+
+    kwargs: dict = {"cwd": str(ROOT_DIR)}
+    if os.name == "nt":
+        creationflags = 0
+        creationflags |= getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        creationflags |= getattr(subprocess, "DETACHED_PROCESS", 0)
+        creationflags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        kwargs["creationflags"] = creationflags
+    else:
+        kwargs["start_new_session"] = True
+
+    subprocess.Popen(
+        [exe, str(worker), "--git", "--host", host, "--port", str(port)],
+        **kwargs,
+    )
+
+    background_tasks.add_task(_shutdown_server)
+    return template_response(
+        request,
+        "update.html",
+        _update_page_ctx({"updating": True, "message": t["update_started"]}),
+    )
 
 
 @app.get("/debug", response_class=HTMLResponse)

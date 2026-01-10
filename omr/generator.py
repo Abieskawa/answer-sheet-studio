@@ -124,9 +124,18 @@ BOX_Y0 = 55
 BOX_PAD = 10
 
 BUBBLE_RADIUS = 6.0
-CHOICES = ["A", "B", "C", "D"]
+MIN_CHOICES_COUNT = 3
+MAX_CHOICES_COUNT = 5
+DEFAULT_CHOICES_COUNT = 4
 COLS = 3
 MAX_QUESTIONS = 100
+
+
+def make_choices(choices_count: int):
+    choices_count = int(choices_count)
+    if not (MIN_CHOICES_COUNT <= choices_count <= MAX_CHOICES_COUNT):
+        raise ValueError(f"choices_count must be {MIN_CHOICES_COUNT}–{MAX_CHOICES_COUNT}")
+    return [chr(ord("A") + i) for i in range(choices_count)]
 
 
 # -----------------------------
@@ -140,7 +149,7 @@ def _assert_inside_box(x: float, y: float, r: float, x0: float, y0: float, x1: f
         )
 
 
-def compute_question_layout(num_questions: int):
+def compute_question_layout(num_questions: int, choices_count: int = DEFAULT_CHOICES_COUNT):
     """
     Compute positions so that the black rectangle "fits" the answer grid more tightly.
 
@@ -148,6 +157,7 @@ def compute_question_layout(num_questions: int):
     simply render a prefix subset (e.g., Q1–Q10 positions are identical on 10Q vs 20Q sheets).
     """
     num_questions = int(max(1, min(MAX_QUESTIONS, num_questions)))
+    choices = make_choices(choices_count)
     box_w = BOX_X1 - BOX_X0
     col_w = box_w / COLS
     rows_per_col = int(math.ceil(MAX_QUESTIONS / COLS))
@@ -187,16 +197,16 @@ def compute_question_layout(num_questions: int):
         q_right = inner_left + q_num_area_w
 
         xA = q_right + gap_after_num + BUBBLE_RADIUS
-        xD = inner_right - BUBBLE_RADIUS
-        step = (xD - xA) / 3.0
-        xs = [xA + i * step for i in range(4)]
+        x_last = inner_right - BUBBLE_RADIUS
+        step = (x_last - xA) / float(len(choices) - 1)
+        xs = [xA + i * step for i in range(len(choices))]
 
         # Validate X positions with first_row_y
         for j, x in enumerate(xs):
             _assert_inside_box(
                 x, first_row_y, BUBBLE_RADIUS,
                 inner_left, inner_y0_all, inner_right, inner_y1_all,
-                label=f"col{ci} {CHOICES[j]} (x-check)"
+                label=f"col{ci} {choices[j]} (x-check)"
             )
 
         bubble_xs.append(xs)
@@ -295,8 +305,9 @@ def draw_answer_box(c: canvas.Canvas):
     c.setLineWidth(2.0)
     c.rect(BOX_X0, BOX_Y0, BOX_X1 - BOX_X0, BOX_Y1 - BOX_Y0, stroke=1, fill=0)
 
-def draw_questions(c: canvas.Canvas, num_questions: int):
-    layout = compute_question_layout(num_questions)
+def draw_questions(c: canvas.Canvas, num_questions: int, choices_count: int = DEFAULT_CHOICES_COUNT):
+    layout = compute_question_layout(num_questions, choices_count=choices_count)
+    choices = make_choices(choices_count)
 
     rows = layout["rows_per_col"]
     used_cols = min(COLS, int(math.ceil(num_questions / rows)))
@@ -305,7 +316,7 @@ def draw_questions(c: canvas.Canvas, num_questions: int):
     set_font_lat(c, 10, bold=False)
     for col in range(used_cols):
         xs = layout["bubble_xs"][col]
-        for j, ch in enumerate(CHOICES):
+        for j, ch in enumerate(choices):
             c.drawCentredString(xs[j], layout["header_y"], ch)
 
     # Bubbles + numbers
@@ -338,7 +349,16 @@ def draw_questions(c: canvas.Canvas, num_questions: int):
             # bubbles
             xs = layout["bubble_xs"][col]
             for j, x in enumerate(xs):
-                _assert_inside_box(x, y, BUBBLE_RADIUS, inner_x0, inner_y0, inner_x1, inner_y1, f"bubble q{q} {CHOICES[j]}")
+                _assert_inside_box(
+                    x,
+                    y,
+                    BUBBLE_RADIUS,
+                    inner_x0,
+                    inner_y0,
+                    inner_x1,
+                    inner_y1,
+                    f"bubble q{q} {choices[j]}",
+                )
                 c.circle(x, y, BUBBLE_RADIUS, stroke=1, fill=0)
 
             q += 1
@@ -356,11 +376,13 @@ def generate_answer_sheet_pdf(
     subject: str,
     num_questions: int,
     out_pdf_path: Union[str, Path],
+    choices_count: int = DEFAULT_CHOICES_COUNT,
     title_text: str = DEFAULT_TITLE,
     subject_label: str = "科目：",
     footer_text: str = "請使用 2B 鉛筆或深色原子筆將圓圈塗滿",
 ) -> Path:
     num_questions = int(max(1, min(MAX_QUESTIONS, num_questions)))
+    choices_count = int(max(MIN_CHOICES_COUNT, min(MAX_CHOICES_COUNT, choices_count)))
     out_pdf_path = Path(out_pdf_path)
 
     c = canvas.Canvas(str(out_pdf_path), pagesize=A4)
@@ -368,7 +390,7 @@ def generate_answer_sheet_pdf(
     draw_header(c, title_text=title_text, subject=subject, subject_label=subject_label)
     draw_identity(c)
     draw_answer_box(c)
-    draw_questions(c, num_questions=num_questions)
+    draw_questions(c, num_questions=num_questions, choices_count=choices_count)
     draw_footer(c, footer_text=footer_text)
     c.showPage()
     c.save()
@@ -380,6 +402,7 @@ def main():
     ap.add_argument("--subject_label", default="科目：")
     ap.add_argument("--subject", default="國文")
     ap.add_argument("--questions", type=int, default=100)
+    ap.add_argument("--choices", type=int, default=DEFAULT_CHOICES_COUNT, help="Choices per question (3–5)")
     ap.add_argument("--out", default="answer_sheet.pdf")
     ap.add_argument("--footer", default="請使用 2B 鉛筆或深色原子筆將圓圈塗滿")
     args = ap.parse_args()
@@ -387,6 +410,7 @@ def main():
     generate_answer_sheet_pdf(
         subject=args.subject,
         num_questions=args.questions,
+        choices_count=args.choices,
         out_pdf_path=args.out,
         title_text=args.title,
         subject_label=args.subject_label,

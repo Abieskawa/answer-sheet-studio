@@ -3,11 +3,11 @@
 點此下載程式（ZIP）：https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip
 線上文件（Read the Docs）：https://answer-sheet-studio.readthedocs.io/zh-tw/latest/
 
-Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進行 OMR 辨識：
+Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進行影像辨識（不會上傳到雲端）：
 
 - **下載答案卡**：輸入標題、科目、班級、題數（最多 100 題）、每題選項（`ABC` / `ABCD` / `ABCDE`），產生單頁 PDF。
-- **上傳辨識**：上傳多頁 PDF（每頁一位學生）。會輸出 `results.csv`（題號為列、學生為欄）、`ambiguity.csv`（空白/模稜兩可/多選）與 `annotated.pdf`（標註辨識結果）。
-- **Launcher**：雙擊啟動器（`start_mac.command` 或 `start_windows.vbs`）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 `http://127.0.0.1:8000`。
+- **上傳影像辨識**：上傳多頁 PDF（每頁一位學生）。會輸出 `results.csv`（題號為列、學生為欄）、`ambiguity.csv`（空白/模稜兩可/多選）與 `annotated.pdf`（標註辨識結果）。
+- **啟動器**：雙擊啟動器（`start_mac.command` 或 `start_windows.vbs`）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 `http://127.0.0.1:8000`。
 
 網頁介面支援 **English / 繁體中文**，可用頁首的語言切換。
 

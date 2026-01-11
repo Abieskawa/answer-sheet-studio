@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022) (preloaded format=xelatex 2022.10.10)  11 JAN 2026 09:35
+This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022) (preloaded format=xelatex 2022.10.10)  11 JAN 2026 12:24
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1149,15 +1149,15 @@ Chapter 2.
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
 Package rerunfilecheck Info: File `answer-sheet-studio.out' has not changed.
-(rerunfilecheck)             Checksum: C6693BE8E67AA599894B067419F7638F;2048.
+(rerunfilecheck)             Checksum: 07C2CDE80787ACA0DDEFEC7B1F65BAD7;2100.
  ) 
 Here is how much of TeX's memory you used:
- 21257 strings out of 476179
- 435251 string characters out of 5809543
- 792693 words of memory out of 5000000
- 41586 multiletter control sequences out of 15000+600000
+ 21248 strings out of 476179
+ 434671 string characters out of 5809543
+ 793738 words of memory out of 5000000
+ 41577 multiletter control sequences out of 15000+600000
  475399 words of font info for 105 fonts, out of 8000000 for 9000
  1349 hyphenation exceptions out of 8191
- 70i,11n,85p,420b,480s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 70i,11n,85p,321b,405s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
 Output written on answer-sheet-studio.pdf (13 pages).

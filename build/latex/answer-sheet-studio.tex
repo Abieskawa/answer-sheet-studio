@@ -77,21 +77,25 @@
 \usepackage{fontspec}
 \usepackage{xeCJK}
 
+\newcommand{\sphinxsetcjkfonts}[1]{
+  \setCJKmainfont{#1}
+  \setCJKsansfont{#1}
+  \setCJKmonofont{#1}
+}
+
 % Prefer Noto CJK on Read the Docs; fall back to common macOS fonts.
 \IfFontExistsTF{Noto Sans CJK TC}{
-  \setCJKmainfont{Noto Sans CJK TC}
-  \setCJKsansfont{Noto Sans CJK TC}
+  \sphinxsetcjkfonts{Noto Sans CJK TC}
 }{
   \IfFontExistsTF{PingFang TC}{
-    \setCJKmainfont{PingFang TC}
-    \setCJKsansfont{PingFang TC}
+    \sphinxsetcjkfonts{PingFang TC}
   }{
     \IfFontExistsTF{Noto Sans CJK SC}{
-      \setCJKmainfont{Noto Sans CJK SC}
-      \setCJKsansfont{Noto Sans CJK SC}
+      \sphinxsetcjkfonts{Noto Sans CJK SC}
     }{
       \setCJKmainfont{FandolSong-Regular}
       \setCJKsansfont{FandolHei-Regular}
+      \setCJKmonofont{FandolFang-Regular}
     }
   }
 }

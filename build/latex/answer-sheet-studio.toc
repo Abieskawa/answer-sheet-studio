@@ -1,0 +1,21 @@
+\babel@toc {english}{}\relax 
+\contentsline {chapter}{\numberline {1}English}{3}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Requirements}{3}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Quick Start}{4}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}macOS}{4}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}Windows 11}{4}{subsection.1.2.2}%
+\contentsline {section}{\numberline {1.3}Important Notes}{4}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Output Files}{4}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Updating}{4}{section.1.5}%
+\contentsline {section}{\numberline {1.6}Debug Mode}{5}{section.1.6}%
+\contentsline {section}{\numberline {1.7}Troubleshooting}{5}{section.1.7}%
+\contentsline {chapter}{\numberline {2}繁體中文}{7}{chapter.2}%
+\contentsline {section}{\numberline {2.1}系統需求}{7}{section.2.1}%
+\contentsline {section}{\numberline {2.2}快速開始}{7}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}macOS}{7}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Windows 11}{8}{subsection.2.2.2}%
+\contentsline {section}{\numberline {2.3}使用注意事項}{8}{section.2.3}%
+\contentsline {section}{\numberline {2.4}輸出檔案}{8}{section.2.4}%
+\contentsline {section}{\numberline {2.5}更新}{8}{section.2.5}%
+\contentsline {section}{\numberline {2.6}Debug Mode（回報問題用）}{8}{section.2.6}%
+\contentsline {section}{\numberline {2.7}排除問題}{9}{section.2.7}%

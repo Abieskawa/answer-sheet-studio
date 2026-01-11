@@ -1,0 +1,21 @@
+%
+% sphinxmessages.sty
+%
+% message resources for Sphinx
+%
+\ProvidesPackage{sphinxmessages}[2019/01/04 v2.0 Localized LaTeX macros (Sphinx team)]
+
+\renewcommand{\literalblockcontinuedname}{繼續上一頁}
+\renewcommand{\literalblockcontinuesname}{繼續下一頁}
+\renewcommand{\sphinxnonalphabeticalgroupname}{非依字母順序}
+\renewcommand{\sphinxsymbolsname}{符號}
+\renewcommand{\sphinxnumbersname}{數字}
+\def\pageautorefname{頁}
+
+\addto\captionsenglish{\renewcommand{\figurename}{圖 }}
+\def\fnum@figure{\figurename\thefigure{}}
+
+\addto\captionsenglish{\renewcommand{\tablename}{表格 }}
+\def\fnum@table{\tablename\thetable{}}
+
+\addto\captionsenglish{\renewcommand{\literalblockname}{列表}}

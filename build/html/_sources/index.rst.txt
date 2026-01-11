@@ -1,7 +1,7 @@
 Answer Sheet Studio
 ===================
 
-`點此下載程式（ZIP） <https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip>`_ | :ref:`English <english>` | :ref:`繁體中文 <zh-hant>`
+`Download (ZIP) / 點此下載程式（ZIP） <https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip>`_ | :ref:`English <english>` | :ref:`繁體中文 <zh-hant>`
 
 .. _english:
 

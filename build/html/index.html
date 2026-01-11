@@ -116,7 +116,7 @@
 <h3>Requirements<a class="headerlink" href="#requirements" title="連結到這個標頭"></a></h3>
 <ul class="simple">
 <li><p>macOS ≥ 13 or Windows 11</p></li>
-<li><p>Python <strong>3.10+</strong> (3.11 recommended; 3.10–3.13 supported). If you’re on Python 3.14 and installs fail, use Python 3.10–3.13.</p></li>
+<li><p>Python <strong>3.10+</strong> (3.11 recommended; 3.10–3.13 supported). If you’re on Python 3.14 and installs fail, use Python 3.10–3.13. If Python isn’t installed yet, the launcher can help download the official installer.</p></li>
 <li><p>On Windows, ensure “Add python.exe to PATH” during installation (and keep the <code class="docutils literal notranslate"><span class="pre">py</span></code> launcher enabled if offered).</p></li>
 <li><p>Internet access the first time to download Python packages (FastAPI, PyMuPDF, OpenCV, NumPy, etc.).</p></li>
 </ul>
@@ -127,6 +127,7 @@
 <h4>macOS<a class="headerlink" href="#macos" title="連結到這個標頭"></a></h4>
 <ol class="arabic simple">
 <li><p>Double-click <code class="docutils literal notranslate"><span class="pre">start_mac.command</span></code> (or run <code class="docutils literal notranslate"><span class="pre">chmod</span> <span class="pre">+x</span> <span class="pre">start_mac.command</span></code> once if prompted).</p></li>
+<li><p>If Python isn’t installed, the launcher offers to download and open the installer (from python.org). After installation finishes, run <code class="docutils literal notranslate"><span class="pre">start_mac.command</span></code> again.</p></li>
 <li><p>First run creates <code class="docutils literal notranslate"><span class="pre">.venv</span></code> and installs requirements; later runs reuse the existing <code class="docutils literal notranslate"><span class="pre">.venv</span></code> (unless requirements changed).</p></li>
 <li><p>Your browser opens <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000</span></code>. Close the browser when you’re done; the server auto-exits after a period of inactivity.</p></li>
 </ol>
@@ -134,8 +135,8 @@
 <section id="windows-11">
 <h4>Windows 11<a class="headerlink" href="#windows-11" title="連結到這個標頭"></a></h4>
 <ol class="arabic simple">
-<li><p>Install Python 3.10+ (3.11 recommended; 3.10–3.13 supported) from python.org and check “Add python.exe to PATH”.</p></li>
-<li><p>Double-click <code class="docutils literal notranslate"><span class="pre">start_windows.vbs</span></code>.</p></li>
+<li><p>Double-click <code class="docutils literal notranslate"><span class="pre">start_windows.vbs</span></code>. If Python isn’t installed, it will offer to download/install Python 3.11 automatically (recommended).</p></li>
+<li><p>If you install Python manually, check “Add python.exe to PATH” during installation (and keep the <code class="docutils literal notranslate"><span class="pre">py</span></code> launcher enabled if offered).</p></li>
 <li><p>First run installs requirements; later runs reuse the existing <code class="docutils literal notranslate"><span class="pre">.venv</span></code> (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.</p></li>
 </ol>
 </section>
@@ -191,7 +192,7 @@
 <h3>系統需求<a class="headerlink" href="#id3" title="連結到這個標頭"></a></h3>
 <ul class="simple">
 <li><p>macOS 13+ 或 Windows 11</p></li>
-<li><p>Python 3.10+（建議 3.11；支援 3.10–3.13）</p></li>
+<li><p>Python 3.10+（建議 3.11；支援 3.10–3.13）。若尚未安裝 Python，啟動器可協助下載官方安裝程式。</p></li>
 <li><p>Windows 安裝 Python 時請勾選「Add python.exe to PATH」（並保留 <code class="docutils literal notranslate"><span class="pre">py</span></code> launcher）</p></li>
 <li><p>第一次安裝需要網路下載 Python 套件（FastAPI、PyMuPDF、OpenCV、NumPy 等）</p></li>
 </ul>
@@ -202,6 +203,7 @@
 <h4>macOS<a class="headerlink" href="#id5" title="連結到這個標頭"></a></h4>
 <ol class="arabic simple">
 <li><p>雙擊 <code class="docutils literal notranslate"><span class="pre">start_mac.command</span></code> （若提示權限，先執行一次 <code class="docutils literal notranslate"><span class="pre">chmod</span> <span class="pre">+x</span> <span class="pre">start_mac.command</span></code>）。</p></li>
+<li><p>若尚未安裝 Python，啟動器會提示下載並開啟安裝程式（python.org）。安裝完成後請再執行一次 <code class="docutils literal notranslate"><span class="pre">start_mac.command</span></code>。</p></li>
 <li><p>第一次會建立 <code class="docutils literal notranslate"><span class="pre">.venv</span></code> 並安裝依賴套件；之後會重用既有 <code class="docutils literal notranslate"><span class="pre">.venv</span></code> （除非 <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> 有變更）。</p></li>
 <li><p>瀏覽器會自動開啟 <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:8000</span></code>。用完關閉瀏覽器即可；伺服器會在一段時間無操作後自動結束。</p></li>
 </ol>
@@ -209,8 +211,8 @@
 <section id="id6">
 <h4>Windows 11<a class="headerlink" href="#id6" title="連結到這個標頭"></a></h4>
 <ol class="arabic simple">
-<li><p>從 python.org 安裝 Python 3.10+（建議 3.11；支援 3.10–3.13），並勾選「Add python.exe to PATH」。</p></li>
-<li><p>雙擊 <code class="docutils literal notranslate"><span class="pre">start_windows.vbs</span></code>。</p></li>
+<li><p>雙擊 <code class="docutils literal notranslate"><span class="pre">start_windows.vbs</span></code>。若尚未安裝 Python，會提示自動下載/安裝 Python 3.11（建議）。</p></li>
+<li><p>若你選擇手動安裝 Python，請勾選「Add python.exe to PATH」（並保留 <code class="docutils literal notranslate"><span class="pre">py</span></code> launcher）。</p></li>
 <li><p>第一次會安裝依賴套件；之後會重用既有 <code class="docutils literal notranslate"><span class="pre">.venv</span></code> （除非 <code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code> 有變更）。若 Windows Defender 詢問是否允許網路連線，請允許（只會綁定 localhost）。</p></li>
 </ol>
 </section>

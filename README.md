@@ -15,20 +15,20 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 ## Requirements
 
 - macOS ≥ 13 or Windows 11
-- Python **3.10+** (3.11 recommended; 3.10–3.13 supported).
+- Python **3.10+** (3.11 recommended; 3.10–3.13 supported). If Python isn’t installed yet, the launcher can help download the official installer.
 - On Windows, ensure “Add python.exe to PATH” during installation (and keep the `py` launcher enabled if offered).
 - Internet access the first time to download Python packages (FastAPI, PyMuPDF, OpenCV, NumPy, etc.).
 
 ## Quick Start
 
 ### macOS
-1. Double-click `start_mac.command` (or run `chmod +x start_mac.command` once if prompted).
+1. Double-click `start_mac.command` (or run `chmod +x start_mac.command` once if prompted). If Python isn’t installed, it will offer to download and open the installer.
 2. First run creates `.venv` and installs requirements; later runs reuse the existing `.venv` (unless requirements changed).
 3. Your browser opens `http://127.0.0.1:8000`. Close the browser when you’re done; the server auto-exits after a period of inactivity.
 
 ### Windows 11
-1. Install Python 3.10+ (3.11 recommended; 3.10–3.13 supported) from python.org and check “Add python.exe to PATH”.
-2. Double-click `start_windows.vbs`.
+1. Double-click `start_windows.vbs`. If Python isn’t installed, it will offer to download/install Python 3.11 automatically (recommended).
+2. If you install Python manually, ensure “Add python.exe to PATH” during installation (and keep the `py` launcher enabled if offered).
 3. First run installs requirements; later runs reuse the existing `.venv` (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
 
 ## Important Notes

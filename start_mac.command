@@ -16,8 +16,27 @@ pick_python() {
 
 PYTHON_BIN="$(pick_python || true)"
 if [ -z "$PYTHON_BIN" ]; then
-  osascript -e 'display dialog "Python 3.10+ was not found.\n\nPlease install Python 3.11 (recommended) from python.org, then run Answer Sheet Studio again." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
-  open "https://www.python.org/downloads/" >/dev/null 2>&1 || true
+  RECOMMENDED_PYTHON_VERSION="${ANSWER_SHEET_PYTHON_VERSION:-3.11.8}"
+  CHOICE="$(osascript -e 'button returned of (display dialog "Python 3.10+ was not found.\n\nDownload and open the Python installer now? (Recommended: Python 3.11)\n\nSource: python.org" buttons {"Cancel","Download"} default button "Download" with icon caution)' 2>/dev/null || true)"
+
+  if [ "$CHOICE" = "Download" ]; then
+    PKG_URL="https://www.python.org/ftp/python/${RECOMMENDED_PYTHON_VERSION}/python-${RECOMMENDED_PYTHON_VERSION}-macos11.pkg"
+    PKG_PATH="${HOME}/Downloads/answer_sheet_studio_python_${RECOMMENDED_PYTHON_VERSION}.pkg"
+    if curl -L --fail --output "$PKG_PATH" "$PKG_URL" >/dev/null 2>&1; then
+      if pkgutil --check-signature "$PKG_PATH" 2>/dev/null | grep -q "Python Software Foundation"; then
+        open "$PKG_PATH" >/dev/null 2>&1 || open "$PKG_URL" >/dev/null 2>&1 || true
+        osascript -e 'display dialog "Python installer opened.\n\nAfter installation finishes, run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
+      else
+        osascript -e 'display dialog "Downloaded installer signature could not be verified.\n\nWe will open python.org instead." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
+        open "https://www.python.org/downloads/" >/dev/null 2>&1 || true
+      fi
+    else
+      osascript -e 'display dialog "Failed to download the Python installer.\n\nWe will open python.org instead." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
+      open "https://www.python.org/downloads/" >/dev/null 2>&1 || true
+    fi
+  else
+    open "https://www.python.org/downloads/" >/dev/null 2>&1 || true
+  fi
   exit 1
 fi
 

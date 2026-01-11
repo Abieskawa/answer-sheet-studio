@@ -19,7 +19,7 @@ Requirements
 ~~~~~~~~~~~~
 
 - macOS ≥ 13 or Windows 11
-- Python **3.10+** (3.11 recommended; 3.10–3.13 supported). If you’re on Python 3.14 and installs fail, use Python 3.10–3.13.
+- Python **3.10+** (3.11 recommended; 3.10–3.13 supported). If you’re on Python 3.14 and installs fail, use Python 3.10–3.13. If Python isn’t installed yet, the launcher can help download the official installer.
 - On Windows, ensure “Add python.exe to PATH” during installation (and keep the ``py`` launcher enabled if offered).
 - Internet access the first time to download Python packages (FastAPI, PyMuPDF, OpenCV, NumPy, etc.).
 
@@ -30,14 +30,15 @@ macOS
 ^^^^^
 
 #. Double-click ``start_mac.command`` (or run ``chmod +x start_mac.command`` once if prompted).
+#. If Python isn’t installed, the launcher offers to download and open the installer (from python.org). After installation finishes, run ``start_mac.command`` again.
 #. First run creates ``.venv`` and installs requirements; later runs reuse the existing ``.venv`` (unless requirements changed).
 #. Your browser opens ``http://127.0.0.1:8000``. Close the browser when you’re done; the server auto-exits after a period of inactivity.
 
 Windows 11
 ^^^^^^^^^^
 
-#. Install Python 3.10+ (3.11 recommended; 3.10–3.13 supported) from python.org and check “Add python.exe to PATH”.
-#. Double-click ``start_windows.vbs``.
+#. Double-click ``start_windows.vbs``. If Python isn’t installed, it will offer to download/install Python 3.11 automatically (recommended).
+#. If you install Python manually, check “Add python.exe to PATH” during installation (and keep the ``py`` launcher enabled if offered).
 #. First run installs requirements; later runs reuse the existing ``.venv`` (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
 
 Important Notes
@@ -89,7 +90,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 ~~~~~~~~
 
 - macOS 13+ 或 Windows 11
-- Python 3.10+（建議 3.11；支援 3.10–3.13）
+- Python 3.10+（建議 3.11；支援 3.10–3.13）。若尚未安裝 Python，啟動器可協助下載官方安裝程式。
 - Windows 安裝 Python 時請勾選「Add python.exe to PATH」（並保留 ``py`` launcher）
 - 第一次安裝需要網路下載 Python 套件（FastAPI、PyMuPDF、OpenCV、NumPy 等）
 
@@ -100,14 +101,15 @@ macOS
 ^^^^^
 
 #. 雙擊 ``start_mac.command`` （若提示權限，先執行一次 ``chmod +x start_mac.command``）。
+#. 若尚未安裝 Python，啟動器會提示下載並開啟安裝程式（python.org）。安裝完成後請再執行一次 ``start_mac.command``。
 #. 第一次會建立 ``.venv`` 並安裝依賴套件；之後會重用既有 ``.venv`` （除非 ``requirements.txt`` 有變更）。
 #. 瀏覽器會自動開啟 ``http://127.0.0.1:8000``。用完關閉瀏覽器即可；伺服器會在一段時間無操作後自動結束。
 
 Windows 11
 ^^^^^^^^^^
 
-#. 從 python.org 安裝 Python 3.10+（建議 3.11；支援 3.10–3.13），並勾選「Add python.exe to PATH」。
-#. 雙擊 ``start_windows.vbs``。
+#. 雙擊 ``start_windows.vbs``。若尚未安裝 Python，會提示自動下載/安裝 Python 3.11（建議）。
+#. 若你選擇手動安裝 Python，請勾選「Add python.exe to PATH」（並保留 ``py`` launcher）。
 #. 第一次會安裝依賴套件；之後會重用既有 ``.venv`` （除非 ``requirements.txt`` 有變更）。若 Windows Defender 詢問是否允許網路連線，請允許（只會綁定 localhost）。
 
 使用注意事項

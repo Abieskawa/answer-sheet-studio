@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import os
 from pathlib import Path
 from typing import List, Tuple, Dict, Optional, Any
 
@@ -19,6 +20,23 @@ from .config import (
     compute_answer_layout,
 )
 
+
+def _env_float(name: str, default: float) -> float:
+    raw = os.environ.get(name)
+    if raw is None:
+        return float(default)
+    try:
+        return float(raw)
+    except ValueError:
+        return float(default)
+
+
+MIN_SCORE_GRADE = _env_float("ANSWER_SHEET_MIN_SCORE_GRADE", 0.04)
+MIN_SCORE_CLASS = _env_float("ANSWER_SHEET_MIN_SCORE_CLASS", 0.04)
+MIN_SCORE_SEAT = _env_float("ANSWER_SHEET_MIN_SCORE_SEAT", 0.045)
+MIN_SCORE_CHOICE = _env_float("ANSWER_SHEET_MIN_SCORE_CHOICE", 0.06)
+
+
 def render_page(page: fitz.Page, dpi: int = 200) -> Tuple[np.ndarray, float]:
     # scale points -> pixels
     zoom = dpi / 72.0
@@ -28,48 +46,126 @@ def render_page(page: fitz.Page, dpi: int = 200) -> Tuple[np.ndarray, float]:
     return img, zoom
 
 
-def find_corner_marks(img: np.ndarray) -> Optional[np.ndarray]:
-    """Return 4 corner points in image pixels: TL, TR, BR, BL."""
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # strong threshold for black squares
-    _, bw = cv2.threshold(gray, 60, 255, cv2.THRESH_BINARY_INV)
+def _estimate_zoom_from_image(gray: np.ndarray) -> float:
+    h, w = gray.shape[:2]
+    zx = float(w) / float(PAGE_W_PT)
+    zy = float(h) / float(PAGE_H_PT)
+    # Choose the smaller scale to stay conservative when the PDF has margins/crop.
+    return float(min(zx, zy))
+
+
+def _find_corner_mark_in_roi(roi_gray: np.ndarray, expected_px: float) -> Optional[Tuple[float, float]]:
+    if roi_gray.size == 0:
+        return None
+
+    blur = cv2.GaussianBlur(roi_gray, (5, 5), 0)
+    # Otsu makes this robust to different scanners/brightness.
+    _, bw = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    bw = cv2.morphologyEx(bw, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8), iterations=1)
     bw = cv2.medianBlur(bw, 5)
 
     contours, _ = cv2.findContours(bw, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    h, w = gray.shape[:2]
-
-    candidates = []
-    for cnt in contours:
-        area = cv2.contourArea(cnt)
-        if area < (w*h)*0.0002:
-            continue
-        x,y,ww,hh = cv2.boundingRect(cnt)
-        ar = ww / (hh + 1e-6)
-        if 0.7 < ar < 1.3 and ww > 8 and hh > 8:
-            # prefer near corners
-            cx, cy = x + ww/2, y + hh/2
-            dist_corner = min(
-                (cx-0)**2 + (cy-0)**2,
-                (cx-w)**2 + (cy-0)**2,
-                (cx-w)**2 + (cy-h)**2,
-                (cx-0)**2 + (cy-h)**2,
-            )
-            candidates.append((dist_corner, area, (cx, cy), (x,y,ww,hh)))
-
-    if len(candidates) < 4:
+    if not contours:
         return None
 
-    # pick 4 best by closeness to corners, then by area
-    candidates.sort(key=lambda t: (t[0], -t[1]))
-    pts = [c[2] for c in candidates[:8]]  # take more to be safe
+    expected = float(max(8.0, expected_px))
+    min_side = expected * 0.35
+    max_side = expected * 2.0
+    min_area = (expected * expected) * 0.15
 
-    # cluster into 4 corners by quadrant
-    pts = np.array(pts, dtype=np.float32)
-    tl = pts[np.argmin(pts[:,0] + pts[:,1])]
-    tr = pts[np.argmin((-pts[:,0]) + pts[:,1])]
-    br = pts[np.argmin((-pts[:,0]) + (-pts[:,1]))]
-    bl = pts[np.argmin((pts[:,0]) + (-pts[:,1]))]
+    best: Optional[Tuple[float, float, float]] = None  # score, cx, cy
+    for cnt in contours:
+        area = float(cv2.contourArea(cnt))
+        if area < min_area:
+            continue
+        x, y, ww, hh = cv2.boundingRect(cnt)
+        ww_f = float(ww)
+        hh_f = float(hh)
+        ar = ww_f / (hh_f + 1e-6)
+        if not (0.6 < ar < 1.4):
+            continue
+        if ww_f < min_side or hh_f < min_side:
+            continue
+        if ww_f > max_side or hh_f > max_side:
+            continue
+        fill = area / ((ww_f * hh_f) + 1e-6)
+        if fill < 0.6:
+            continue
+        cx = float(x) + ww_f / 2.0
+        cy = float(y) + hh_f / 2.0
+        score = area * fill
+        if best is None or score > best[0]:
+            best = (score, cx, cy)
 
+    if best is None:
+        return None
+    _, cx, cy = best
+    return cx, cy
+
+
+def _fill_missing_corner(corners: Dict[str, Tuple[float, float]]) -> Dict[str, Tuple[float, float]]:
+    """
+    Given up to 4 corners (tl/tr/br/bl), try to fill the missing one assuming a parallelogram:
+      tl + br = tr + bl
+    """
+    required = {"tl", "tr", "br", "bl"}
+    missing = list(required - set(corners))
+    if len(missing) != 1:
+        return corners
+
+    m = missing[0]
+    tl = corners.get("tl")
+    tr = corners.get("tr")
+    br = corners.get("br")
+    bl = corners.get("bl")
+
+    if m == "tl" and tr and bl and br:
+        corners["tl"] = (tr[0] + bl[0] - br[0], tr[1] + bl[1] - br[1])
+    elif m == "tr" and tl and br and bl:
+        corners["tr"] = (tl[0] + br[0] - bl[0], tl[1] + br[1] - bl[1])
+    elif m == "br" and tr and bl and tl:
+        corners["br"] = (tr[0] + bl[0] - tl[0], tr[1] + bl[1] - tl[1])
+    elif m == "bl" and tl and br and tr:
+        corners["bl"] = (tl[0] + br[0] - tr[0], tl[1] + br[1] - tr[1])
+    return corners
+
+
+def find_corner_marks(img: np.ndarray) -> Optional[np.ndarray]:
+    """Return 4 corner points in image pixels: TL, TR, BR, BL."""
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    h, w = gray.shape[:2]
+
+    zoom_est = _estimate_zoom_from_image(gray)
+    expected_px = float(CORNER_MARK_SIZE) * float(zoom_est)
+
+    rx = int(w * 0.25)
+    ry = int(h * 0.25)
+    rois = {
+        "tl": (0, 0, rx, ry),
+        "tr": (w - rx, 0, w, ry),
+        "bl": (0, h - ry, rx, h),
+        "br": (w - rx, h - ry, w, h),
+    }
+
+    corners: Dict[str, Tuple[float, float]] = {}
+    for key, (x0, y0, x1, y1) in rois.items():
+        roi = gray[y0:y1, x0:x1]
+        found = _find_corner_mark_in_roi(roi, expected_px=expected_px)
+        if found is None:
+            continue
+        cx, cy = found
+        corners[key] = (cx + float(x0), cy + float(y0))
+
+    if len(corners) == 3:
+        corners = _fill_missing_corner(corners)
+
+    if len(corners) < 4:
+        return None
+
+    tl = corners["tl"]
+    tr = corners["tr"]
+    br = corners["br"]
+    bl = corners["bl"]
     return np.array([tl, tr, br, bl], dtype=np.float32)
 
 
@@ -255,7 +351,7 @@ def process_page(
         grade_scores.append(score_bubble(gray, bbox))
     g_label = [str(v) for v in GRADE_VALUES]
     g_val, g_status, _, g_idx, g_second_label, _ = pick_one(
-        grade_scores, g_label, min_score=0.05, amb_delta=0.02
+        grade_scores, g_label, min_score=MIN_SCORE_GRADE, amb_delta=0.02
     )
     results["grade"] = g_val if g_status == "OK" else None
     results["grade_status"] = g_status
@@ -280,7 +376,7 @@ def process_page(
         class_scores.append(score_bubble(gray, bbox))
     c_label = [str(v) for v in CLASS_VALUES]
     c_val, c_status, _, c_idx, c_second_label, _ = pick_one(
-        class_scores, c_label, min_score=0.05, amb_delta=0.02
+        class_scores, c_label, min_score=MIN_SCORE_CLASS, amb_delta=0.02
     )
     results["class_no"] = c_val if c_status == "OK" else None
     results["class_status"] = c_status
@@ -309,15 +405,15 @@ def process_page(
             bboxes.append(bbox)
             scores.append(score_bubble(gray, bbox))
         val, status, best, idx, second_label, second_score = pick_one(
-            scores, digit_labels, min_score=0.06, amb_delta=0.02
+            scores, digit_labels, min_score=MIN_SCORE_SEAT, amb_delta=0.02
         )
         return val, status, best, idx, second_label, second_score, bboxes
 
     tens, t_status, _, t_idx, t_second_label, _, t_bboxes = pick_digit(SEAT_TOP_ROW_Y)
     ones, o_status, _, o_idx, o_second_label, _, o_bboxes = pick_digit(SEAT_BOTTOM_ROW_Y)
 
-    tens_out = tens if t_status == "OK" else None
-    ones_out = ones if o_status == "OK" else None
+    tens_out = tens if t_status in {"OK", "AMBIGUOUS"} else None
+    ones_out = ones if o_status in {"OK", "AMBIGUOUS"} else None
     if tens_out is not None and ones_out is not None:
         results["seat_no"] = f"{tens_out}{ones_out}"
     else:
@@ -371,7 +467,7 @@ def process_page(
                 bboxes.append(bbox)
                 scores.append(score_bubble(gray, bbox))
             val, status, _, idx, second_label, _, picked_idxs = pick_choice_multi(
-                scores, choices, min_score=0.08, amb_delta=0.03
+                scores, choices, min_score=MIN_SCORE_CHOICE, amb_delta=0.03
             )
             answers.append(val if status in {"OK", "MULTI"} and val is not None else "")
             if status == "MULTI":
@@ -479,7 +575,7 @@ def process_pdf_to_csv_and_annotated_pdf(
         if not seat:
             return None
         if seat.isdigit():
-            return str(int(seat))
+            return seat.zfill(2)
         return seat
 
     used_person_ids: set[str] = set()

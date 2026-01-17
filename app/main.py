@@ -46,8 +46,6 @@ I18N = {
         "download_ph_title": "例如：第一次段考",
         "download_label_subject": "科目（可留空）",
         "download_ph_subject": "例如：數學",
-        "download_label_class": "班級（可留空）",
-        "download_ph_class": "例如：701",
         "download_label_num_questions": "題數（1–100；上傳辨識時也要填一樣）",
         "download_label_choices_count": "每題選項（ABC/ABCD/ABCDE）",
         "download_btn_generate": "產生並下載 PDF",
@@ -109,8 +107,6 @@ I18N = {
         "download_ph_title": "e.g., Midterm 1",
         "download_label_subject": "Subject (optional)",
         "download_ph_subject": "e.g., Math",
-        "download_label_class": "Class (optional)",
-        "download_ph_class": "e.g., 701",
         "download_label_num_questions": "Number of questions (1–100; must match upload)",
         "download_label_choices_count": "Choices per question (ABC/ABCD/ABCDE)",
         "download_btn_generate": "Generate & Download PDF",
@@ -338,7 +334,6 @@ def _sanitize_token(value: str, fallback: str) -> str:
 def api_generate(
     title_text: str = Form(DEFAULT_SHEET_TITLE),
     subject: str = Form(""),
-    class_name: str = Form(""),
     num_questions: int = Form(50),
     choices_count: int = Form(4),
 ):
@@ -349,7 +344,6 @@ def api_generate(
     out_path = OUTPUTS_DIR / f"answer_sheets_{out_id}.pdf"
 
     subject = subject.strip()
-    class_name = class_name.strip()
     title_text = title_text.strip() or DEFAULT_SHEET_TITLE
 
     generate_answer_sheet_pdf(
@@ -361,12 +355,9 @@ def api_generate(
     )
 
     subject_token = _sanitize_token(subject, "subject") if subject else "subject"
-    class_token = _sanitize_token(class_name, "class") if class_name else None
     title_token = _sanitize_token(title_text, "exam")
     choices_token = "".join(chr(ord("A") + i) for i in range(choices_count))
     filename_bits = ["answer_sheets", subject_token]
-    if class_token:
-        filename_bits.append(class_token)
     filename_bits.append(title_token)
     filename_bits.append(choices_token)
     filename_bits.append(f"{num_questions}q")

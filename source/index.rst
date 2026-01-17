@@ -32,7 +32,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 功能說明（進階）
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- **下載答案卡**：輸入標題、科目、班級、題數（最多 100 題）、每題選項（ABC / ABCD / ABCDE），產生單頁 PDF。
+- **下載答案卡**：輸入標題、科目、題數（最多 100 題）、每題選項（ABC / ABCD / ABCDE），產生單頁 PDF。
 - **上傳影像辨識**：上傳多頁 PDF（每頁一位學生）。會輸出 ``results.csv`` （題號為列、學生為欄）、``ambiguity.csv`` （空白/模稜兩可/多選）與 ``annotated.pdf`` （標註辨識結果）。
 - **啟動器**：雙擊啟動器（``start_mac.command`` 或 ``start_windows.vbs``）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 ``http://127.0.0.1:8000``。
 
@@ -110,7 +110,7 @@ Windows 11
 Features
 ~~~~~~~~
 
-- **Download page** – choose title, subject, class, number of questions (up to 100), and choices per question (ABC/ABCD/ABCDE). Generates a single-page PDF template.
+- **Download page** – choose title, subject, number of questions (up to 100), and choices per question (ABC/ABCD/ABCDE). Generates a single-page PDF template.
 - **Upload page** – drop a multi-page PDF scan. Recognition exports ``results.csv``, ``ambiguity.csv``, and ``annotated.pdf``.
 - **Launcher** – sets up ``.venv``, installs requirements, starts the local server, and opens the browser.
 - The web UI supports **English** and **Traditional Chinese**.

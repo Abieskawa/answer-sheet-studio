@@ -1,7 +1,7 @@
 import math
 from typing import Dict, List
 
-# PDF coordinates are in "points" (1/72 inch). All layout constants mirror omr.generator.
+# PDF coordinates are in "points" (1/72 inch). All layout constants mirror engine.generator.
 
 PAGE_W_PT = 595  # A4 width in points
 PAGE_H_PT = 842  # A4 height in points
@@ -59,7 +59,7 @@ BUBBLE_RADIUS = 6.0
 COL_COUNT = 3
 MAX_QUESTIONS = 100
 
-# Layout helpers (match omr.generator)
+# Layout helpers (match engine.generator)
 Q_NUM_AREA_W = 30
 GAP_AFTER_NUM = 10
 
@@ -73,7 +73,7 @@ def make_choices(choices_count: int) -> List[str]:
 
 def compute_answer_layout(num_questions: int, choices_count: int = DEFAULT_CHOICES_COUNT) -> Dict:
     """
-    Mirror omr.generator.compute_question_layout for recognizer.
+    Mirror engine.generator.compute_question_layout for recognizer.
 
     Note: Question *positions* are fixed (based on MAX_QUESTIONS). Different `num_questions`
     simply read a prefix subset (e.g., Q1–Q10 positions are identical on 10Q vs 20Q sheets).

@@ -31,9 +31,9 @@ def _env_float(name: str, default: float) -> float:
         return float(default)
 
 
-MIN_SCORE_GRADE = _env_float("ANSWER_SHEET_MIN_SCORE_GRADE", 0.04)
-MIN_SCORE_CLASS = _env_float("ANSWER_SHEET_MIN_SCORE_CLASS", 0.04)
-MIN_SCORE_SEAT = _env_float("ANSWER_SHEET_MIN_SCORE_SEAT", 0.045)
+MIN_SCORE_GRADE = _env_float("ANSWER_SHEET_MIN_SCORE_GRADE", 0.05)
+MIN_SCORE_CLASS = _env_float("ANSWER_SHEET_MIN_SCORE_CLASS", 0.05)
+MIN_SCORE_SEAT = _env_float("ANSWER_SHEET_MIN_SCORE_SEAT", 0.06)
 MIN_SCORE_CHOICE = _env_float("ANSWER_SHEET_MIN_SCORE_CHOICE", 0.06)
 
 
@@ -54,7 +54,11 @@ def _estimate_zoom_from_image(gray: np.ndarray) -> float:
     return float(min(zx, zy))
 
 
-def _find_corner_mark_in_roi(roi_gray: np.ndarray, expected_px: float) -> Optional[Tuple[float, float]]:
+def _find_corner_mark_in_roi(
+    roi_gray: np.ndarray,
+    expected_px: float,
+    target_corner_xy: Tuple[float, float],
+) -> Optional[Tuple[float, float]]:
     if roi_gray.size == 0:
         return None
 
@@ -69,7 +73,7 @@ def _find_corner_mark_in_roi(roi_gray: np.ndarray, expected_px: float) -> Option
         return None
 
     expected = float(max(8.0, expected_px))
-    min_side = expected * 0.35
+    min_side = expected * 0.55
     max_side = expected * 2.0
     min_area = (expected * expected) * 0.15
 
@@ -93,7 +97,10 @@ def _find_corner_mark_in_roi(roi_gray: np.ndarray, expected_px: float) -> Option
             continue
         cx = float(x) + ww_f / 2.0
         cy = float(y) + hh_f / 2.0
-        score = area * fill
+        dx = cx - float(target_corner_xy[0])
+        dy = cy - float(target_corner_xy[1])
+        dist = float((dx * dx + dy * dy) ** 0.5)
+        score = (area * fill) / (1.0 + dist)
         if best is None or score > best[0]:
             best = (score, cx, cy)
 
@@ -150,7 +157,16 @@ def find_corner_marks(img: np.ndarray) -> Optional[np.ndarray]:
     corners: Dict[str, Tuple[float, float]] = {}
     for key, (x0, y0, x1, y1) in rois.items():
         roi = gray[y0:y1, x0:x1]
-        found = _find_corner_mark_in_roi(roi, expected_px=expected_px)
+        roi_h, roi_w = roi.shape[:2]
+        if key == "tl":
+            target = (0.0, 0.0)
+        elif key == "tr":
+            target = (float(max(0, roi_w - 1)), 0.0)
+        elif key == "bl":
+            target = (0.0, float(max(0, roi_h - 1)))
+        else:
+            target = (float(max(0, roi_w - 1)), float(max(0, roi_h - 1)))
+        found = _find_corner_mark_in_roi(roi, expected_px=expected_px, target_corner_xy=target)
         if found is None:
             continue
         cx, cy = found
@@ -412,8 +428,8 @@ def process_page(
     tens, t_status, _, t_idx, t_second_label, _, t_bboxes = pick_digit(SEAT_TOP_ROW_Y)
     ones, o_status, _, o_idx, o_second_label, _, o_bboxes = pick_digit(SEAT_BOTTOM_ROW_Y)
 
-    tens_out = tens if t_status in {"OK", "AMBIGUOUS"} else None
-    ones_out = ones if o_status in {"OK", "AMBIGUOUS"} else None
+    tens_out = tens if t_status == "OK" else None
+    ones_out = ones if o_status == "OK" else None
     if tens_out is not None and ones_out is not None:
         results["seat_no"] = f"{tens_out}{ones_out}"
     else:
@@ -575,7 +591,7 @@ def process_pdf_to_csv_and_annotated_pdf(
         if not seat:
             return None
         if seat.isdigit():
-            return seat.zfill(2)
+            return str(int(seat))
         return seat
 
     used_person_ids: set[str] = set()

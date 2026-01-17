@@ -288,6 +288,11 @@ def draw_identity(c: canvas.Canvas):
     c.drawString(SEAT_BOX_X0 - 26, SEAT_BOX_Y0 + 38, "座")
     c.drawString(SEAT_BOX_X0 - 26, SEAT_BOX_Y0 + 18, "號")
 
+    # Labels for tens / ones
+    set_font_cjk(c, 9)
+    c.drawString(SEAT_BOX_X0 + 6, SEAT_TOP_Y - 4, "十位")
+    c.drawString(SEAT_BOX_X0 + 6, SEAT_BOTTOM_Y - 4, "個位")
+
     set_font_lat(c, 8, bold=False)
     for i, d in enumerate(SEAT_DIGITS):
         x = SEAT_X0 + i * SEAT_STEP

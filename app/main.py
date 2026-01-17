@@ -1,3 +1,5 @@
+import csv
+import io
 import os
 import uuid
 import re
@@ -12,8 +14,8 @@ from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from omr.generator import generate_answer_sheet_pdf, DEFAULT_TITLE as DEFAULT_SHEET_TITLE
-from omr.recognizer import process_pdf_to_csv_and_annotated_pdf
+from engine.generator import generate_answer_sheet_pdf, DEFAULT_TITLE as DEFAULT_SHEET_TITLE
+from engine.recognizer import process_pdf_to_csv_and_annotated_pdf
 
 APP_DIR = Path(__file__).resolve().parent
 ROOT_DIR = APP_DIR.parent
@@ -37,6 +39,7 @@ I18N = {
         "lang_en": "English",
         "nav_download": "下載答案卡",
         "nav_upload": "上傳處理",
+        "nav_analysis": "答案分析",
         "nav_update": "更新",
         "footer_local": "本機運行 / 不上傳到雲端",
         "footer_docs": "說明文件",
@@ -77,6 +80,7 @@ I18N = {
         "result_job_id": "Job ID：",
         "result_download_results": "下載 results.csv",
         "result_download_annotated": "下載 annotated.pdf",
+        "result_open_analysis": "答案分析",
         "result_hint_unstable": "如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。",
         "result_debug_hint": "需要回報問題時，可到 Debug Mode 下載診斷檔案（輸入 Job ID）。",
         "result_debug_open": "開啟 Debug Mode",
@@ -92,12 +96,30 @@ I18N = {
         "debug_dl_annotated": "下載 annotated.pdf",
         "debug_dl_input": "下載 input.pdf（原始上傳檔）",
         "debug_report_hint": "回報時請提供：Job ID、results.csv、ambiguity.csv、annotated.pdf（必要時 input.pdf）。",
+        "analysis_title": "答案分析",
+        "analysis_hint": "流程：先下載 template.csv → 填入每題正確答案與分數（可留空白）→ 上傳並產生分析報表。",
+        "analysis_job_id": "Job ID：",
+        "analysis_label_default_points": "每題預設分數（可之後逐題微調）",
+        "analysis_btn_download_template": "下載 template.csv",
+        "analysis_hint_template": "template.csv 會包含學生作答；請在 correct/points 欄位補齊。",
+        "analysis_label_job_id": "Job ID",
+        "analysis_ph_job_id": "貼上處理完成頁面顯示的 Job ID",
+        "analysis_label_template_file": "上傳已填好的 template.csv",
+        "analysis_btn_run": "產生分析",
+        "analysis_hint_upload": "如果你用 Excel 編輯，請存成 CSV 再上傳。",
+        "analysis_error_missing_job": "找不到此 Job ID 的輸出資料夾。",
+        "analysis_error_invalid_job_id": "Job ID 格式不正確。",
+        "analysis_error_missing_results": "找不到 results.csv，請先完成一次辨識。",
+        "analysis_error_missing_rscript": "找不到 Rscript。請先安裝 R（並確保 Rscript 在 PATH）。",
+        "analysis_error_r_failed": "分析失敗：",
+        "analysis_message_done": "分析完成，可下載報表與圖表。",
     },
     "en": {
         "lang_zh": "繁體中文",
         "lang_en": "English",
         "nav_download": "Download",
         "nav_upload": "Upload",
+        "nav_analysis": "Analysis",
         "nav_update": "Update",
         "footer_local": "Runs locally / no cloud upload",
         "footer_docs": "Docs",
@@ -138,6 +160,7 @@ I18N = {
         "result_job_id": "Job ID:",
         "result_download_results": "Download results.csv",
         "result_download_annotated": "Download annotated.pdf",
+        "result_open_analysis": "Answer analysis",
         "result_hint_unstable": "If results are unstable, scans may be skewed or too light. Try 300dpi or a darker pen.",
         "result_debug_hint": "For reporting/debugging, open Debug Mode and enter the Job ID to download diagnostic files.",
         "result_debug_open": "Open Debug Mode",
@@ -153,6 +176,23 @@ I18N = {
         "debug_dl_annotated": "Download annotated.pdf",
         "debug_dl_input": "Download input.pdf (original upload)",
         "debug_report_hint": "When reporting, include: Job ID, results.csv, ambiguity.csv, annotated.pdf (and input.pdf if needed).",
+        "analysis_title": "Answer Analysis",
+        "analysis_hint": "Workflow: download template.csv → fill correct answers and points (blanks supported) → upload to generate reports.",
+        "analysis_job_id": "Job ID:",
+        "analysis_label_default_points": "Default points per question (you can fine-tune per item later)",
+        "analysis_btn_download_template": "Download template.csv",
+        "analysis_hint_template": "template.csv includes student answers; fill the correct/points columns before uploading.",
+        "analysis_label_job_id": "Job ID",
+        "analysis_ph_job_id": "Paste the Job ID from the result page",
+        "analysis_label_template_file": "Upload completed template.csv",
+        "analysis_btn_run": "Run analysis",
+        "analysis_hint_upload": "If you edit in Excel, save as CSV before uploading.",
+        "analysis_error_missing_job": "Output folder not found for this Job ID.",
+        "analysis_error_invalid_job_id": "Invalid Job ID.",
+        "analysis_error_missing_results": "results.csv not found. Please run recognition first.",
+        "analysis_error_missing_rscript": "Rscript not found. Please install R and ensure Rscript is on PATH.",
+        "analysis_error_r_failed": "Analysis failed:",
+        "analysis_message_done": "Analysis complete. Download reports and plots below.",
     },
 }
 
@@ -316,6 +356,167 @@ def home(request: Request):
 @app.get("/upload", response_class=HTMLResponse)
 def upload_page(request: Request):
     return template_response(request, "upload.html")
+
+
+def _analysis_file_links(job_id: str) -> list[dict]:
+    job_dir = OUTPUTS_DIR / job_id
+    files: list[dict] = []
+    label_by_name = {
+        "analysis_template.csv": "template.csv",
+        "analysis_scores.csv": "scores.csv",
+        "analysis_item.csv": "item_analysis.csv",
+        "analysis_summary.csv": "summary.csv",
+        "analysis_score_hist.png": "score_hist.png",
+        "analysis_item_plot.png": "item_plot.png",
+    }
+    for name, label in label_by_name.items():
+        path = job_dir / name
+        if path.exists():
+            files.append({"url": f"/outputs/{job_id}/{name}", "label": label})
+    return files
+
+
+@app.get("/analysis", response_class=HTMLResponse)
+def analysis_page(request: Request, job_id: str = ""):
+    lang = resolve_lang(request)
+    t = I18N.get(lang, I18N[DEFAULT_LANG])
+    job_id = (job_id or "").strip()
+    ctx: dict = {"job_id": job_id or None, "files": None, "error": None, "message": None, "default_points": 1}
+
+    if job_id:
+        if not _JOB_ID_RE.match(job_id):
+            ctx["error"] = t["analysis_error_invalid_job_id"]
+            return template_response(request, "analysis.html", ctx)
+        if not (OUTPUTS_DIR / job_id).exists():
+            ctx["error"] = t["analysis_error_missing_job"]
+            return template_response(request, "analysis.html", ctx)
+        ctx["files"] = _analysis_file_links(job_id)
+
+    return template_response(request, "analysis.html", ctx)
+
+
+@app.get("/analysis/template")
+def analysis_template(request: Request, job_id: str, points: int = 1):
+    lang = resolve_lang(request)
+    t = I18N.get(lang, I18N[DEFAULT_LANG])
+    job_id = (job_id or "").strip()
+    if not _JOB_ID_RE.match(job_id):
+        return template_response(
+            request,
+            "analysis.html",
+            {"job_id": job_id or None, "error": t["analysis_error_invalid_job_id"], "default_points": 1},
+        )
+
+    job_dir = OUTPUTS_DIR / job_id
+    if not job_dir.exists():
+        return template_response(
+            request,
+            "analysis.html",
+            {"job_id": job_id, "error": t["analysis_error_missing_job"], "default_points": 1},
+        )
+
+    results_path = job_dir / "results.csv"
+    if not results_path.exists():
+        return template_response(
+            request,
+            "analysis.html",
+            {"job_id": job_id, "error": t["analysis_error_missing_results"], "default_points": 1},
+        )
+
+    points = max(0, min(100, int(points)))
+
+    with open(results_path, "r", newline="", encoding="utf-8-sig") as f:
+        reader = csv.reader(f)
+        rows = list(reader)
+    if not rows:
+        return template_response(
+            request,
+            "analysis.html",
+            {"job_id": job_id, "error": t["analysis_error_missing_results"], "default_points": points},
+        )
+
+    header = rows[0]
+    if not header or header[0] != "number":
+        return template_response(
+            request,
+            "analysis.html",
+            {"job_id": job_id, "error": t["analysis_error_missing_results"], "default_points": points},
+        )
+
+    out = io.StringIO()
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(["number", "correct", "points", *header[1:]])
+    for row in rows[1:]:
+        if not row:
+            continue
+        qno = row[0]
+        writer.writerow([qno, "", points, *row[1:]])
+
+    content = out.getvalue().encode("utf-8-sig")
+    filename = f"analysis_template_{job_id[:8]}.csv"
+    return Response(
+        content=content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename=\"{filename}\"'},
+    )
+
+
+@app.post("/api/analysis/run", response_class=HTMLResponse)
+async def api_analysis_run(
+    request: Request,
+    job_id: str = Form(""),
+    analysis_csv: UploadFile = File(...),
+):
+    lang = resolve_lang(request)
+    t = I18N.get(lang, I18N[DEFAULT_LANG])
+    job_id = (job_id or "").strip()
+    ctx: dict = {"job_id": job_id or None, "files": None, "error": None, "message": None, "default_points": 1}
+
+    if not _JOB_ID_RE.match(job_id):
+        ctx["error"] = t["analysis_error_invalid_job_id"]
+        return template_response(request, "analysis.html", ctx)
+
+    job_dir = OUTPUTS_DIR / job_id
+    if not job_dir.exists():
+        ctx["error"] = t["analysis_error_missing_job"]
+        return template_response(request, "analysis.html", ctx)
+
+    template_path = job_dir / "analysis_template.csv"
+    with open(template_path, "wb") as f:
+        f.write(await analysis_csv.read())
+
+    rscript = shutil.which("Rscript")
+    if rscript is None:
+        ctx["error"] = t["analysis_error_missing_rscript"]
+        ctx["files"] = _analysis_file_links(job_id)
+        return template_response(request, "analysis.html", ctx)
+
+    script_path = ROOT_DIR / "engine" / "item_analysis_cli.R"
+    if not script_path.exists():
+        ctx["error"] = "item_analysis_cli.R not found."
+        ctx["files"] = _analysis_file_links(job_id)
+        return template_response(request, "analysis.html", ctx)
+
+    import subprocess
+
+    proc = subprocess.run(
+        [rscript, str(script_path), "--input", str(template_path), "--outdir", str(job_dir)],
+        cwd=str(ROOT_DIR),
+        capture_output=True,
+        text=True,
+        errors="replace",
+    )
+    if proc.returncode != 0:
+        out_text = ((proc.stdout or "") + (proc.stderr or "")).strip()
+        if len(out_text) > 2000:
+            out_text = out_text[-2000:]
+        ctx["error"] = f"{t['analysis_error_r_failed']} {out_text or f'code {proc.returncode}'}"
+        ctx["files"] = _analysis_file_links(job_id)
+        return template_response(request, "analysis.html", ctx)
+
+    ctx["message"] = t["analysis_message_done"]
+    ctx["files"] = _analysis_file_links(job_id)
+    return template_response(request, "analysis.html", ctx)
 
 
 @app.get("/update", response_class=HTMLResponse)
@@ -612,12 +813,26 @@ def download_output(job_id: str, filename: str):
         download_name = f"{upload_base_ascii}_{job_tag}_annotated.pdf"
     elif filename == "input.pdf":
         download_name = f"{upload_base_ascii}_{job_tag}_input.pdf"
+    elif filename == "analysis_template.csv":
+        download_name = f"{upload_base_ascii}_{job_tag}_analysis_template.csv"
+    elif filename == "analysis_scores.csv":
+        download_name = f"{upload_base_ascii}_{job_tag}_analysis_scores.csv"
+    elif filename == "analysis_item.csv":
+        download_name = f"{upload_base_ascii}_{job_tag}_analysis_item.csv"
+    elif filename == "analysis_summary.csv":
+        download_name = f"{upload_base_ascii}_{job_tag}_analysis_summary.csv"
+    elif filename == "analysis_score_hist.png":
+        download_name = f"{upload_base_ascii}_{job_tag}_analysis_score_hist.png"
+    elif filename == "analysis_item_plot.png":
+        download_name = f"{upload_base_ascii}_{job_tag}_analysis_item_plot.png"
 
     media = "application/octet-stream"
     if filename.lower().endswith(".pdf"):
         media = "application/pdf"
     if filename.lower().endswith(".csv"):
         media = "text/csv"
+    if filename.lower().endswith(".png"):
+        media = "image/png"
     return FileResponse(path=str(file_path), media_type=media, filename=download_name)
 
 

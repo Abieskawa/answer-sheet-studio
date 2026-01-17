@@ -9,6 +9,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 - **下載答案卡**：輸入標題、科目、題數（最多 100 題）、每題選項（`ABC` / `ABCD` / `ABCDE`），產生單頁 PDF。
 - **上傳影像辨識**：上傳多頁 PDF（每頁一位學生）。會輸出 `results.csv`（題號為列、學生為欄）、`ambiguity.csv`（空白/模稜兩可/多選）與 `annotated.pdf`（標註辨識結果）。
+- **答案分析**：辨識後可下載 `analysis_template.csv`，填入每題正確答案（`correct`）與分數（`points`），再上傳執行分析並輸出統計表與圖表（需要安裝 R）。
 - **啟動器**：雙擊啟動器（`start_mac.command` 或 `start_windows.vbs`）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 `http://127.0.0.1:8000`。
 - 網頁介面支援 **English / 繁體中文**，可用頁首的語言切換。
 
@@ -18,6 +19,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 - Python 3.10+（建議 3.11；支援 3.10–3.13）。若尚未安裝 Python，啟動器可協助下載官方安裝程式。
 - Windows 安裝 Python 時請勾選「Add python.exe to PATH」（並保留 `py` launcher）
 - 第一次安裝需要網路下載 Python 套件（FastAPI、PyMuPDF、OpenCV、NumPy 等）
+- （選用）**答案分析** 功能需要安裝 **R**（可執行 `Rscript`），並安裝套件：`readr`、`dplyr`、`tidyr`、`ggplot2`。
 
 ### 快速開始
 
@@ -44,6 +46,7 @@ Windows 11
 - `ambiguity.csv`
 - `annotated.pdf`
 - `input.pdf`（原始上傳檔）
+- （若執行答案分析）`analysis_template.csv`、`analysis_scores.csv`、`analysis_item.csv`、`analysis_summary.csv`、`analysis_score_hist.png`、`analysis_item_plot.png`
 
 ### 更新
 
@@ -73,6 +76,7 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 
 - **Download page** – choose title, subject, number of questions (up to 100), and choices per question (`ABC` / `ABCD` / `ABCDE`). Generates a single-page PDF template.
 - **Upload page** – drop a multi-page PDF scan. Recognition exports `results.csv` (questions as rows, students as columns), `ambiguity.csv` (blank/ambiguous/multi picks), plus `annotated.pdf` that visualizes detections.
+- **Answer analysis** – after recognition, download `analysis_template.csv`, fill `correct` + `points`, then upload to generate analysis tables and plots (requires R).
 - **Launcher** – double-click (`start_mac.command` or `start_windows.vbs`) to create a virtual env, install dependencies, start the local server, and open `http://127.0.0.1:8000`.
 - The web UI supports **English** and **Traditional Chinese**. Use the language tabs in the header.
 
@@ -82,6 +86,7 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 - Python **3.10+** (3.11 recommended; 3.10–3.13 supported). If Python isn’t installed yet, the launcher can help download the official installer.
 - On Windows, ensure “Add python.exe to PATH” during installation (and keep the `py` launcher enabled if offered).
 - Internet access the first time to download Python packages (FastAPI, PyMuPDF, OpenCV, NumPy, etc.).
+- (Optional) **Answer analysis** requires **R** (`Rscript`) and packages: `readr`, `dplyr`, `tidyr`, `ggplot2`.
 
 ### Quick Start
 
@@ -108,6 +113,7 @@ After recognition, files are written under `outputs/<job_id>/`:
 - `ambiguity.csv`
 - `annotated.pdf`
 - `input.pdf` (original upload)
+- (If you run analysis) `analysis_template.csv`, `analysis_scores.csv`, `analysis_item.csv`, `analysis_summary.csv`, `analysis_score_hist.png`, `analysis_item_plot.png`
 
 ### Updating
 

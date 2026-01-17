@@ -34,6 +34,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 - **下載答案卡**：輸入標題、科目、題數（最多 100 題）、每題選項（ABC / ABCD / ABCDE），產生單頁 PDF。
 - **上傳影像辨識**：上傳多頁 PDF（每頁一位學生）。會輸出 ``results.csv`` （題號為列、學生為欄）、``ambiguity.csv`` （空白/模稜兩可/多選）與 ``annotated.pdf`` （標註辨識結果）。
+- **答案分析**：辨識後可下載 ``analysis_template.csv``，填入每題正確答案（``correct``）與分數（``points``），再上傳執行分析（需要安裝 R）。
 - **啟動器**：雙擊啟動器（``start_mac.command`` 或 ``start_windows.vbs``）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 ``http://127.0.0.1:8000``。
 
 使用注意事項
@@ -41,6 +42,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 - 進行影像辨識時，**題數** 與 **每題選項（ABC/ABCD/ABCDE）** 必須與答案卡一致。
 - 想要結果更穩定：建議用較深的筆、掃描 **300dpi**，並避免歪斜/旋轉。
+- **答案分析** 功能需要安裝 **R**（可執行 ``Rscript``），並安裝套件：``readr``、``dplyr``、``tidyr``、``ggplot2``。
 
 輸出檔案
 ~~~~~~~~
@@ -51,6 +53,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 - ``ambiguity.csv``
 - ``annotated.pdf``
 - ``input.pdf`` （原始上傳檔）
+- （若執行答案分析）``analysis_template.csv``、``analysis_scores.csv``、``analysis_item.csv``、``analysis_summary.csv``、``analysis_score_hist.png``、``analysis_item_plot.png``
 
 更新
 ~~~~
@@ -112,6 +115,7 @@ Features
 
 - **Download page** – choose title, subject, number of questions (up to 100), and choices per question (ABC/ABCD/ABCDE). Generates a single-page PDF template.
 - **Upload page** – drop a multi-page PDF scan. Recognition exports ``results.csv``, ``ambiguity.csv``, and ``annotated.pdf``.
+- **Answer analysis** – after recognition, download ``analysis_template.csv``, fill ``correct`` + ``points``, then upload to generate analysis tables and plots (requires R).
 - **Launcher** – sets up ``.venv``, installs requirements, starts the local server, and opens the browser.
 - The web UI supports **English** and **Traditional Chinese**.
 
@@ -120,6 +124,7 @@ Important Notes
 
 - For recognition, the **number of questions** and **choices per question** must match the generated answer sheet.
 - For more stable results: use a darker pen/pencil, scan at **300dpi**, and avoid skew/rotation.
+- **Answer analysis** requires **R** (``Rscript``) and packages: ``readr``, ``dplyr``, ``tidyr``, ``ggplot2``.
 
 Output Files
 ~~~~~~~~~~~~
@@ -130,6 +135,7 @@ After recognition, files are written under ``outputs/<job_id>/``:
 - ``ambiguity.csv``
 - ``annotated.pdf``
 - ``input.pdf`` (original upload)
+- (If you run analysis) ``analysis_template.csv``, ``analysis_scores.csv``, ``analysis_item.csv``, ``analysis_summary.csv``, ``analysis_score_hist.png``, ``analysis_item_plot.png``
 
 Updating
 ~~~~~~~~

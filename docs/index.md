@@ -15,10 +15,10 @@ Answer Sheet Studio helps teachers generate printable answer sheets and run loca
 
 ## Analysis (recommended)
 
-Use the Download page to get a ZIP bundle (answer-sheet PDF + teacher answer key `answer_key.xlsx`/`answer_key.csv`). Fill the answer key, then upload **both**:
+Use the Download page to download the answer-sheet PDF and the teacher answer key template (`answer_key.xlsx`). Fill the answer key, then upload **both**:
 
 - multi-page scanned PDF (one student per page)
-- teacher answer key (`XLSX/CSV`)
+- teacher answer key (`answer_key.xlsx`)
 
 The Upload page runs recognition + analysis and lets you download tables and plots. For best-looking plots, install R (`Rscript`) and packages: `readr`, `dplyr`, `tidyr`, `ggplot2` (the launcher auto-opens the installer if R is missing).
 

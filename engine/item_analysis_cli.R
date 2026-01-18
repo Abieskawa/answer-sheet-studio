@@ -90,7 +90,7 @@ scores_df <- tibble(
   score = as.numeric(scores),
   blank_count = as.integer(blank_counts),
   total_possible = as.numeric(total_possible),
-  percent = ifelse(total_possible > 0, round(score / total_possible, 4), NA_real_)
+  percent = ifelse(total_possible > 0, round(score / total_possible, 2), NA_real_)
 ) %>%
   arrange(desc(score), person_id)
 
@@ -141,14 +141,14 @@ item_df <- tibble(
   number = df$number,
   correct = correct_vec,
   points = points_vec,
-  difficulty = ifelse(is.na(difficulty), NA_real_, round(difficulty, 4)),
-  discrimination = ifelse(is.na(disc), NA_real_, round(disc, 4)),
-  blank_rate = round(blank_rate, 4),
-  multi_rate = round(multi_rate, 4),
-  other_rate = round(other_rate, 4)
+  difficulty = ifelse(is.na(difficulty), NA_real_, round(difficulty, 2)),
+  discrimination = ifelse(is.na(disc), NA_real_, round(disc, 2)),
+  blank_rate = round(blank_rate, 2),
+  multi_rate = round(multi_rate, 2),
+  other_rate = round(other_rate, 2)
 )
 for (nm in names(choice_rates)) {
-  item_df[[nm]] <- round(choice_rates[[nm]], 4)
+  item_df[[nm]] <- round(choice_rates[[nm]], 2)
 }
 
 write_excel_csv(item_df, file.path(outdir, "analysis_item.csv"))
@@ -210,4 +210,3 @@ ggsave(
   height = 7,
   dpi = 160
 )
-

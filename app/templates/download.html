@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>{{ t.download_title }}</h1>
-<form class="form" action="/api/generate" method="post">
+<form class="form" action="/api/generate_sheet" method="post">
   <label>{{ t.download_label_title }}
     <input type="text" name="title_text" placeholder="{{ t.download_ph_title }}" />
   </label>
@@ -22,9 +22,13 @@
     </select>
   </label>
 
-  <button type="submit">{{ t.download_btn_generate }}</button>
+  <div class="downloads">
+    <button type="submit">{{ t.download_btn_sheet }}</button>
+    <button type="submit" formaction="/api/generate_answer_key">{{ t.download_btn_answer_key }}</button>
+  </div>
 
-  <p class="hint">{{ t.download_hint_location }}</p>
+  <p class="hint">{{ t.download_hint_sheet }}</p>
+  <p class="hint">{{ t.download_hint_answer_key }}</p>
   <p class="hint">{{ t.download_hint_support }}</p>
 </form>
 

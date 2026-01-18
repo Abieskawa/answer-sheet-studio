@@ -19,7 +19,7 @@
   </label>
 
   <label>{{ t.upload_label_answer_key }}
-    <input type="file" name="answer_key" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.csv,text/csv" required />
+    <input type="file" name="answer_key" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
   </label>
 
   <button type="submit">{{ t.upload_btn_process }}</button>
@@ -42,9 +42,6 @@
     <a class="download" href="{{ pdf_url }}">{{ t.result_download_annotated }}</a>
     {% if answer_key_url %}
       <a class="download" href="{{ answer_key_url }}">{{ t.result_download_answer_key }}</a>
-    {% endif %}
-    {% if answer_key_csv_url %}
-      <a class="download" href="{{ answer_key_csv_url }}">{{ t.result_download_answer_key_csv }}</a>
     {% endif %}
   </div>
 

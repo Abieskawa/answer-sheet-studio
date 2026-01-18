@@ -1,5 +1,4 @@
 import csv
-import io
 import os
 import uuid
 import re
@@ -7,7 +6,6 @@ import json
 import time
 import threading
 import shutil
-import zipfile
 from typing import Optional
 from pathlib import Path
 from fastapi import FastAPI, Request, UploadFile, File, Form, BackgroundTasks
@@ -53,15 +51,17 @@ I18N = {
         "download_ph_subject": "例如：數學",
         "download_label_num_questions": "題數（1–100；上傳辨識時也要填一樣）",
         "download_label_choices_count": "每題選項（ABC/ABCD/ABCDE）",
-        "download_btn_generate": "下載 PDF + 答案檔（ZIP）",
-        "download_hint_location": "會下載一個 ZIP，裡面包含：答案卡 PDF + 老師答案檔（XLSX/CSV；可用 Excel 編輯）。",
+        "download_btn_sheet": "下載答案卡 PDF",
+        "download_btn_answer_key": "下載老師答案檔（Excel）",
+        "download_hint_sheet": "先下載並列印答案卡 PDF（給學生填）。",
+        "download_hint_answer_key": "需要編輯正確答案/配分時，再下載老師答案檔（Excel）填 correct/points，之後到「上傳處理」上傳即可。",
         "download_hint_support": "年級欄位支援 7–12（含 10/11/12），座號支援 00–99，選擇題支援 ABC / ABCD / ABCDE，最多 100 題。",
         "upload_title": "上傳處理",
         "upload_label_num_questions": "題數（1–100；請依每份掃描檔案輸入，需與答案卡一致）",
         "upload_ph_num_questions": "例如：50",
         "upload_label_choices_count": "每題選項（ABC/ABCD/ABCDE；需與答案卡一致）",
         "upload_label_pdf": "上傳多頁 PDF（每頁一位）",
-        "upload_label_answer_key": "上傳老師答案檔（XLSX/CSV；correct/points）",
+        "upload_label_answer_key": "上傳老師答案檔（Excel .xlsx；correct/points）",
         "upload_btn_process": "開始辨識並分析",
         "upload_processing": "處理中，請稍候…",
         "upload_hint_output": "完成後會輸出 results.csv、annotated.pdf，以及答案分析報表（若已安裝 R）。",
@@ -85,7 +85,7 @@ I18N = {
         "result_download_results": "下載 results.csv",
         "result_download_annotated": "下載 annotated.pdf",
         "result_download_answer_key": "下載 answer_key.xlsx",
-        "result_download_answer_key_csv": "下載 answer_key.csv",
+        "result_download_showwrong": "下載 showwrong.xlsx（只顯示錯題）",
         "result_hint_unstable": "如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。",
         "result_debug_hint": "需要回報問題時，可到 Debug Mode 下載診斷檔案（輸入 Job ID）。",
         "result_debug_open": "開啟 Debug Mode",
@@ -105,7 +105,7 @@ I18N = {
         "analysis_error_r_failed": "分析失敗：",
         "analysis_error_builtin_failed": "內建分析失敗：",
         "analysis_message_done": "分析完成，可下載報表與圖表。",
-        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請安裝 R）。",
+        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請確認已安裝 R，並安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
     },
     "en": {
         "lang_zh": "繁體中文",
@@ -123,15 +123,17 @@ I18N = {
         "download_ph_subject": "e.g., Math",
         "download_label_num_questions": "Number of questions (1–100; must match upload)",
         "download_label_choices_count": "Choices per question (ABC/ABCD/ABCDE)",
-        "download_btn_generate": "Download PDF + Answer Key (ZIP)",
-        "download_hint_location": "Downloads a ZIP that contains: the answer-sheet PDF + a teacher answer key (XLSX/CSV, editable in Excel).",
+        "download_btn_sheet": "Download Answer Sheet PDF",
+        "download_btn_answer_key": "Download Teacher Answer Key (Excel)",
+        "download_hint_sheet": "Download and print the answer sheet PDF (for students).",
+        "download_hint_answer_key": "When you need to edit correct answers/points, download the teacher answer key (Excel) and upload it on the Upload page.",
         "download_hint_support": "Grade supports 7–12 (including 10/11/12). Seat No supports 00–99. Choices support ABC / ABCD / ABCDE. Up to 100 questions.",
         "upload_title": "Upload for Recognition",
         "upload_label_num_questions": "Number of questions (1–100; enter per PDF and must match the sheet)",
         "upload_ph_num_questions": "e.g., 50",
         "upload_label_choices_count": "Choices per question (ABC/ABCD/ABCDE; must match the sheet)",
         "upload_label_pdf": "Upload multi-page PDF (one student per page)",
-        "upload_label_answer_key": "Upload teacher answer key (XLSX/CSV; correct/points)",
+        "upload_label_answer_key": "Upload teacher answer key (Excel .xlsx; correct/points)",
         "upload_btn_process": "Run recognition + analysis",
         "upload_processing": "Processing…",
         "upload_hint_output": "Outputs results.csv, annotated.pdf, and analysis reports (if R is installed).",
@@ -155,7 +157,7 @@ I18N = {
         "result_download_results": "Download results.csv",
         "result_download_annotated": "Download annotated.pdf",
         "result_download_answer_key": "Download answer_key.xlsx",
-        "result_download_answer_key_csv": "Download answer_key.csv",
+        "result_download_showwrong": "Download showwrong.xlsx (wrong answers only)",
         "result_hint_unstable": "If results are unstable, scans may be skewed or too light. Try 300dpi or a darker pen.",
         "result_debug_hint": "For reporting/debugging, open Debug Mode and enter the Job ID to download diagnostic files.",
         "result_debug_open": "Open Debug Mode",
@@ -175,7 +177,7 @@ I18N = {
         "analysis_error_r_failed": "Analysis failed:",
         "analysis_error_builtin_failed": "Built-in analysis failed:",
         "analysis_message_done": "Analysis complete. Download reports and plots below.",
-        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; install R for ggplot2 plots).",
+        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; to enable ggplot2 plots, install R and packages: readr, dplyr, tidyr, ggplot2).",
     },
 }
 
@@ -348,6 +350,36 @@ def upload_page(request: Request):
     return template_response(request, "upload.html")
 
 
+@app.get("/result/{job_id}", response_class=HTMLResponse)
+def result_page(request: Request, job_id: str):
+    job_id = (job_id or "").strip()
+    if not _JOB_ID_RE.match(job_id):
+        return RedirectResponse(url="/upload", status_code=302)
+
+    job_dir = OUTPUTS_DIR / job_id
+    if not job_dir.exists():
+        return RedirectResponse(url="/upload", status_code=302)
+
+    meta = _read_job_meta(job_dir)
+    display_filename = str(meta.get("original_filename") or "") or job_id
+
+    return template_response(
+        request,
+        "result.html",
+        {
+            "job_id": job_id,
+            "display_filename": display_filename,
+            "csv_url": f"/outputs/{job_id}/results.csv",
+            "pdf_url": f"/outputs/{job_id}/annotated.pdf",
+            "answer_key_url": (f"/outputs/{job_id}/answer_key.xlsx" if (job_dir / "answer_key.xlsx").exists() else None),
+            "showwrong_url": (f"/outputs/{job_id}/showwrong.xlsx" if (job_dir / "showwrong.xlsx").exists() else None),
+            "analysis_error": (str(meta.get("analysis_error") or "") or None),
+            "analysis_message": (str(meta.get("analysis_message") or "") or None),
+            "analysis_files": _analysis_file_links(job_id),
+        },
+    )
+
+
 def _analysis_file_links(job_id: str) -> list[dict]:
     job_dir = OUTPUTS_DIR / job_id
     files: list[dict] = []
@@ -451,8 +483,8 @@ def _read_answer_key_file(path: Path) -> dict[int, tuple[str, float]]:
 def _write_answer_key_files(
     num_questions: int,
     answer_key: dict[int, tuple[str, float]],
-    out_csv_path: Path,
-    out_xlsx_path: Path,
+    out_csv_path: Optional[Path] = None,
+    out_xlsx_path: Optional[Path] = None,
     default_points: float = 1.0,
 ) -> None:
     num_questions = max(1, min(100, int(num_questions)))
@@ -472,12 +504,15 @@ def _write_answer_key_files(
             points_out = int(round(points))
         rows.append([qno, correct, points_out])
 
-    out_csv_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(out_csv_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f, lineterminator="\n")
-        writer.writerows(rows)
+    if out_csv_path is not None:
+        out_csv_path = Path(out_csv_path)
+        out_csv_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_csv_path, "w", newline="", encoding="utf-8-sig") as f:
+            writer = csv.writer(f, lineterminator="\n")
+            writer.writerows(rows)
 
-    write_simple_xlsx(out_xlsx_path, rows=rows, sheet_name="answer_key")
+    if out_xlsx_path is not None:
+        write_simple_xlsx(Path(out_xlsx_path), rows=rows, sheet_name="answer_key")
 
 
 def _write_analysis_template(
@@ -522,6 +557,86 @@ def _write_analysis_template(
             writer.writerow([row[0], _normalize_answer_cell(correct), points_out, *row[1:]])
 
 
+def _write_showwrong_xlsx(
+    results_csv_path: Path,
+    answer_key: dict[int, tuple[str, float]],
+    out_xlsx_path: Path,
+    blank_label: str = "空白",
+) -> None:
+    with open(results_csv_path, "r", newline="", encoding="utf-8-sig") as f:
+        reader = csv.reader(f)
+        rows = list(reader)
+    if not rows:
+        raise ValueError("results.csv is empty")
+
+    header = rows[0]
+    if not header or header[0] != "number":
+        raise ValueError("unexpected results.csv header (expected first column: number)")
+
+    student_cols = [str(x or "").strip() for x in header[1:] if str(x or "").strip()]
+    if not student_cols:
+        raise ValueError("no students found in results.csv")
+
+    q_numbers: list[int] = []
+    corrects: list[str] = []
+    points_list: list[float] = []
+    answers_by_student: dict[str, list[str]] = {s: [] for s in student_cols}
+
+    for row in rows[1:]:
+        if not row:
+            continue
+        raw_no = (row[0] or "").strip()
+        try:
+            qno = int(raw_no)
+        except ValueError:
+            continue
+
+        correct, points = answer_key.get(qno, ("", 1.0))
+        correct_norm = _normalize_answer_cell(correct)
+        try:
+            points_f = float(points) if points is not None else 1.0
+        except Exception:
+            points_f = 1.0
+
+        q_numbers.append(qno)
+        corrects.append(correct_norm)
+        points_list.append(points_f)
+
+        for idx, student in enumerate(student_cols):
+            val = row[idx + 1] if idx + 1 < len(row) else ""
+            answers_by_student[student].append(_normalize_answer_cell(val))
+
+    def score_out(v: float) -> object:
+        if abs(float(v) - round(float(v))) < 1e-9:
+            return int(round(float(v)))
+        return round(float(v), 2)
+
+    out_rows: list[list[object]] = []
+    out_rows.append(["person_id", *[str(n) for n in q_numbers], "score"])
+    out_rows.append(["正確答案", *corrects, ""])
+
+    for student in student_cols:
+        score = 0.0
+        row_out: list[object] = [student]
+        answers = answers_by_student.get(student, [])
+        for i in range(len(q_numbers)):
+            correct = corrects[i] if i < len(corrects) else ""
+            ans = answers[i] if i < len(answers) else ""
+            points = points_list[i] if i < len(points_list) else 1.0
+            if not correct:
+                row_out.append("")
+                continue
+            if ans == correct:
+                score += float(points)
+                row_out.append("")
+                continue
+            row_out.append(blank_label if ans == "" else ans)
+        row_out.append(score_out(score))
+        out_rows.append(row_out)
+
+    write_simple_xlsx(Path(out_xlsx_path), rows=out_rows, sheet_name="showwrong")
+
+
 @app.get("/update", response_class=HTMLResponse)
 def update_page(request: Request):
     return template_response(request, "update.html", _update_page_ctx())
@@ -534,8 +649,8 @@ def _sanitize_token(value: str, fallback: str) -> str:
     return token or fallback
 
 
-@app.post("/api/generate")
-def api_generate(
+@app.post("/api/generate_sheet")
+def api_generate_sheet(
     background_tasks: BackgroundTasks,
     title_text: str = Form(DEFAULT_SHEET_TITLE),
     subject: str = Form(""),
@@ -565,32 +680,47 @@ def api_generate(
     filename_bits = ["answer_sheets", subject_token, title_token, choices_token, f"{num_questions}q"]
 
     pdf_name = "_".join(filename_bits) + ".pdf"
-    key_xlsx_name = "_".join(["answer_key", subject_token, title_token, choices_token, f"{num_questions}q"]) + ".xlsx"
-    key_csv_name = "_".join(["answer_key", subject_token, title_token, choices_token, f"{num_questions}q"]) + ".csv"
-    zip_name = "_".join(["answer_sheet_bundle", subject_token, title_token, choices_token, f"{num_questions}q"]) + ".zip"
+    background_tasks.add_task(_safe_unlink, out_path)
 
-    key_csv_path = OUTPUTS_DIR / f"answer_key_{out_id}.csv"
+    return FileResponse(path=str(out_path), media_type="application/pdf", filename=pdf_name)
+
+
+@app.post("/api/generate_answer_key")
+def api_generate_answer_key(
+    background_tasks: BackgroundTasks,
+    title_text: str = Form(DEFAULT_SHEET_TITLE),
+    subject: str = Form(""),
+    num_questions: int = Form(50),
+    choices_count: int = Form(4),
+):
+    num_questions = max(1, min(100, int(num_questions)))
+    choices_count = max(3, min(5, int(choices_count)))
+
+    out_id = str(uuid.uuid4())[:8]
+
+    subject = subject.strip()
+    title_text = title_text.strip() or DEFAULT_SHEET_TITLE
+
+    subject_token = _sanitize_token(subject, "subject") if subject else "subject"
+    title_token = _sanitize_token(title_text, "exam")
+    choices_token = "".join(chr(ord("A") + i) for i in range(choices_count))
+
+    key_xlsx_name = "_".join(["answer_key", subject_token, title_token, choices_token, f"{num_questions}q"]) + ".xlsx"
     key_xlsx_path = OUTPUTS_DIR / f"answer_key_{out_id}.xlsx"
     _write_answer_key_files(
         num_questions=num_questions,
         answer_key={},
-        out_csv_path=key_csv_path,
         out_xlsx_path=key_xlsx_path,
         default_points=1.0,
     )
 
-    zip_path = OUTPUTS_DIR / f"answer_sheet_bundle_{out_id}.zip"
-    with zipfile.ZipFile(zip_path, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.write(out_path, arcname=pdf_name)
-        zf.write(key_xlsx_path, arcname=key_xlsx_name)
-        zf.write(key_csv_path, arcname=key_csv_name)
-
-    background_tasks.add_task(_safe_unlink, out_path)
-    background_tasks.add_task(_safe_unlink, key_csv_path)
     background_tasks.add_task(_safe_unlink, key_xlsx_path)
-    background_tasks.add_task(_safe_unlink, zip_path)
 
-    return FileResponse(path=str(zip_path), media_type="application/zip", filename=zip_name)
+    return FileResponse(
+        path=str(key_xlsx_path),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=key_xlsx_name,
+    )
 
 
 @app.post("/api/process")
@@ -618,18 +748,18 @@ async def api_process(
     with open(input_pdf, "wb") as f:
         f.write(await pdf.read())
 
-    answer_key_filename = (answer_key.filename or "").strip() or "answer_key.csv"
+    answer_key_filename = (answer_key.filename or "").strip() or "answer_key.xlsx"
     answer_key_filename = answer_key_filename.replace("\\", "/")
-    answer_key_filename = _sanitize_download_component(Path(answer_key_filename).name, "answer_key.csv")
+    answer_key_filename = _sanitize_download_component(Path(answer_key_filename).name, "answer_key.xlsx")
     answer_key_suffix = (Path(answer_key_filename).suffix or "").lower()
     if answer_key_suffix not in {".csv", ".xlsx"}:
-        answer_key_suffix = ".csv"
+        answer_key_suffix = ".xlsx"
     answer_key_upload_path = job_dir / f"answer_key_upload{answer_key_suffix}"
     with open(answer_key_upload_path, "wb") as f:
         f.write(await answer_key.read())
 
-    answer_key_csv_path = job_dir / "answer_key.csv"
     answer_key_xlsx_path = job_dir / "answer_key.xlsx"
+    showwrong_xlsx_path = job_dir / "showwrong.xlsx"
 
     _write_job_meta(
         job_dir,
@@ -677,12 +807,16 @@ async def api_process(
             _write_answer_key_files(
                 num_questions=num_questions,
                 answer_key=key_map,
-                out_csv_path=answer_key_csv_path,
                 out_xlsx_path=answer_key_xlsx_path,
                 default_points=1.0,
             )
         except Exception:
             pass
+        try:
+            _write_showwrong_xlsx(csv_path, key_map, showwrong_xlsx_path)
+        except Exception as exc:
+            if analysis_error is None:
+                analysis_error = f"Showwrong error: {exc}"
 
     if key_map is not None:
         try:
@@ -725,23 +859,18 @@ async def api_process(
                 else:
                     analysis_message = t["analysis_message_done_fallback"]
 
-    analysis_files = _analysis_file_links(job_id)
+    meta = _read_job_meta(job_dir)
+    if analysis_error:
+        meta["analysis_error"] = analysis_error
+    else:
+        meta.pop("analysis_error", None)
+    if analysis_message:
+        meta["analysis_message"] = analysis_message
+    else:
+        meta.pop("analysis_message", None)
+    _write_job_meta(job_dir, meta)
 
-    return template_response(
-        request,
-        "upload.html",
-        {
-            "job_id": job_id,
-            "display_filename": original_filename,
-            "csv_url": f"/outputs/{job_id}/results.csv",
-            "pdf_url": f"/outputs/{job_id}/annotated.pdf",
-            "answer_key_url": (f"/outputs/{job_id}/answer_key.xlsx" if (job_dir / "answer_key.xlsx").exists() else None),
-            "answer_key_csv_url": (f"/outputs/{job_id}/answer_key.csv" if (job_dir / "answer_key.csv").exists() else None),
-            "analysis_error": analysis_error,
-            "analysis_message": analysis_message,
-            "analysis_files": analysis_files,
-        },
-    )
+    return RedirectResponse(url=f"/result/{job_id}", status_code=303)
 
 
 @app.post("/api/update/apply_zip", response_class=HTMLResponse)
@@ -927,6 +1056,8 @@ def download_output(job_id: str, filename: str):
         download_name = f"{upload_base_ascii}_{job_tag}_answer_key.csv"
     elif filename == "answer_key.xlsx":
         download_name = f"{upload_base_ascii}_{job_tag}_answer_key.xlsx"
+    elif filename == "showwrong.xlsx":
+        download_name = f"{upload_base_ascii}_{job_tag}_showwrong.xlsx"
     elif filename == "analysis_scores.csv":
         download_name = f"{upload_base_ascii}_{job_tag}_analysis_scores.csv"
     elif filename == "analysis_item.csv":

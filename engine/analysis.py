@@ -246,7 +246,7 @@ def run_analysis_template(template_csv_path: Path, outdir: Path) -> None:
         score = float(student_scores[s])
         percent = (score / total_possible) if total_possible > 0 else None
         scores_rows.append(
-            [s, round(score, 4), int(blank_counts[s]), round(total_possible, 4), (round(percent, 4) if percent is not None else "")],
+            [s, round(score, 2), int(blank_counts[s]), round(total_possible, 2), (round(percent, 2) if percent is not None else "")],
         )
 
     scores_rows.sort(key=lambda r: (-float(r[1]), str(r[0])))
@@ -308,13 +308,13 @@ def run_analysis_template(template_csv_path: Path, outdir: Path) -> None:
             [
                 qno,
                 c or "",
-                (int(p) if abs(p - round(p)) < 1e-9 else round(p, 4)),
-                (round(diff, 4) if diff is not None else ""),
-                (round(disc, 4) if disc is not None else ""),
-                round(blank_rate, 4),
-                round(multi_rate, 4),
-                round(other_rate, 4),
-                *[round(p_choice[ch], 4) for ch in choices],
+                (int(p) if abs(p - round(p)) < 1e-9 else round(p, 2)),
+                (round(diff, 2) if diff is not None else ""),
+                (round(disc, 2) if disc is not None else ""),
+                round(blank_rate, 2),
+                round(multi_rate, 2),
+                round(other_rate, 2),
+                *[round(p_choice[ch], 2) for ch in choices],
             ]
         )
 
@@ -336,7 +336,7 @@ def run_analysis_template(template_csv_path: Path, outdir: Path) -> None:
             [
                 int(s_count),
                 int(q_count),
-                round(total_possible, 4),
+                round(total_possible, 2),
                 round(mean_v, 3),
                 round(sd_v, 3),
                 round(float(q88), 3),
@@ -358,4 +358,3 @@ def run_analysis_template(template_csv_path: Path, outdir: Path) -> None:
         },
         outdir / "analysis_item_plot.png",
     )
-

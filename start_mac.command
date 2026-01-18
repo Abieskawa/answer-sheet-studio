@@ -14,6 +14,44 @@ pick_python() {
   return 1
 }
 
+ensure_r() {
+  if command -v Rscript >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local arch base html pkg_name url
+  arch="$(uname -m 2>/dev/null || echo "")"
+  if [ "$arch" = "arm64" ]; then
+    base="https://cran.r-project.org/bin/macosx/big-sur-arm64/base/"
+  else
+    base="https://cran.r-project.org/bin/macosx/big-sur-x86_64/base/"
+  fi
+
+  html="$(curl -fsSL "$base" 2>/dev/null || true)"
+  pkg_name="$(printf "%s" "$html" | grep -Eo 'R-[0-9.]+(-arm64)?\\.pkg' | sort -V | tail -n 1)"
+  if [ -z "$pkg_name" ]; then
+    open "https://cran.r-project.org/bin/macosx/" >/dev/null 2>&1 || true
+    osascript -e 'display dialog "R was not found, and the installer could not be detected automatically.\n\nWe opened CRAN in your browser. Please install R, then run Answer Sheet Studio again." buttons {"OK"} with icon caution' >/dev/null 2>&1 || true
+    exit 1
+  fi
+
+  url="${base}${pkg_name}"
+  PKG_PATH="${HOME}/Downloads/answer_sheet_studio_R_${pkg_name}"
+  if curl -L --fail --progress-bar --output "$PKG_PATH" "$url" >/dev/null 2>&1; then
+    if pkgutil --check-signature "$PKG_PATH" 2>/dev/null | grep -qi "Status: signed"; then
+      open "$PKG_PATH" >/dev/null 2>&1 || open "$url" >/dev/null 2>&1 || true
+      osascript -e 'display dialog "R installer opened.\n\nAfter installation finishes, run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
+    else
+      osascript -e 'display dialog "Downloaded R installer signature could not be verified.\n\nWe will open CRAN instead." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
+      open "https://cran.r-project.org/bin/macosx/" >/dev/null 2>&1 || true
+    fi
+  else
+    osascript -e 'display dialog "Failed to download the R installer.\n\nWe will open CRAN instead." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
+    open "https://cran.r-project.org/bin/macosx/" >/dev/null 2>&1 || true
+  fi
+  exit 1
+}
+
 PYTHON_BIN="$(pick_python || true)"
 if [ -z "$PYTHON_BIN" ]; then
   RECOMMENDED_PYTHON_VERSION="${ANSWER_SHEET_PYTHON_VERSION:-3.11.8}"
@@ -39,6 +77,8 @@ if [ -z "$PYTHON_BIN" ]; then
   fi
   exit 1
 fi
+
+ensure_r
 
 nohup "$PYTHON_BIN" launcher_headless.py >/dev/null 2>&1 &
 

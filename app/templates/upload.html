@@ -18,10 +18,53 @@
     <input type="file" name="pdf" accept="application/pdf" required />
   </label>
 
+  <label>{{ t.upload_label_answer_key }}
+    <input type="file" name="answer_key" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.csv,text/csv" required />
+  </label>
+
   <button type="submit">{{ t.upload_btn_process }}</button>
+  <div id="processing" class="hint" style="display:none">
+    <progress style="width:260px"></progress>
+    <span>{{ t.upload_processing }}</span>
+  </div>
 
   <p class="hint">{{ t.upload_hint_output }}</p>
 </form>
+
+{% if job_id %}
+  <hr />
+  <h2>{{ t.result_title }}</h2>
+  <p>{{ t.result_file }}<code>{{ display_filename }}</code></p>
+  <p>{{ t.result_job_id }}<code>{{ job_id }}</code></p>
+
+  <div class="downloads">
+    <a class="download" href="{{ csv_url }}">{{ t.result_download_results }}</a>
+    <a class="download" href="{{ pdf_url }}">{{ t.result_download_annotated }}</a>
+    {% if answer_key_url %}
+      <a class="download" href="{{ answer_key_url }}">{{ t.result_download_answer_key }}</a>
+    {% endif %}
+    {% if answer_key_csv_url %}
+      <a class="download" href="{{ answer_key_csv_url }}">{{ t.result_download_answer_key_csv }}</a>
+    {% endif %}
+  </div>
+
+  {% if analysis_error %}
+    <p class="hint" style="color:#fca5a5">{{ analysis_error }}</p>
+  {% endif %}
+  {% if analysis_message %}
+    <p class="hint">{{ analysis_message }}</p>
+  {% endif %}
+
+  {% if analysis_files %}
+    <div class="downloads">
+      {% for f in analysis_files %}
+        <a class="download" href="{{ f.url }}">{{ f.label }}</a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <p class="hint">{{ t.result_hint_unstable }}</p>
+{% endif %}
 
 <script>
   (() => {
@@ -31,6 +74,17 @@
     const saved = localStorage.getItem(key);
     if (saved && /^(3|4|5)$/.test(saved)) select.value = saved;
     select.addEventListener("change", () => localStorage.setItem(key, select.value));
+  })();
+
+  (() => {
+    const form = document.querySelector("form.form");
+    const processing = document.getElementById("processing");
+    const btn = form ? form.querySelector('button[type="submit"]') : null;
+    if (!form || !processing || !btn) return;
+    form.addEventListener("submit", () => {
+      btn.disabled = true;
+      processing.style.display = "block";
+    });
   })();
 </script>
 {% endblock %}

@@ -34,7 +34,7 @@ def _env_float(name: str, default: float) -> float:
 MIN_SCORE_GRADE = _env_float("ANSWER_SHEET_MIN_SCORE_GRADE", 0.05)
 MIN_SCORE_CLASS = _env_float("ANSWER_SHEET_MIN_SCORE_CLASS", 0.05)
 MIN_SCORE_SEAT = _env_float("ANSWER_SHEET_MIN_SCORE_SEAT", 0.06)
-MIN_SCORE_CHOICE = _env_float("ANSWER_SHEET_MIN_SCORE_CHOICE", 0.06)
+MIN_SCORE_CHOICE = _env_float("ANSWER_SHEET_MIN_SCORE_CHOICE", 0.025)
 
 
 def render_page(page: fitz.Page, dpi: int = 200) -> Tuple[np.ndarray, float]:
@@ -144,6 +144,7 @@ def find_corner_marks(img: np.ndarray) -> Optional[np.ndarray]:
 
     zoom_est = _estimate_zoom_from_image(gray)
     expected_px = float(CORNER_MARK_SIZE) * float(zoom_est)
+    expected_center = float(CORNER_MARK_MARGIN + (CORNER_MARK_SIZE / 2.0)) * float(zoom_est)
 
     rx = int(w * 0.25)
     ry = int(h * 0.25)
@@ -158,14 +159,16 @@ def find_corner_marks(img: np.ndarray) -> Optional[np.ndarray]:
     for key, (x0, y0, x1, y1) in rois.items():
         roi = gray[y0:y1, x0:x1]
         roi_h, roi_w = roi.shape[:2]
+        off_x = float(min(max(expected_center, 0.0), float(max(0, roi_w - 1))))
+        off_y = float(min(max(expected_center, 0.0), float(max(0, roi_h - 1))))
         if key == "tl":
-            target = (0.0, 0.0)
+            target = (off_x, off_y)
         elif key == "tr":
-            target = (float(max(0, roi_w - 1)), 0.0)
+            target = (float(max(0, roi_w - 1)) - off_x, off_y)
         elif key == "bl":
-            target = (0.0, float(max(0, roi_h - 1)))
+            target = (off_x, float(max(0, roi_h - 1)) - off_y)
         else:
-            target = (float(max(0, roi_w - 1)), float(max(0, roi_h - 1)))
+            target = (float(max(0, roi_w - 1)) - off_x, float(max(0, roi_h - 1)) - off_y)
         found = _find_corner_mark_in_roi(roi, expected_px=expected_px, target_corner_xy=target)
         if found is None:
             continue
@@ -299,7 +302,9 @@ def pick_one(
         return None, "BLANK", float(best), top, second_label, second_score
     if len(scores) >= 2:
         second = scores[int(idxs[1])]
-        if (best - second) < amb_delta:
+        # For light scans, scores can be small; use a smaller ambiguity delta when best is low.
+        delta = float(min(float(amb_delta), float(best) * 0.55))
+        if float(second) >= float(min_score) * 0.85 and (best - second) < delta:
             second_label = labels[int(idxs[1])]
             second_score = float(second)
             return labels[top], "AMBIGUOUS", float(best), top, second_label, second_score
@@ -352,7 +357,10 @@ def process_page(
     choices_count: int,
 ) -> Tuple[Dict[str, Any], np.ndarray, List[Dict[str, Any]]]:
     can = warped.copy()
-    gray = cv2.cvtColor(can, cv2.COLOR_BGR2GRAY)
+    gray_raw = cv2.cvtColor(can, cv2.COLOR_BGR2GRAY)
+    # Boost local contrast so light marks are easier to detect.
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(16, 16))
+    gray = clahe.apply(gray_raw)
 
     results: Dict[str, Any] = {}
     marks: List[Tuple[Tuple[int,int,int,int], str, str]] = []  # bbox, text, status
@@ -383,17 +391,26 @@ def process_page(
             }
         )
 
-    # Class (single row digits 0-9)
+    # Class (single row digits 0-9; treat 0 as unused)
     class_scores = []
     class_bboxes = []
     for x in CLASS_CIRCLE_XS:
         bbox = bubble_bbox_px(x, CLASS_CIRCLE_Y, CLASS_CIRCLE_RADIUS, zoom)
         class_bboxes.append(bbox)
         class_scores.append(score_bubble(gray, bbox))
-    c_label = [str(v) for v in CLASS_VALUES]
-    c_val, c_status, _, c_idx, c_second_label, _ = pick_one(
-        class_scores, c_label, min_score=MIN_SCORE_CLASS, amb_delta=0.02
+    c_label_all = [str(v) for v in CLASS_VALUES]
+    c_scores_pick = class_scores
+    c_labels_pick = c_label_all
+    c_offset = 0
+    if c_label_all and c_label_all[0] == "0":
+        c_scores_pick = class_scores[1:]
+        c_labels_pick = c_label_all[1:]
+        c_offset = 1
+
+    c_val, c_status, _, c_idx0, c_second_label, _ = pick_one(
+        c_scores_pick, c_labels_pick, min_score=MIN_SCORE_CLASS, amb_delta=0.02
     )
+    c_idx = int(c_idx0) + int(c_offset)
     results["class_no"] = c_val if c_status == "OK" else None
     results["class_status"] = c_status
     marks.append((class_bboxes[c_idx], f"C:{c_val or ''}", c_status))
@@ -403,41 +420,83 @@ def process_page(
                 "field": "class_no",
                 "question": "",
                 "status": c_status,
-                "best_label": c_label[c_idx],
+                "best_label": c_labels_pick[int(c_idx0)] if c_labels_pick else "",
                 "second_label": c_second_label or "",
             }
         )
 
     # Seat number (00-99): top row = tens, bottom row = ones
     digit_labels = [str(d) for d in range(10)]
-    def pick_digit(
+    def pick_digit_row(
         y_pt: float,
-    ) -> Tuple[Optional[str], str, float, int, Optional[str], float, List[Tuple[int, int, int, int]]]:
-        bboxes = []
-        scores = []
+        prefix: str,
+    ) -> Tuple[str, str, float, int, Optional[str], float, List[Tuple[int, int, int, int]], List[int]]:
+        bboxes: List[Tuple[int, int, int, int]] = []
+        scores: List[float] = []
         for i in range(10):
-            x_pt = SEAT_START_X + i*SEAT_STEP_X
+            x_pt = SEAT_START_X + i * SEAT_STEP_X
             bbox = bubble_bbox_px(x_pt, y_pt, SEAT_CIRCLE_RADIUS, zoom)
             bboxes.append(bbox)
             scores.append(score_bubble(gray, bbox))
-        val, status, best, idx, second_label, second_score = pick_one(
+
+        best = float(max(scores) if scores else 0.0)
+        multi_cut = max(float(MIN_SCORE_SEAT), best * 0.65)
+        picked = [i for i, s in enumerate(scores) if float(s) >= multi_cut]
+        if len(picked) >= 2:
+            picked_sorted = sorted(int(i) for i in picked)
+            value = "".join(digit_labels[i] for i in picked_sorted)
+            best_idx = int(max(picked_sorted, key=lambda i: scores[i]))
+            best_score = float(scores[best_idx])
+            picked_by_score = sorted(picked_sorted, key=lambda i: scores[i], reverse=True)
+            second_idx = int(picked_by_score[1]) if len(picked_by_score) >= 2 else best_idx
+            second_label = digit_labels[second_idx] if len(digit_labels) > second_idx else None
+            second_score = float(scores[second_idx]) if len(scores) > second_idx else 0.0
+            return value, "MULTI", best_score, best_idx, second_label, second_score, bboxes, picked_sorted
+
+        val, status, best_score, idx, second_label, second_score = pick_one(
             scores, digit_labels, min_score=MIN_SCORE_SEAT, amb_delta=0.02
         )
-        return val, status, best, idx, second_label, second_score, bboxes
+        val_out = str(val) if (val is not None) else ""
+        return val_out, status, float(best_score), int(idx), second_label, float(second_score), bboxes, [int(idx)]
 
-    tens, t_status, _, t_idx, t_second_label, _, t_bboxes = pick_digit(SEAT_TOP_ROW_Y)
-    ones, o_status, _, o_idx, o_second_label, _, o_bboxes = pick_digit(SEAT_BOTTOM_ROW_Y)
+    tens, t_status, _, t_idx, t_second_label, _, t_bboxes, t_picked = pick_digit_row(SEAT_TOP_ROW_Y, "T")
+    ones, o_status, _, o_idx, o_second_label, _, o_bboxes, o_picked = pick_digit_row(SEAT_BOTTOM_ROW_Y, "O")
 
-    tens_out = tens if t_status == "OK" else None
-    ones_out = ones if o_status == "OK" else None
-    if tens_out is not None and ones_out is not None:
-        results["seat_no"] = f"{tens_out}{ones_out}"
+    seat_no: Optional[str] = None
+    if t_status == "OK" and o_status == "OK" and tens and ones:
+        seat_no = f"{tens}{ones}"
     else:
-        results["seat_no"] = None
-    results["seat_status"] = "OK" if (t_status=="OK" and o_status=="OK") else ("AMBIGUOUS" if ("AMBIGUOUS" in [t_status,o_status]) else "BLANK")
+        def candidate(value: str, status: str) -> Optional[str]:
+            if status == "OK" and value:
+                return value
+            if status == "MULTI" and len(value) == 2:
+                return value
+            return None
 
-    marks.append((t_bboxes[t_idx], f"T:{tens or ''}", t_status))
-    marks.append((o_bboxes[o_idx], f"O:{ones or ''}", o_status))
+        t_cand = candidate(tens, t_status)
+        o_cand = candidate(ones, o_status)
+        if o_status == "BLANK" and t_cand is not None:
+            seat_no = t_cand
+        elif t_status == "BLANK" and o_cand is not None:
+            seat_no = o_cand
+
+    results["seat_no"] = seat_no
+    results["seat_status"] = "OK" if seat_no is not None else ("AMBIGUOUS" if ("AMBIGUOUS" in [t_status, o_status]) else "BLANK")
+
+    if t_status == "MULTI":
+        for j in t_picked:
+            text = f"T:{tens}" if j == t_idx else ""
+            marks.append((t_bboxes[j], text, t_status))
+    else:
+        marks.append((t_bboxes[t_idx], f"T:{tens or ''}", t_status))
+
+    if o_status == "MULTI":
+        for j in o_picked:
+            text = f"O:{ones}" if j == o_idx else ""
+            marks.append((o_bboxes[j], text, o_status))
+    else:
+        marks.append((o_bboxes[o_idx], f"O:{ones or ''}", o_status))
+
     if t_status != "OK":
         flags.append(
             {

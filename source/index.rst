@@ -32,9 +32,8 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 功能說明（進階）
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- **下載答案卡**：輸入標題、科目、題數（最多 100 題）、每題選項（ABC / ABCD / ABCDE），產生單頁 PDF。
-- **上傳影像辨識**：上傳多頁 PDF（每頁一位學生）。會輸出 ``results.csv`` （題號為列、學生為欄）、``ambiguity.csv`` （空白/模稜兩可/多選）與 ``annotated.pdf`` （標註辨識結果）。
-- **答案分析**：辨識後可下載 ``analysis_template.csv``，填入每題正確答案（``correct``）與分數（``points``），再上傳執行分析（需要安裝 R）。
+- **下載答案卡**：輸入標題、科目、題數（最多 100 題）、每題選項（ABC / ABCD / ABCDE），下載一個 ZIP（答案卡 PDF + 老師答案檔 ``answer_key.xlsx``/``answer_key.csv``）。
+- **上傳處理（辨識＋分析）**：上傳多頁 PDF（每頁一位學生）＋老師答案檔（XLSX/CSV）。會輸出 ``results.csv``、``ambiguity.csv``、``annotated.pdf``，以及分析報表/圖表（建議安裝 R 用 ``ggplot2`` 出圖）。
 - **啟動器**：雙擊啟動器（``start_mac.command`` 或 ``start_windows.vbs``）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 ``http://127.0.0.1:8000``。
 
 使用注意事項
@@ -42,7 +41,8 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 - 進行影像辨識時，**題數** 與 **每題選項（ABC/ABCD/ABCDE）** 必須與答案卡一致。
 - 想要結果更穩定：建議用較深的筆、掃描 **300dpi**，並避免歪斜/旋轉。
-- **答案分析** 功能需要安裝 **R**（可執行 ``Rscript``），並安裝套件：``readr``、``dplyr``、``tidyr``、``ggplot2``。
+- （推薦）安裝 **R**（可執行 ``Rscript``）以使用 ``ggplot2`` 產生更好看的圖表；若偵測不到 R，啟動器會自動下載並開啟安裝程式。安裝完成後請再執行一次啟動器。
+- R 套件需求：``readr``、``dplyr``、``tidyr``、``ggplot2``。
 
 輸出檔案
 ~~~~~~~~
@@ -53,7 +53,8 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 - ``ambiguity.csv``
 - ``annotated.pdf``
 - ``input.pdf`` （原始上傳檔）
-- （若執行答案分析）``analysis_template.csv``、``analysis_scores.csv``、``analysis_item.csv``、``analysis_summary.csv``、``analysis_score_hist.png``、``analysis_item_plot.png``
+- ``answer_key.xlsx``、``answer_key.csv``（老師答案檔）
+- ``analysis_template.csv``、``analysis_scores.csv``、``analysis_item.csv``、``analysis_summary.csv``、``analysis_score_hist.png``、``analysis_item_plot.png``
 
 更新
 ~~~~
@@ -113,9 +114,8 @@ Windows 11
 Features
 ~~~~~~~~
 
-- **Download page** – choose title, subject, number of questions (up to 100), and choices per question (ABC/ABCD/ABCDE). Generates a single-page PDF template.
-- **Upload page** – drop a multi-page PDF scan. Recognition exports ``results.csv``, ``ambiguity.csv``, and ``annotated.pdf``.
-- **Answer analysis** – after recognition, download ``analysis_template.csv``, fill ``correct`` + ``points``, then upload to generate analysis tables and plots (requires R).
+- **Download page** – choose title, subject, number of questions (up to 100), and choices per question (ABC/ABCD/ABCDE). Downloads a ZIP (answer sheet PDF + teacher answer key ``answer_key.xlsx``/``answer_key.csv``).
+- **Upload page (recognize + analyze)** – upload a multi-page PDF scan (one student per page) plus the teacher answer key (XLSX/CSV). Exports ``results.csv``, ``ambiguity.csv``, ``annotated.pdf``, and analysis reports/plots (install R for ggplot2 plots).
 - **Launcher** – sets up ``.venv``, installs requirements, starts the local server, and opens the browser.
 - The web UI supports **English** and **Traditional Chinese**.
 
@@ -124,7 +124,8 @@ Important Notes
 
 - For recognition, the **number of questions** and **choices per question** must match the generated answer sheet.
 - For more stable results: use a darker pen/pencil, scan at **300dpi**, and avoid skew/rotation.
-- **Answer analysis** requires **R** (``Rscript``) and packages: ``readr``, ``dplyr``, ``tidyr``, ``ggplot2``.
+- (Recommended) Install **R** (``Rscript``) for ggplot2 plots. If R is missing, the launcher auto-opens the official installer; run the launcher again after installing.
+- R packages: ``readr``, ``dplyr``, ``tidyr``, ``ggplot2``.
 
 Output Files
 ~~~~~~~~~~~~
@@ -135,7 +136,8 @@ After recognition, files are written under ``outputs/<job_id>/``:
 - ``ambiguity.csv``
 - ``annotated.pdf``
 - ``input.pdf`` (original upload)
-- (If you run analysis) ``analysis_template.csv``, ``analysis_scores.csv``, ``analysis_item.csv``, ``analysis_summary.csv``, ``analysis_score_hist.png``, ``analysis_item_plot.png``
+- ``answer_key.xlsx``, ``answer_key.csv`` (teacher answer key)
+- ``analysis_template.csv``, ``analysis_scores.csv``, ``analysis_item.csv``, ``analysis_summary.csv``, ``analysis_score_hist.png``, ``analysis_item_plot.png``
 
 Updating
 ~~~~~~~~

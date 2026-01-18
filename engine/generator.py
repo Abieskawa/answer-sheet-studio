@@ -90,7 +90,7 @@ GRADE_X0 = NAME_LINE_X0  # align with name underline start
 GRADE_STEP = 26
 
 CLASS_Y = PAGE_H - 199
-CLASS_VALUES = list(range(10))  # 0..9
+CLASS_VALUES = list(range(10))  # 0..9 (we skip drawing 0)
 CLASS_RADIUS = 6.2
 CLASS_X0 = NAME_LINE_X0  # align with name underline start
 CLASS_STEP = 21
@@ -275,6 +275,8 @@ def draw_identity(c: canvas.Canvas):
     c.drawString(LEFT_X, CLASS_Y - 2, "班級")
     set_font_lat(c, 9, bold=False)
     for i, v in enumerate(CLASS_VALUES):
+        if v == 0:
+            continue
         x = CLASS_X0 + i * CLASS_STEP
         c.drawCentredString(x, CLASS_Y + BUBBLE_LABEL_DY, str(v))
         c.circle(x, CLASS_Y, CLASS_RADIUS, stroke=1, fill=0)

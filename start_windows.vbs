@@ -9,6 +9,78 @@ If recommendedPython = "" Then
     recommendedPython = "3.11.8"
 End If
 
+Function DetectLatestRWindowsExe()
+    On Error Resume Next
+    Dim ps, cmd, rc, out, tempDir, outPath, f
+    tempDir = WshShell.ExpandEnvironmentStrings("%TEMP%")
+    outPath = tempDir & "\answer_sheet_studio_r_latest.txt"
+    ' Query CRAN and extract the latest R-x.y.z-win.exe filename
+    ps = "$ErrorActionPreference='Stop';" & _
+         "$base='https://cran.r-project.org/bin/windows/base/';" & _
+         "$html=(Invoke-WebRequest -Uri $base -UseBasicParsing).Content;" & _
+         "$ms=[regex]::Matches($html,'R-([0-9]+\\.[0-9]+\\.[0-9]+)-win\\.exe');" & _
+         "$vers=@(); foreach($m in $ms){ $vers += [version]$m.Groups[1].Value };" & _
+         "if($vers.Count -eq 0){ throw 'No R installer found' };" & _
+         "$v=($vers | Sort-Object -Descending | Select-Object -First 1);" & _
+         "('R-' + $v.ToString() + '-win.exe') | Set-Content -Encoding ASCII -NoNewline '" & Replace(outPath, "\", "\\") & "';"
+    cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command " & q & ps & q
+    rc = WshShell.Run(cmd, 0, True)
+    If rc <> 0 Then
+        DetectLatestRWindowsExe = ""
+        Exit Function
+    End If
+    If Not fso.FileExists(outPath) Then
+        DetectLatestRWindowsExe = ""
+        Exit Function
+    End If
+    Set f = fso.OpenTextFile(outPath, 1, False)
+    out = f.ReadAll
+    f.Close
+    DetectLatestRWindowsExe = Trim(out)
+End Function
+
+Function DownloadAndInstallR()
+    On Error Resume Next
+    Dim exeName, url, tempDir, outPath, ps, cmd, rc
+    exeName = DetectLatestRWindowsExe()
+    If exeName = "" Then
+        DownloadAndInstallR = False
+        Exit Function
+    End If
+    url = "https://cran.r-project.org/bin/windows/base/" & exeName
+    tempDir = WshShell.ExpandEnvironmentStrings("%TEMP%")
+    outPath = tempDir & "\answer_sheet_studio_" & exeName
+
+    ps = "$ErrorActionPreference='Stop';" & _
+         "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" & _
+         "$url='" & Replace(url, "'", "''") & "';" & _
+         "$out='" & Replace(outPath, "'", "''") & "';" & _
+         "try { Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing } catch { (New-Object Net.WebClient).DownloadFile($url, $out) };" & _
+         "try { $sig=Get-AuthenticodeSignature -FilePath $out; if ($sig.Status -ne 'Valid') { throw ('Invalid installer signature: ' + $sig.Status) } } catch { throw };" & _
+         "try { Start-Process -FilePath $out -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait } catch { Start-Process -FilePath $out -Wait };"
+
+    cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command " & q & ps & q
+    rc = WshShell.Run(cmd, 0, True)
+    DownloadAndInstallR = (rc = 0)
+End Function
+
+Sub EnsureRInstalledOrExit()
+    On Error Resume Next
+    If CanRun("Rscript -e " & q & "quit(status=0)" & q) Then
+        Exit Sub
+    End If
+    ' No prompt: automatically download and start installing R from CRAN.
+    If DownloadAndInstallR() Then
+        ' After installation, ask user to rerun (Start Menu shortcuts and PATH may update).
+        WshShell.Popup "R installer finished. Please run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
+        WScript.Quit
+    End If
+    WshShell.Popup "Failed to download or install R automatically." & vbCrLf & vbCrLf & "Please install R from CRAN, then run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 48
+    On Error Resume Next
+    WshShell.Run "https://cran.r-project.org/bin/windows/base/", 1, False
+    WScript.Quit
+End Sub
+
 Function CanRun(cmd)
     On Error Resume Next
     Dim rc
@@ -45,10 +117,12 @@ Sub TryRunFromKnownInstall(tag)
     pythonw = localAppData & "\Programs\Python\Python" & tag & "\pythonw.exe"
     python = localAppData & "\Programs\Python\Python" & tag & "\python.exe"
     If fso.FileExists(pythonw) Then
+        EnsureRInstalledOrExit
         RunAsync q & pythonw & q & " " & q & launcher & q
         WScript.Quit
     End If
     If fso.FileExists(python) Then
+        EnsureRInstalledOrExit
         RunAsync q & python & q & " " & q & launcher & q
         WScript.Quit
     End If
@@ -56,10 +130,12 @@ Sub TryRunFromKnownInstall(tag)
     pythonw = programFiles & "\Python" & tag & "\pythonw.exe"
     python = programFiles & "\Python" & tag & "\python.exe"
     If fso.FileExists(pythonw) Then
+        EnsureRInstalledOrExit
         RunAsync q & pythonw & q & " " & q & launcher & q
         WScript.Quit
     End If
     If fso.FileExists(python) Then
+        EnsureRInstalledOrExit
         RunAsync q & python & q & " " & q & launcher & q
         WScript.Quit
     End If
@@ -105,24 +181,29 @@ probe = q & "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 
 
 ' Prefer supported Python versions (3.10+) via the Windows py launcher (pyw) if available.
 If CanRun("pyw -3.10 -c " & probe) Then
+    EnsureRInstalledOrExit
     RunAsync "pyw -3.10 " & q & launcher & q
     WScript.Quit
 End If
 If CanRun("pyw -3.11 -c " & probe) Then
+    EnsureRInstalledOrExit
     RunAsync "pyw -3.11 " & q & launcher & q
     WScript.Quit
 End If
 If CanRun("pyw -3.12 -c " & probe) Then
+    EnsureRInstalledOrExit
     RunAsync "pyw -3.12 " & q & launcher & q
     WScript.Quit
 End If
 If CanRun("pyw -3.13 -c " & probe) Then
+    EnsureRInstalledOrExit
     RunAsync "pyw -3.13 " & q & launcher & q
     WScript.Quit
 End If
 
 ' Fallback: pythonw (no console window)
 If CanRun("pythonw -c " & probe) Then
+    EnsureRInstalledOrExit
     RunAsync "pythonw " & q & launcher & q
     WScript.Quit
 End If

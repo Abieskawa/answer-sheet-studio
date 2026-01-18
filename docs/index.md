@@ -13,9 +13,14 @@ Answer Sheet Studio helps teachers generate printable answer sheets and run loca
 2. Your browser opens `http://127.0.0.1:8000`.
 3. Close the browser when finished; the server auto-exits after a period of inactivity.
 
-## Answer analysis (optional)
+## Analysis (recommended)
 
-After recognition, you can download `analysis_template.csv`, fill `correct` + `points`, and upload it to generate analysis tables and plots. This requires R (`Rscript`) and packages: `readr`, `dplyr`, `tidyr`, `ggplot2`.
+Use the Download page to get a ZIP bundle (answer-sheet PDF + teacher answer key `answer_key.xlsx`/`answer_key.csv`). Fill the answer key, then upload **both**:
+
+- multi-page scanned PDF (one student per page)
+- teacher answer key (`XLSX/CSV`)
+
+The Upload page runs recognition + analysis and lets you download tables and plots. For best-looking plots, install R (`Rscript`) and packages: `readr`, `dplyr`, `tidyr`, `ggplot2` (the launcher auto-opens the installer if R is missing).
 
 ## Docs / README
 

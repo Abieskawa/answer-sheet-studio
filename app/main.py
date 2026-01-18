@@ -7,6 +7,7 @@ import json
 import time
 import threading
 import shutil
+import zipfile
 from typing import Optional
 from pathlib import Path
 from fastapi import FastAPI, Request, UploadFile, File, Form, BackgroundTasks
@@ -14,8 +15,10 @@ from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from engine.analysis import run_analysis_template
 from engine.generator import generate_answer_sheet_pdf, DEFAULT_TITLE as DEFAULT_SHEET_TITLE
 from engine.recognizer import process_pdf_to_csv_and_annotated_pdf
+from engine.xlsx import read_simple_xlsx_table, write_simple_xlsx
 
 APP_DIR = Path(__file__).resolve().parent
 ROOT_DIR = APP_DIR.parent
@@ -39,7 +42,6 @@ I18N = {
         "lang_en": "English",
         "nav_download": "下載答案卡",
         "nav_upload": "上傳處理",
-        "nav_analysis": "答案分析",
         "nav_update": "更新",
         "footer_local": "本機運行 / 不上傳到雲端",
         "footer_docs": "說明文件",
@@ -51,16 +53,18 @@ I18N = {
         "download_ph_subject": "例如：數學",
         "download_label_num_questions": "題數（1–100；上傳辨識時也要填一樣）",
         "download_label_choices_count": "每題選項（ABC/ABCD/ABCDE）",
-        "download_btn_generate": "產生並下載 PDF",
-        "download_hint_location": "下載後由瀏覽器決定儲存位置（會跳出「儲存」視窗或下載到預設資料夾）。",
+        "download_btn_generate": "下載 PDF + 答案檔（ZIP）",
+        "download_hint_location": "會下載一個 ZIP，裡面包含：答案卡 PDF + 老師答案檔（XLSX/CSV；可用 Excel 編輯）。",
         "download_hint_support": "年級欄位支援 7–12（含 10/11/12），座號支援 00–99，選擇題支援 ABC / ABCD / ABCDE，最多 100 題。",
         "upload_title": "上傳處理",
         "upload_label_num_questions": "題數（1–100；請依每份掃描檔案輸入，需與答案卡一致）",
         "upload_ph_num_questions": "例如：50",
         "upload_label_choices_count": "每題選項（ABC/ABCD/ABCDE；需與答案卡一致）",
         "upload_label_pdf": "上傳多頁 PDF（每頁一位）",
-        "upload_btn_process": "開始辨識",
-        "upload_hint_output": "完成後會輸出 results.csv 與 annotated.pdf。",
+        "upload_label_answer_key": "上傳老師答案檔（XLSX/CSV；correct/points）",
+        "upload_btn_process": "開始辨識並分析",
+        "upload_processing": "處理中，請稍候…",
+        "upload_hint_output": "完成後會輸出 results.csv、annotated.pdf，以及答案分析報表（若已安裝 R）。",
         "update_title": "更新",
         "update_hint": "下載最新 ZIP 後在此上傳套用更新。更新過程會短暫重新啟動。",
         "update_open_releases": "開啟下載頁（GitHub Releases）",
@@ -80,7 +84,8 @@ I18N = {
         "result_job_id": "Job ID：",
         "result_download_results": "下載 results.csv",
         "result_download_annotated": "下載 annotated.pdf",
-        "result_open_analysis": "答案分析",
+        "result_download_answer_key": "下載 answer_key.xlsx",
+        "result_download_answer_key_csv": "下載 answer_key.csv",
         "result_hint_unstable": "如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。",
         "result_debug_hint": "需要回報問題時，可到 Debug Mode 下載診斷檔案（輸入 Job ID）。",
         "result_debug_open": "開啟 Debug Mode",
@@ -96,30 +101,17 @@ I18N = {
         "debug_dl_annotated": "下載 annotated.pdf",
         "debug_dl_input": "下載 input.pdf（原始上傳檔）",
         "debug_report_hint": "回報時請提供：Job ID、results.csv、ambiguity.csv、annotated.pdf（必要時 input.pdf）。",
-        "analysis_title": "答案分析",
-        "analysis_hint": "流程：先下載 template.csv → 填入每題正確答案與分數（可留空白）→ 上傳並產生分析報表。",
-        "analysis_job_id": "Job ID：",
-        "analysis_label_default_points": "每題預設分數（可之後逐題微調）",
-        "analysis_btn_download_template": "下載 template.csv",
-        "analysis_hint_template": "template.csv 會包含學生作答；請在 correct/points 欄位補齊。",
-        "analysis_label_job_id": "Job ID",
-        "analysis_ph_job_id": "貼上處理完成頁面顯示的 Job ID",
-        "analysis_label_template_file": "上傳已填好的 template.csv",
-        "analysis_btn_run": "產生分析",
-        "analysis_hint_upload": "如果你用 Excel 編輯，請存成 CSV 再上傳。",
-        "analysis_error_missing_job": "找不到此 Job ID 的輸出資料夾。",
-        "analysis_error_invalid_job_id": "Job ID 格式不正確。",
-        "analysis_error_missing_results": "找不到 results.csv，請先完成一次辨識。",
-        "analysis_error_missing_rscript": "找不到 Rscript。請先安裝 R（並確保 Rscript 在 PATH）。",
+        "analysis_error_missing_rscript": "找不到 Rscript（啟動器會協助安裝 R；若仍未安裝請先安裝 R 以用 ggplot2 出圖）。",
         "analysis_error_r_failed": "分析失敗：",
+        "analysis_error_builtin_failed": "內建分析失敗：",
         "analysis_message_done": "分析完成，可下載報表與圖表。",
+        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請安裝 R）。",
     },
     "en": {
         "lang_zh": "繁體中文",
         "lang_en": "English",
         "nav_download": "Download",
         "nav_upload": "Upload",
-        "nav_analysis": "Analysis",
         "nav_update": "Update",
         "footer_local": "Runs locally / no cloud upload",
         "footer_docs": "Docs",
@@ -131,16 +123,18 @@ I18N = {
         "download_ph_subject": "e.g., Math",
         "download_label_num_questions": "Number of questions (1–100; must match upload)",
         "download_label_choices_count": "Choices per question (ABC/ABCD/ABCDE)",
-        "download_btn_generate": "Generate & Download PDF",
-        "download_hint_location": "Your browser decides where the file is saved (Save dialog or default Downloads folder).",
+        "download_btn_generate": "Download PDF + Answer Key (ZIP)",
+        "download_hint_location": "Downloads a ZIP that contains: the answer-sheet PDF + a teacher answer key (XLSX/CSV, editable in Excel).",
         "download_hint_support": "Grade supports 7–12 (including 10/11/12). Seat No supports 00–99. Choices support ABC / ABCD / ABCDE. Up to 100 questions.",
         "upload_title": "Upload for Recognition",
         "upload_label_num_questions": "Number of questions (1–100; enter per PDF and must match the sheet)",
         "upload_ph_num_questions": "e.g., 50",
         "upload_label_choices_count": "Choices per question (ABC/ABCD/ABCDE; must match the sheet)",
         "upload_label_pdf": "Upload multi-page PDF (one student per page)",
-        "upload_btn_process": "Start Recognition",
-        "upload_hint_output": "Outputs results.csv and annotated.pdf.",
+        "upload_label_answer_key": "Upload teacher answer key (XLSX/CSV; correct/points)",
+        "upload_btn_process": "Run recognition + analysis",
+        "upload_processing": "Processing…",
+        "upload_hint_output": "Outputs results.csv, annotated.pdf, and analysis reports (if R is installed).",
         "update_title": "Update",
         "update_hint": "Download the latest ZIP and upload it here. The app will restart briefly.",
         "update_open_releases": "Open download page (GitHub Releases)",
@@ -160,7 +154,8 @@ I18N = {
         "result_job_id": "Job ID:",
         "result_download_results": "Download results.csv",
         "result_download_annotated": "Download annotated.pdf",
-        "result_open_analysis": "Answer analysis",
+        "result_download_answer_key": "Download answer_key.xlsx",
+        "result_download_answer_key_csv": "Download answer_key.csv",
         "result_hint_unstable": "If results are unstable, scans may be skewed or too light. Try 300dpi or a darker pen.",
         "result_debug_hint": "For reporting/debugging, open Debug Mode and enter the Job ID to download diagnostic files.",
         "result_debug_open": "Open Debug Mode",
@@ -176,23 +171,11 @@ I18N = {
         "debug_dl_annotated": "Download annotated.pdf",
         "debug_dl_input": "Download input.pdf (original upload)",
         "debug_report_hint": "When reporting, include: Job ID, results.csv, ambiguity.csv, annotated.pdf (and input.pdf if needed).",
-        "analysis_title": "Answer Analysis",
-        "analysis_hint": "Workflow: download template.csv → fill correct answers and points (blanks supported) → upload to generate reports.",
-        "analysis_job_id": "Job ID:",
-        "analysis_label_default_points": "Default points per question (you can fine-tune per item later)",
-        "analysis_btn_download_template": "Download template.csv",
-        "analysis_hint_template": "template.csv includes student answers; fill the correct/points columns before uploading.",
-        "analysis_label_job_id": "Job ID",
-        "analysis_ph_job_id": "Paste the Job ID from the result page",
-        "analysis_label_template_file": "Upload completed template.csv",
-        "analysis_btn_run": "Run analysis",
-        "analysis_hint_upload": "If you edit in Excel, save as CSV before uploading.",
-        "analysis_error_missing_job": "Output folder not found for this Job ID.",
-        "analysis_error_invalid_job_id": "Invalid Job ID.",
-        "analysis_error_missing_results": "results.csv not found. Please run recognition first.",
-        "analysis_error_missing_rscript": "Rscript not found. Please install R and ensure Rscript is on PATH.",
+        "analysis_error_missing_rscript": "Rscript not found (the launcher can help install R; install R for ggplot2 plots).",
         "analysis_error_r_failed": "Analysis failed:",
+        "analysis_error_builtin_failed": "Built-in analysis failed:",
         "analysis_message_done": "Analysis complete. Download reports and plots below.",
+        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; install R for ggplot2 plots).",
     },
 }
 
@@ -238,6 +221,13 @@ def _write_job_meta(job_dir: Path, meta: dict) -> None:
     meta_path = job_dir / _META_FILENAME
     try:
         meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _safe_unlink(path: Path) -> None:
+    try:
+        path.unlink(missing_ok=True)
     except Exception:
         pass
 
@@ -362,12 +352,11 @@ def _analysis_file_links(job_id: str) -> list[dict]:
     job_dir = OUTPUTS_DIR / job_id
     files: list[dict] = []
     label_by_name = {
-        "analysis_template.csv": "template.csv",
-        "analysis_scores.csv": "scores.csv",
-        "analysis_item.csv": "item_analysis.csv",
-        "analysis_summary.csv": "summary.csv",
-        "analysis_score_hist.png": "score_hist.png",
-        "analysis_item_plot.png": "item_plot.png",
+        "analysis_scores.csv": "analysis_scores.csv",
+        "analysis_item.csv": "analysis_item.csv",
+        "analysis_summary.csv": "analysis_summary.csv",
+        "analysis_score_hist.png": "analysis_score_hist.png",
+        "analysis_item_plot.png": "analysis_item_plot.png",
     }
     for name, label in label_by_name.items():
         path = job_dir / name
@@ -376,147 +365,161 @@ def _analysis_file_links(job_id: str) -> list[dict]:
     return files
 
 
-@app.get("/analysis", response_class=HTMLResponse)
-def analysis_page(request: Request, job_id: str = ""):
-    lang = resolve_lang(request)
-    t = I18N.get(lang, I18N[DEFAULT_LANG])
-    job_id = (job_id or "").strip()
-    ctx: dict = {"job_id": job_id or None, "files": None, "error": None, "message": None, "default_points": 1}
-
-    if job_id:
-        if not _JOB_ID_RE.match(job_id):
-            ctx["error"] = t["analysis_error_invalid_job_id"]
-            return template_response(request, "analysis.html", ctx)
-        if not (OUTPUTS_DIR / job_id).exists():
-            ctx["error"] = t["analysis_error_missing_job"]
-            return template_response(request, "analysis.html", ctx)
-        ctx["files"] = _analysis_file_links(job_id)
-
-    return template_response(request, "analysis.html", ctx)
+def _normalize_answer_cell(value: object) -> str:
+    s = ("" if value is None else str(value)).strip().upper()
+    return s
 
 
-@app.get("/analysis/template")
-def analysis_template(request: Request, job_id: str, points: int = 1):
-    lang = resolve_lang(request)
-    t = I18N.get(lang, I18N[DEFAULT_LANG])
-    job_id = (job_id or "").strip()
-    if not _JOB_ID_RE.match(job_id):
-        return template_response(
-            request,
-            "analysis.html",
-            {"job_id": job_id or None, "error": t["analysis_error_invalid_job_id"], "default_points": 1},
-        )
+def _read_answer_key_csv(path: Path) -> dict[int, tuple[str, float]]:
+    with open(path, "r", newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        if not reader.fieldnames:
+            raise ValueError("missing header (expected: number, correct, points)")
 
-    job_dir = OUTPUTS_DIR / job_id
-    if not job_dir.exists():
-        return template_response(
-            request,
-            "analysis.html",
-            {"job_id": job_id, "error": t["analysis_error_missing_job"], "default_points": 1},
-        )
+        field_map = {str(name).strip().lower(): str(name) for name in reader.fieldnames if name}
+        required = ("number", "correct", "points")
+        missing = [k for k in required if k not in field_map]
+        if missing:
+            raise ValueError(f"missing columns: {', '.join(missing)}")
 
-    results_path = job_dir / "results.csv"
-    if not results_path.exists():
-        return template_response(
-            request,
-            "analysis.html",
-            {"job_id": job_id, "error": t["analysis_error_missing_results"], "default_points": 1},
-        )
+        number_col = field_map["number"]
+        correct_col = field_map["correct"]
+        points_col = field_map["points"]
 
-    points = max(0, min(100, int(points)))
+        out: dict[int, tuple[str, float]] = {}
+        for row in reader:
+            raw_no = (row.get(number_col) or "").strip()
+            if not raw_no:
+                continue
+            try:
+                qno = int(raw_no)
+            except ValueError:
+                continue
 
-    with open(results_path, "r", newline="", encoding="utf-8-sig") as f:
+            correct = _normalize_answer_cell(row.get(correct_col, ""))
+            raw_points = (row.get(points_col) or "").strip()
+            try:
+                points = float(raw_points) if raw_points != "" else 1.0
+            except ValueError:
+                points = 1.0
+            out[qno] = (correct, points)
+        return out
+
+
+def _read_answer_key_xlsx(path: Path) -> dict[int, tuple[str, float]]:
+    table = read_simple_xlsx_table(path)
+    if not table:
+        raise ValueError("empty xlsx")
+    header = [str(x).strip() for x in table[0]]
+    field_map = {str(name).strip().lower(): idx for idx, name in enumerate(header) if str(name).strip()}
+    required = ("number", "correct", "points")
+    missing = [k for k in required if k not in field_map]
+    if missing:
+        raise ValueError(f"missing columns: {', '.join(missing)}")
+
+    idx_number = int(field_map["number"])
+    idx_correct = int(field_map["correct"])
+    idx_points = int(field_map["points"])
+
+    out: dict[int, tuple[str, float]] = {}
+    for row in table[1:]:
+        raw_no = (row[idx_number] if idx_number < len(row) else "").strip()
+        if not raw_no:
+            continue
+        try:
+            qno = int(float(raw_no))  # Excel may store as "1" or "1.0"
+        except ValueError:
+            continue
+
+        correct = _normalize_answer_cell(row[idx_correct] if idx_correct < len(row) else "")
+        raw_points = (row[idx_points] if idx_points < len(row) else "").strip()
+        try:
+            points = float(raw_points) if raw_points != "" else 1.0
+        except ValueError:
+            points = 1.0
+        out[qno] = (correct, points)
+    return out
+
+
+def _read_answer_key_file(path: Path) -> dict[int, tuple[str, float]]:
+    suffix = (path.suffix or "").lower()
+    if suffix == ".xlsx":
+        return _read_answer_key_xlsx(path)
+    return _read_answer_key_csv(path)
+
+
+def _write_answer_key_files(
+    num_questions: int,
+    answer_key: dict[int, tuple[str, float]],
+    out_csv_path: Path,
+    out_xlsx_path: Path,
+    default_points: float = 1.0,
+) -> None:
+    num_questions = max(1, min(100, int(num_questions)))
+    rows: list[list[object]] = [["number", "correct", "points"]]
+    for qno in range(1, num_questions + 1):
+        correct = ""
+        points = float(default_points)
+        if qno in answer_key:
+            c, p = answer_key[qno]
+            correct = _normalize_answer_cell(c)
+            try:
+                points = float(p)
+            except Exception:
+                points = float(default_points)
+        points_out: object = points
+        if isinstance(points, float) and abs(points - round(points)) < 1e-9:
+            points_out = int(round(points))
+        rows.append([qno, correct, points_out])
+
+    out_csv_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_csv_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f, lineterminator="\n")
+        writer.writerows(rows)
+
+    write_simple_xlsx(out_xlsx_path, rows=rows, sheet_name="answer_key")
+
+
+def _write_analysis_template(
+    results_csv_path: Path,
+    answer_key: dict[int, tuple[str, float]],
+    out_csv_path: Path,
+    default_points: float = 1.0,
+) -> None:
+    with open(results_csv_path, "r", newline="", encoding="utf-8-sig") as f:
         reader = csv.reader(f)
         rows = list(reader)
     if not rows:
-        return template_response(
-            request,
-            "analysis.html",
-            {"job_id": job_id, "error": t["analysis_error_missing_results"], "default_points": points},
-        )
+        raise ValueError("results.csv is empty")
 
     header = rows[0]
     if not header or header[0] != "number":
-        return template_response(
-            request,
-            "analysis.html",
-            {"job_id": job_id, "error": t["analysis_error_missing_results"], "default_points": points},
-        )
+        raise ValueError("unexpected results.csv header (expected first column: number)")
 
-    out = io.StringIO()
-    writer = csv.writer(out, lineterminator="\n")
-    writer.writerow(["number", "correct", "points", *header[1:]])
-    for row in rows[1:]:
-        if not row:
-            continue
-        qno = row[0]
-        writer.writerow([qno, "", points, *row[1:]])
+    with open(out_csv_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.writer(f, lineterminator="\n")
+        writer.writerow(["number", "correct", "points", *header[1:]])
+        for row in rows[1:]:
+            if not row:
+                continue
+            raw_no = (row[0] or "").strip()
+            try:
+                qno = int(raw_no)
+            except ValueError:
+                qno = None
 
-    content = out.getvalue().encode("utf-8-sig")
-    filename = f"analysis_template_{job_id[:8]}.csv"
-    return Response(
-        content=content,
-        media_type="text/csv; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename=\"{filename}\"'},
-    )
+            correct = ""
+            points = float(default_points)
+            if qno is not None and qno in answer_key:
+                correct, points = answer_key[qno]
+                if correct is None:
+                    correct = ""
 
+            points_out: object = points
+            if isinstance(points, float) and abs(points - round(points)) < 1e-9:
+                points_out = int(round(points))
 
-@app.post("/api/analysis/run", response_class=HTMLResponse)
-async def api_analysis_run(
-    request: Request,
-    job_id: str = Form(""),
-    analysis_csv: UploadFile = File(...),
-):
-    lang = resolve_lang(request)
-    t = I18N.get(lang, I18N[DEFAULT_LANG])
-    job_id = (job_id or "").strip()
-    ctx: dict = {"job_id": job_id or None, "files": None, "error": None, "message": None, "default_points": 1}
-
-    if not _JOB_ID_RE.match(job_id):
-        ctx["error"] = t["analysis_error_invalid_job_id"]
-        return template_response(request, "analysis.html", ctx)
-
-    job_dir = OUTPUTS_DIR / job_id
-    if not job_dir.exists():
-        ctx["error"] = t["analysis_error_missing_job"]
-        return template_response(request, "analysis.html", ctx)
-
-    template_path = job_dir / "analysis_template.csv"
-    with open(template_path, "wb") as f:
-        f.write(await analysis_csv.read())
-
-    rscript = shutil.which("Rscript")
-    if rscript is None:
-        ctx["error"] = t["analysis_error_missing_rscript"]
-        ctx["files"] = _analysis_file_links(job_id)
-        return template_response(request, "analysis.html", ctx)
-
-    script_path = ROOT_DIR / "engine" / "item_analysis_cli.R"
-    if not script_path.exists():
-        ctx["error"] = "item_analysis_cli.R not found."
-        ctx["files"] = _analysis_file_links(job_id)
-        return template_response(request, "analysis.html", ctx)
-
-    import subprocess
-
-    proc = subprocess.run(
-        [rscript, str(script_path), "--input", str(template_path), "--outdir", str(job_dir)],
-        cwd=str(ROOT_DIR),
-        capture_output=True,
-        text=True,
-        errors="replace",
-    )
-    if proc.returncode != 0:
-        out_text = ((proc.stdout or "") + (proc.stderr or "")).strip()
-        if len(out_text) > 2000:
-            out_text = out_text[-2000:]
-        ctx["error"] = f"{t['analysis_error_r_failed']} {out_text or f'code {proc.returncode}'}"
-        ctx["files"] = _analysis_file_links(job_id)
-        return template_response(request, "analysis.html", ctx)
-
-    ctx["message"] = t["analysis_message_done"]
-    ctx["files"] = _analysis_file_links(job_id)
-    return template_response(request, "analysis.html", ctx)
+            writer.writerow([row[0], _normalize_answer_cell(correct), points_out, *row[1:]])
 
 
 @app.get("/update", response_class=HTMLResponse)
@@ -533,6 +536,7 @@ def _sanitize_token(value: str, fallback: str) -> str:
 
 @app.post("/api/generate")
 def api_generate(
+    background_tasks: BackgroundTasks,
     title_text: str = Form(DEFAULT_SHEET_TITLE),
     subject: str = Form(""),
     num_questions: int = Form(50),
@@ -558,26 +562,47 @@ def api_generate(
     subject_token = _sanitize_token(subject, "subject") if subject else "subject"
     title_token = _sanitize_token(title_text, "exam")
     choices_token = "".join(chr(ord("A") + i) for i in range(choices_count))
-    filename_bits = ["answer_sheets", subject_token]
-    filename_bits.append(title_token)
-    filename_bits.append(choices_token)
-    filename_bits.append(f"{num_questions}q")
-    filename = "_".join(filename_bits) + ".pdf"
+    filename_bits = ["answer_sheets", subject_token, title_token, choices_token, f"{num_questions}q"]
 
-    return FileResponse(
-        path=str(out_path),
-        media_type="application/pdf",
-        filename=filename,
+    pdf_name = "_".join(filename_bits) + ".pdf"
+    key_xlsx_name = "_".join(["answer_key", subject_token, title_token, choices_token, f"{num_questions}q"]) + ".xlsx"
+    key_csv_name = "_".join(["answer_key", subject_token, title_token, choices_token, f"{num_questions}q"]) + ".csv"
+    zip_name = "_".join(["answer_sheet_bundle", subject_token, title_token, choices_token, f"{num_questions}q"]) + ".zip"
+
+    key_csv_path = OUTPUTS_DIR / f"answer_key_{out_id}.csv"
+    key_xlsx_path = OUTPUTS_DIR / f"answer_key_{out_id}.xlsx"
+    _write_answer_key_files(
+        num_questions=num_questions,
+        answer_key={},
+        out_csv_path=key_csv_path,
+        out_xlsx_path=key_xlsx_path,
+        default_points=1.0,
     )
+
+    zip_path = OUTPUTS_DIR / f"answer_sheet_bundle_{out_id}.zip"
+    with zipfile.ZipFile(zip_path, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.write(out_path, arcname=pdf_name)
+        zf.write(key_xlsx_path, arcname=key_xlsx_name)
+        zf.write(key_csv_path, arcname=key_csv_name)
+
+    background_tasks.add_task(_safe_unlink, out_path)
+    background_tasks.add_task(_safe_unlink, key_csv_path)
+    background_tasks.add_task(_safe_unlink, key_xlsx_path)
+    background_tasks.add_task(_safe_unlink, zip_path)
+
+    return FileResponse(path=str(zip_path), media_type="application/zip", filename=zip_name)
 
 
 @app.post("/api/process")
 async def api_process(
     request: Request,
     pdf: UploadFile = File(...),
+    answer_key: UploadFile = File(...),
     num_questions: int = Form(50),
     choices_count: int = Form(4),
 ):
+    lang = resolve_lang(request)
+    t = I18N.get(lang, I18N[DEFAULT_LANG])
     num_questions = max(1, min(100, int(num_questions)))
     choices_count = max(3, min(5, int(choices_count)))
 
@@ -593,11 +618,26 @@ async def api_process(
     with open(input_pdf, "wb") as f:
         f.write(await pdf.read())
 
+    answer_key_filename = (answer_key.filename or "").strip() or "answer_key.csv"
+    answer_key_filename = answer_key_filename.replace("\\", "/")
+    answer_key_filename = _sanitize_download_component(Path(answer_key_filename).name, "answer_key.csv")
+    answer_key_suffix = (Path(answer_key_filename).suffix or "").lower()
+    if answer_key_suffix not in {".csv", ".xlsx"}:
+        answer_key_suffix = ".csv"
+    answer_key_upload_path = job_dir / f"answer_key_upload{answer_key_suffix}"
+    with open(answer_key_upload_path, "wb") as f:
+        f.write(await answer_key.read())
+
+    answer_key_csv_path = job_dir / "answer_key.csv"
+    answer_key_xlsx_path = job_dir / "answer_key.xlsx"
+
     _write_job_meta(
         job_dir,
         {
             "original_filename": original_filename,
             "upload_base": _upload_base_name(original_filename),
+            "answer_key_filename": answer_key_filename,
+            "answer_key_saved_as": answer_key_upload_path.name,
             "created_at": int(time.time()),
             "num_questions": num_questions,
             "choices_count": choices_count,
@@ -622,14 +662,84 @@ async def api_process(
     finally:
         app.state.active_jobs = max(0, int(getattr(app.state, "active_jobs", 1) or 1) - 1)
 
+    analysis_error: Optional[str] = None
+    analysis_message: Optional[str] = None
+    analysis_files: list[dict] = []
+
+    template_path = job_dir / "analysis_template.csv"
+    try:
+        key_map = _read_answer_key_file(answer_key_upload_path)
+    except Exception as exc:
+        key_map = None
+        analysis_error = f"Answer key error: {exc}"
+    else:
+        try:
+            _write_answer_key_files(
+                num_questions=num_questions,
+                answer_key=key_map,
+                out_csv_path=answer_key_csv_path,
+                out_xlsx_path=answer_key_xlsx_path,
+                default_points=1.0,
+            )
+        except Exception:
+            pass
+
+    if key_map is not None:
+        try:
+            _write_analysis_template(csv_path, key_map, template_path, default_points=1.0)
+        except Exception as exc:
+            analysis_error = f"Analysis template error: {exc}"
+        else:
+            rscript = shutil.which("Rscript")
+            script_path = ROOT_DIR / "engine" / "item_analysis_cli.R"
+            r_failed_text: Optional[str] = None
+            r_ok = False
+
+            if rscript is not None and script_path.exists():
+                import subprocess
+
+                proc = subprocess.run(
+                    [rscript, str(script_path), "--input", str(template_path), "--outdir", str(job_dir)],
+                    cwd=str(ROOT_DIR),
+                    capture_output=True,
+                    text=True,
+                    errors="replace",
+                )
+                if proc.returncode == 0:
+                    r_ok = True
+                else:
+                    out_text = ((proc.stdout or "") + (proc.stderr or "")).strip()
+                    if len(out_text) > 2000:
+                        out_text = out_text[-2000:]
+                    r_failed_text = out_text or f"code {proc.returncode}"
+
+            if r_ok:
+                analysis_message = t["analysis_message_done"]
+            else:
+                try:
+                    run_analysis_template(template_path, job_dir)
+                except Exception as exc:
+                    analysis_error = f"{t['analysis_error_builtin_failed']} {exc}"
+                    if rscript is not None:
+                        analysis_error = f"{analysis_error} ({t['analysis_error_r_failed']} {r_failed_text or ''})"
+                else:
+                    analysis_message = t["analysis_message_done_fallback"]
+
+    analysis_files = _analysis_file_links(job_id)
+
     return template_response(
         request,
-        "result.html",
+        "upload.html",
         {
             "job_id": job_id,
             "display_filename": original_filename,
             "csv_url": f"/outputs/{job_id}/results.csv",
             "pdf_url": f"/outputs/{job_id}/annotated.pdf",
+            "answer_key_url": (f"/outputs/{job_id}/answer_key.xlsx" if (job_dir / "answer_key.xlsx").exists() else None),
+            "answer_key_csv_url": (f"/outputs/{job_id}/answer_key.csv" if (job_dir / "answer_key.csv").exists() else None),
+            "analysis_error": analysis_error,
+            "analysis_message": analysis_message,
+            "analysis_files": analysis_files,
         },
     )
 
@@ -813,8 +923,10 @@ def download_output(job_id: str, filename: str):
         download_name = f"{upload_base_ascii}_{job_tag}_annotated.pdf"
     elif filename == "input.pdf":
         download_name = f"{upload_base_ascii}_{job_tag}_input.pdf"
-    elif filename == "analysis_template.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_analysis_template.csv"
+    elif filename == "answer_key.csv":
+        download_name = f"{upload_base_ascii}_{job_tag}_answer_key.csv"
+    elif filename == "answer_key.xlsx":
+        download_name = f"{upload_base_ascii}_{job_tag}_answer_key.xlsx"
     elif filename == "analysis_scores.csv":
         download_name = f"{upload_base_ascii}_{job_tag}_analysis_scores.csv"
     elif filename == "analysis_item.csv":
@@ -831,6 +943,8 @@ def download_output(job_id: str, filename: str):
         media = "application/pdf"
     if filename.lower().endswith(".csv"):
         media = "text/csv"
+    if filename.lower().endswith(".xlsx"):
+        media = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     if filename.lower().endswith(".png"):
         media = "image/png"
     return FileResponse(path=str(file_path), media_type=media, filename=download_name)

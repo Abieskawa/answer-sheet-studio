@@ -19,7 +19,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 #. macOS：雙擊 ``start_mac.command``；Windows：雙擊 ``start_windows.vbs``。
 #. 若尚未安裝 Python，啟動器會提示下載/安裝官方 Python（依照畫面一路按確認即可）。
 #. 安裝完成後再執行一次啟動器；瀏覽器會自動開啟 ``http://127.0.0.1:8000``。
-#. 在網頁裡先「下載答案卡」，再上傳掃描 PDF 做影像辨識。
+#. 在網頁裡先下載並列印「答案卡 PDF」（給學生填答）；需要批改/分析時再下載 ``answer_key.xlsx``（老師答案檔）填入 ``correct/points``，到「上傳處理」上傳掃描 PDF + ``answer_key.xlsx``。
 
 系統需求
 ~~~~~~~~

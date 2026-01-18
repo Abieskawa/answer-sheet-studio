@@ -24,7 +24,7 @@ GRADE_CIRCLE_Y = PAGE_H_PT - 174
 GRADE_STEP_X = 26
 GRADE_CIRCLE_XS = [NAME_LINE_X0 + i * GRADE_STEP_X for i in range(len(GRADE_VALUES))]
 
-CLASS_VALUES = list(range(10))  # 0-9
+CLASS_VALUES = list(range(10))  # 0-9 (0 is unused on new sheets, kept for compatibility)
 CLASS_CIRCLE_RADIUS = 6.2
 CLASS_CIRCLE_Y = PAGE_H_PT - 199
 CLASS_STEP_X = 21

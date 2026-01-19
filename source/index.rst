@@ -34,7 +34,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 - **下載答案卡**：輸入標題、科目、題數（最多 100 題）、每題選項（ABC / ABCD / ABCDE），下載答案卡 PDF（給學生填答）。
 - **下載老師答案檔**：下載 ``answer_key.xlsx``（Excel），填入 ``correct/points`` 後到「上傳處理」上傳。
-- **上傳處理（辨識＋分析）**：上傳多頁 PDF（每頁一位學生）＋老師答案檔 ``answer_key.xlsx``。會輸出 ``results.csv``、``ambiguity.csv``、``annotated.pdf``，以及分析報表/圖表（建議安裝 R 用 ``ggplot2`` 出圖）。
+- **上傳處理（辨識＋分析）**：上傳多頁 PDF（每頁一位學生）＋老師答案檔 ``answer_key.xlsx``。完成後會在**新分頁**開啟結果頁（上傳頁不會被覆蓋），並輸出 ``results.csv``、``ambiguity.csv``、``annotated.pdf``，以及分析報表/圖表（建議安裝 R 用 ``ggplot2`` 出圖）。
 - **啟動器**：雙擊啟動器（``start_mac.command`` 或 ``start_windows.vbs``）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 ``http://127.0.0.1:8000``。
 
 使用注意事項
@@ -55,7 +55,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 - ``annotated.pdf``
 - ``input.pdf`` （原始上傳檔）
 - ``answer_key.xlsx``（老師答案檔）
-- ``showwrong.xlsx``（只顯示錯題的答案表）
+- ``showwrong.xlsx``（只顯示錯題：題號為列、學生為欄；最後一列為每位學生總分）
 - ``analysis_template.csv``、``analysis_scores.csv``、``analysis_item.csv``、``analysis_summary.csv``、``analysis_score_hist.png``、``analysis_item_plot.png``
 
 更新
@@ -118,7 +118,7 @@ Features
 
 - **Download page** – choose title, subject, number of questions (up to 100), and choices per question (ABC/ABCD/ABCDE). Download the answer sheet PDF (for students).
 - **Teacher answer key** – download ``answer_key.xlsx`` (Excel), fill ``correct/points``, then upload it on the Upload page.
-- **Upload page (recognize + analyze)** – upload a multi-page PDF scan (one student per page) plus ``answer_key.xlsx``. Exports ``results.csv``, ``ambiguity.csv``, ``annotated.pdf``, and analysis reports/plots (install R for ggplot2 plots).
+- **Upload page (recognize + analyze)** – upload a multi-page PDF scan (one student per page) plus ``answer_key.xlsx``. The result page opens in a **new tab** (so the upload form stays). Exports ``results.csv``, ``ambiguity.csv``, ``annotated.pdf``, and analysis reports/plots (install R for ggplot2 plots).
 - **Launcher** – sets up ``.venv``, installs requirements, starts the local server, and opens the browser.
 - The web UI supports **English** and **Traditional Chinese**.
 
@@ -140,7 +140,7 @@ After recognition, files are written under ``outputs/<job_id>/``:
 - ``annotated.pdf``
 - ``input.pdf`` (original upload)
 - ``answer_key.xlsx`` (teacher answer key)
-- ``showwrong.xlsx`` (wrong answers only)
+- ``showwrong.xlsx`` (wrong answers only; questions as rows, students as columns; last row is total score per student)
 - ``analysis_template.csv``, ``analysis_scores.csv``, ``analysis_item.csv``, ``analysis_summary.csv``, ``analysis_score_hist.png``, ``analysis_item_plot.png``
 
 Updating

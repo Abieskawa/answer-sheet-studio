@@ -101,11 +101,11 @@ I18N = {
         "debug_dl_annotated": "下載 annotated.pdf",
         "debug_dl_input": "下載 input.pdf（原始上傳檔）",
         "debug_report_hint": "回報時請提供：Job ID、results.csv、ambiguity.csv、annotated.pdf（必要時 input.pdf）。",
-        "analysis_error_missing_rscript": "找不到 Rscript（啟動器會協助安裝 R；若仍未安裝請先安裝 R 以用 ggplot2 出圖）。",
-        "analysis_error_r_failed": "分析失敗：",
-        "analysis_error_builtin_failed": "內建分析失敗：",
-        "analysis_message_done": "分析完成，可下載報表與圖表。",
-        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請確認已安裝 R，並安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
+	        "analysis_error_missing_rscript": "找不到 Rscript（啟動器會協助安裝 R；若仍未安裝請先安裝 R 以用 ggplot2 出圖）。",
+	        "analysis_error_r_failed": "R 分析失敗：",
+	        "analysis_error_builtin_failed": "內建分析失敗：",
+	        "analysis_message_done": "分析完成，可下載報表與圖表。",
+	        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請確認已安裝 R，並安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
     },
     "en": {
         "lang_zh": "繁體中文",
@@ -173,12 +173,12 @@ I18N = {
         "debug_dl_annotated": "Download annotated.pdf",
         "debug_dl_input": "Download input.pdf (original upload)",
         "debug_report_hint": "When reporting, include: Job ID, results.csv, ambiguity.csv, annotated.pdf (and input.pdf if needed).",
-        "analysis_error_missing_rscript": "Rscript not found (the launcher can help install R; install R for ggplot2 plots).",
-        "analysis_error_r_failed": "Analysis failed:",
-        "analysis_error_builtin_failed": "Built-in analysis failed:",
-        "analysis_message_done": "Analysis complete. Download reports and plots below.",
-        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; to enable ggplot2 plots, install R and packages: readr, dplyr, tidyr, ggplot2).",
-    },
+	        "analysis_error_missing_rscript": "Rscript not found (the launcher can help install R; install R for ggplot2 plots).",
+	        "analysis_error_r_failed": "R analysis failed:",
+	        "analysis_error_builtin_failed": "Built-in analysis failed:",
+	        "analysis_message_done": "Analysis complete. Download reports and plots below.",
+	        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; to enable ggplot2 plots, install R and packages: readr, dplyr, tidyr, ggplot2).",
+	    },
 }
 
 _META_FILENAME = "meta.json"
@@ -397,6 +397,60 @@ def _analysis_file_links(job_id: str) -> list[dict]:
     return files
 
 
+def _find_rscript() -> Optional[str]:
+    rscript = shutil.which("Rscript") or shutil.which("Rscript.exe")
+    if rscript:
+        return rscript
+
+    candidates: list[Path] = []
+    if os.name == "nt":
+        roots = [os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)")]
+        for root in roots:
+            if not root:
+                continue
+            r_dir = Path(root) / "R"
+            if not r_dir.exists():
+                continue
+            for exe in sorted(r_dir.glob("R-*/bin/Rscript.exe")):
+                candidates.append(exe)
+    else:
+        candidates.extend(
+            [
+                Path("/usr/local/bin/Rscript"),
+                Path("/opt/homebrew/bin/Rscript"),
+                Path("/Library/Frameworks/R.framework/Resources/bin/Rscript"),
+            ]
+        )
+
+    for cand in candidates:
+        try:
+            if cand.exists():
+                return str(cand)
+        except Exception:
+            continue
+    return None
+
+
+def _summarize_r_error(text: Optional[str], limit: int = 220) -> Optional[str]:
+    if not text:
+        return None
+    msg = (text or "").strip().replace("\r", "\n")
+    lines = [ln.strip() for ln in msg.split("\n") if ln.strip()]
+    if not lines:
+        return None
+
+    m = re.search(r"there is no package called ['\"]([^'\"]+)['\"]", msg, flags=re.IGNORECASE)
+    if m:
+        reason = f"missing R package: {m.group(1)}"
+    else:
+        reason = lines[-1]
+
+    reason = re.sub(r"\s+", " ", reason).strip()
+    if len(reason) > limit:
+        reason = reason[:limit].rstrip() + "…"
+    return reason
+
+
 def _normalize_answer_cell(value: object) -> str:
     s = ("" if value is None else str(value)).strip().upper()
     return s
@@ -611,28 +665,31 @@ def _write_showwrong_xlsx(
             return int(round(float(v)))
         return round(float(v), 2)
 
-    out_rows: list[list[object]] = []
-    out_rows.append(["person_id", *[str(n) for n in q_numbers], "score"])
-    out_rows.append(["正確答案", *corrects, ""])
+    student_scores: dict[str, float] = {s: 0.0 for s in student_cols}
 
-    for student in student_cols:
-        score = 0.0
-        row_out: list[object] = [student]
-        answers = answers_by_student.get(student, [])
-        for i in range(len(q_numbers)):
-            correct = corrects[i] if i < len(corrects) else ""
+    out_rows: list[list[object]] = []
+    out_rows.append(["number", "correct", *student_cols])
+
+    for i, qno in enumerate(q_numbers):
+        correct = corrects[i] if i < len(corrects) else ""
+        row_out: list[object] = [qno, correct]
+        if not correct:
+            row_out.extend(["" for _ in student_cols])
+            out_rows.append(row_out)
+            continue
+
+        points = points_list[i] if i < len(points_list) else 1.0
+        for student in student_cols:
+            answers = answers_by_student.get(student, [])
             ans = answers[i] if i < len(answers) else ""
-            points = points_list[i] if i < len(points_list) else 1.0
-            if not correct:
-                row_out.append("")
-                continue
             if ans == correct:
-                score += float(points)
+                student_scores[student] += float(points)
                 row_out.append("")
-                continue
-            row_out.append(blank_label if ans == "" else ans)
-        row_out.append(score_out(score))
+            else:
+                row_out.append(blank_label if ans == "" else ans)
         out_rows.append(row_out)
+
+    out_rows.append(["score", "", *[score_out(student_scores[s]) for s in student_cols]])
 
     write_simple_xlsx(Path(out_xlsx_path), rows=out_rows, sheet_name="showwrong")
 
@@ -824,7 +881,7 @@ async def api_process(
         except Exception as exc:
             analysis_error = f"Analysis template error: {exc}"
         else:
-            rscript = shutil.which("Rscript")
+            rscript = _find_rscript()
             script_path = ROOT_DIR / "engine" / "item_analysis_cli.R"
             r_failed_text: Optional[str] = None
             r_ok = False
@@ -856,8 +913,16 @@ async def api_process(
                     analysis_error = f"{t['analysis_error_builtin_failed']} {exc}"
                     if rscript is not None:
                         analysis_error = f"{analysis_error} ({t['analysis_error_r_failed']} {r_failed_text or ''})"
+                    else:
+                        analysis_error = f"{analysis_error} ({t['analysis_error_missing_rscript']})"
                 else:
                     analysis_message = t["analysis_message_done_fallback"]
+                    if rscript is None:
+                        analysis_message = f"{analysis_message} ({t['analysis_error_missing_rscript']})"
+                    else:
+                        reason = _summarize_r_error(r_failed_text)
+                        if reason:
+                            analysis_message = f"{analysis_message} ({t['analysis_error_r_failed']} {reason})"
 
     meta = _read_job_meta(job_dir)
     if analysis_error:

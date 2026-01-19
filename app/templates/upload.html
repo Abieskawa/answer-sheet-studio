@@ -78,9 +78,44 @@
     const processing = document.getElementById("processing");
     const btn = form ? form.querySelector('button[type="submit"]') : null;
     if (!form || !processing || !btn) return;
+    let pollTimer = null;
+    let resultWindow = null;
+
+    const resetUi = () => {
+      btn.disabled = false;
+      processing.style.display = "none";
+      if (pollTimer) {
+        window.clearInterval(pollTimer);
+        pollTimer = null;
+      }
+      resultWindow = null;
+    };
+
     form.addEventListener("submit", () => {
+      const target = `answer_sheet_result_${Date.now()}`;
+      try {
+        resultWindow = window.open("about:blank", target);
+      } catch (_) {
+        resultWindow = null;
+      }
+      form.target = resultWindow ? target : "_self";
+
       btn.disabled = true;
       processing.style.display = "block";
+
+      if (!resultWindow) return;
+      pollTimer = window.setInterval(() => {
+        if (!resultWindow || resultWindow.closed) {
+          resetUi();
+          return;
+        }
+        try {
+          const path = resultWindow.location.pathname || "";
+          if (path.startsWith("/result/")) resetUi();
+        } catch (_) {
+          // ignore cross-origin/transient access during navigation
+        }
+      }, 500);
     });
   })();
 </script>

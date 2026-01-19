@@ -87,9 +87,9 @@ total_possible <- sum(points_vec[!is.na(correct_vec)], na.rm = TRUE)
 
 scores_df <- tibble(
   person_id = student_cols,
-  score = as.numeric(scores),
+  score = round(as.numeric(scores), 2),
   blank_count = as.integer(blank_counts),
-  total_possible = as.numeric(total_possible),
+  total_possible = round(as.numeric(total_possible), 2),
   percent = ifelse(total_possible > 0, round(score / total_possible, 2), NA_real_)
 ) %>%
   arrange(desc(score), person_id)

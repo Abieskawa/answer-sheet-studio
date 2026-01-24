@@ -3,7 +3,7 @@
 這個資料夾提供一個「一直按下一步」的 Windows 安裝精靈，負責：
 - 把整個專案安裝到 `Program Files`
 - 建立開始功能表/桌面捷徑
-- 安裝完成後可直接啟動（使用 `start_windows_terminal.bat` 顯示進度）
+- 安裝完成後可直接啟動（使用 `start_windows.vbs`）
 
 ## 需求
 - Windows

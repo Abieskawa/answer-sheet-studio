@@ -28,40 +28,14 @@
     <span>{{ t.upload_processing }}</span>
   </div>
 
+  <div id="resultLinkWrap" class="downloads" style="display:none">
+    <a id="resultLink" class="download" href="#" target="_blank" rel="noopener noreferrer">{{ t.upload_open_result }}</a>
+  </div>
+  <p id="resultLinkHint" class="hint" style="display:none">{{ t.upload_open_result_hint }}</p>
+  <p id="resultLinkError" class="hint" style="display:none;color:#fca5a5"></p>
+
   <p class="hint">{{ t.upload_hint_output }}</p>
 </form>
-
-{% if job_id %}
-  <hr />
-  <h2>{{ t.result_title }}</h2>
-  <p>{{ t.result_file }}<code>{{ display_filename }}</code></p>
-  <p>{{ t.result_job_id }}<code>{{ job_id }}</code></p>
-
-  <div class="downloads">
-    <a class="download" href="{{ csv_url }}">{{ t.result_download_results }}</a>
-    <a class="download" href="{{ pdf_url }}">{{ t.result_download_annotated }}</a>
-    {% if answer_key_url %}
-      <a class="download" href="{{ answer_key_url }}">{{ t.result_download_answer_key }}</a>
-    {% endif %}
-  </div>
-
-  {% if analysis_error %}
-    <p class="hint" style="color:#fca5a5">{{ analysis_error }}</p>
-  {% endif %}
-  {% if analysis_message %}
-    <p class="hint">{{ analysis_message }}</p>
-  {% endif %}
-
-  {% if analysis_files %}
-    <div class="downloads">
-      {% for f in analysis_files %}
-        <a class="download" href="{{ f.url }}">{{ f.label }}</a>
-      {% endfor %}
-    </div>
-  {% endif %}
-
-  <p class="hint">{{ t.result_hint_unstable }}</p>
-{% endif %}
 
 <script>
   (() => {
@@ -77,45 +51,44 @@
     const form = document.querySelector("form.form");
     const processing = document.getElementById("processing");
     const btn = form ? form.querySelector('button[type="submit"]') : null;
-    if (!form || !processing || !btn) return;
-    let pollTimer = null;
-    let resultWindow = null;
+    const resultWrap = document.getElementById("resultLinkWrap");
+    const resultLink = document.getElementById("resultLink");
+    const resultHint = document.getElementById("resultLinkHint");
+    const resultError = document.getElementById("resultLinkError");
+    if (!form || !processing || !btn || !resultWrap || !resultLink || !resultHint || !resultError) return;
 
-    const resetUi = () => {
-      btn.disabled = false;
-      processing.style.display = "none";
-      if (pollTimer) {
-        window.clearInterval(pollTimer);
-        pollTimer = null;
-      }
-      resultWindow = null;
-    };
-
-    form.addEventListener("submit", () => {
-      const target = `answer_sheet_result_${Date.now()}`;
-      try {
-        resultWindow = window.open("about:blank", target);
-      } catch (_) {
-        resultWindow = null;
-      }
-      form.target = resultWindow ? target : "_self";
+    form.addEventListener("submit", async (e) => {
+      if (!window.fetch || !window.FormData) return;
+      e.preventDefault();
 
       btn.disabled = true;
       processing.style.display = "block";
+      resultWrap.style.display = "none";
+      resultHint.style.display = "none";
+      resultError.style.display = "none";
+      resultError.textContent = "";
 
-      if (!resultWindow) return;
-      pollTimer = window.setInterval(() => {
-        if (!resultWindow || resultWindow.closed) {
-          resetUi();
-          return;
+      try {
+        const resp = await fetch(form.action, {
+          method: form.method || "POST",
+          body: new FormData(form),
+          credentials: "same-origin",
+        });
+        const finalUrl = resp.url || "";
+        await resp.text().catch(() => {});
+        if (!resp.ok || !finalUrl.includes("/result/")) {
+          throw new Error(`HTTP ${resp.status}`);
         }
-        try {
-          const path = resultWindow.location.pathname || "";
-          if (path.startsWith("/result/")) resetUi();
-        } catch (_) {
-          // ignore cross-origin/transient access during navigation
-        }
-      }, 500);
+        resultLink.href = finalUrl;
+        resultWrap.style.display = "flex";
+        resultHint.style.display = "block";
+      } catch (_) {
+        resultError.textContent = "{{ t.upload_error_generic }}";
+        resultError.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        processing.style.display = "none";
+      }
     });
   })();
 </script>

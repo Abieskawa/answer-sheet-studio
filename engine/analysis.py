@@ -70,11 +70,17 @@ def _score_histogram_png(scores: List[float], total_possible: float, out_path: P
             cv2.rectangle(img, (x0, y0), (x1 - 1, y1), bar_color, thickness=-1)
             cv2.rectangle(img, (x0, y0), (x1 - 1, y1), (255, 255, 255), thickness=1)
 
-    mean_v = float(sum(scores) / len(scores))
-    median_v = float(np.median(np.array(scores, dtype=float)))
+    scores_arr = np.array(scores, dtype=float)
+    mean_v = float(scores_arr.mean())
+    q88, q75, q50, q25, q12 = (float(v) for v in np.quantile(scores_arr, [0.88, 0.75, 0.5, 0.25, 0.12]))
+    median_v = q50
 
     def x_of(v: float) -> int:
         return int(left + max(0.0, min(max_x, float(v))) * x_scale)
+
+    q_color = (90, 90, 90)
+    for v in (q88, q75, q25, q12):
+        cv2.line(img, (x_of(v), top), (x_of(v), height - bottom), q_color, 1)
 
     cv2.line(img, (x_of(mean_v), top), (x_of(mean_v), height - bottom), mean_color, 2)
     cv2.line(img, (x_of(median_v), top), (x_of(median_v), height - bottom), median_color, 2)

@@ -29,6 +29,7 @@ app = FastAPI(title="Answer Sheet Studio")
 app.mount("/static", StaticFiles(directory=str(APP_DIR / "static")), name="static")
 
 _JOB_ID_RE = re.compile(r"^[0-9a-fA-F-]{8,64}$")
+_INLINE_OUTPUT_FILENAMES = {"analysis_score_hist.png", "analysis_item_plot.png"}
 
 LANG_COOKIE_NAME = "lang"
 SUPPORTED_LANGS = ("zh-Hant", "en")
@@ -64,7 +65,10 @@ I18N = {
         "upload_label_answer_key": "上傳老師答案檔（Excel .xlsx；correct/points）",
         "upload_btn_process": "開始辨識並分析",
         "upload_processing": "處理中，請稍候…",
-        "upload_hint_output": "完成後會輸出 results.csv、annotated.pdf，以及答案分析報表（若已安裝 R）。",
+        "upload_open_result": "開啟結果頁（含圖表）",
+        "upload_open_result_hint": "處理完成後請點上方按鈕開啟結果頁。",
+        "upload_error_generic": "處理失敗，請查看 outputs/launcher.log 或 outputs/server.log。",
+        "upload_hint_output": "完成後會輸出 results.csv、annotated.pdf，以及答案分析報表/圖表（若已安裝 R 會使用 ggplot2 出圖）。",
         "update_title": "更新",
         "update_hint": "下載最新 ZIP 後在此上傳套用更新。更新過程會短暫重新啟動。",
         "update_open_releases": "開啟下載頁（GitHub Releases）",
@@ -84,8 +88,10 @@ I18N = {
         "result_job_id": "Job ID：",
         "result_download_results": "下載 results.csv",
         "result_download_annotated": "下載 annotated.pdf",
-        "result_download_answer_key": "下載 answer_key.xlsx",
         "result_download_showwrong": "下載 showwrong.xlsx（只顯示錯題）",
+        "result_plots_title": "圖表",
+        "result_plot_score_hist": "成績分佈",
+        "result_plot_item_metrics": "題目指標",
         "result_hint_unstable": "如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。",
         "result_debug_hint": "需要回報問題時，可到 Debug Mode 下載診斷檔案（輸入 Job ID）。",
         "result_debug_open": "開啟 Debug Mode",
@@ -101,11 +107,11 @@ I18N = {
         "debug_dl_annotated": "下載 annotated.pdf",
         "debug_dl_input": "下載 input.pdf（原始上傳檔）",
         "debug_report_hint": "回報時請提供：Job ID、results.csv、ambiguity.csv、annotated.pdf（必要時 input.pdf）。",
-	        "analysis_error_missing_rscript": "找不到 Rscript（啟動器會協助安裝 R；若仍未安裝請先安裝 R 以用 ggplot2 出圖）。",
-	        "analysis_error_r_failed": "R 分析失敗：",
-	        "analysis_error_builtin_failed": "內建分析失敗：",
-	        "analysis_message_done": "分析完成，可下載報表與圖表。",
-	        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請確認已安裝 R，並安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
+        "analysis_error_missing_rscript": "找不到 Rscript（若要用 ggplot2 出圖，請先安裝 R）。",
+        "analysis_error_r_failed": "R 分析失敗：",
+        "analysis_error_builtin_failed": "內建分析失敗：",
+        "analysis_message_done": "分析完成，可下載報表與圖表。",
+        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請確認已安裝 R，並安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
     },
     "en": {
         "lang_zh": "繁體中文",
@@ -136,7 +142,10 @@ I18N = {
         "upload_label_answer_key": "Upload teacher answer key (Excel .xlsx; correct/points)",
         "upload_btn_process": "Run recognition + analysis",
         "upload_processing": "Processing…",
-        "upload_hint_output": "Outputs results.csv, annotated.pdf, and analysis reports (if R is installed).",
+        "upload_open_result": "Open result page (with plots)",
+        "upload_open_result_hint": "When processing finishes, click the button above to open the result page.",
+        "upload_error_generic": "Processing failed. See outputs/launcher.log or outputs/server.log.",
+        "upload_hint_output": "Outputs results.csv, annotated.pdf, and analysis reports/plots (uses ggplot2 plots if R is installed).",
         "update_title": "Update",
         "update_hint": "Download the latest ZIP and upload it here. The app will restart briefly.",
         "update_open_releases": "Open download page (GitHub Releases)",
@@ -156,8 +165,10 @@ I18N = {
         "result_job_id": "Job ID:",
         "result_download_results": "Download results.csv",
         "result_download_annotated": "Download annotated.pdf",
-        "result_download_answer_key": "Download answer_key.xlsx",
         "result_download_showwrong": "Download showwrong.xlsx (wrong answers only)",
+        "result_plots_title": "Plots",
+        "result_plot_score_hist": "Score distribution",
+        "result_plot_item_metrics": "Item metrics",
         "result_hint_unstable": "If results are unstable, scans may be skewed or too light. Try 300dpi or a darker pen.",
         "result_debug_hint": "For reporting/debugging, open Debug Mode and enter the Job ID to download diagnostic files.",
         "result_debug_open": "Open Debug Mode",
@@ -173,12 +184,12 @@ I18N = {
         "debug_dl_annotated": "Download annotated.pdf",
         "debug_dl_input": "Download input.pdf (original upload)",
         "debug_report_hint": "When reporting, include: Job ID, results.csv, ambiguity.csv, annotated.pdf (and input.pdf if needed).",
-	        "analysis_error_missing_rscript": "Rscript not found (the launcher can help install R; install R for ggplot2 plots).",
-	        "analysis_error_r_failed": "R analysis failed:",
-	        "analysis_error_builtin_failed": "Built-in analysis failed:",
-	        "analysis_message_done": "Analysis complete. Download reports and plots below.",
-	        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; to enable ggplot2 plots, install R and packages: readr, dplyr, tidyr, ggplot2).",
-	    },
+        "analysis_error_missing_rscript": "Rscript not found (install R to enable ggplot2 plots).",
+        "analysis_error_r_failed": "R analysis failed:",
+        "analysis_error_builtin_failed": "Built-in analysis failed:",
+        "analysis_message_done": "Analysis complete. Download reports and plots below.",
+        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; to enable ggplot2 plots, install R and packages: readr, dplyr, tidyr, ggplot2).",
+    },
 }
 
 _META_FILENAME = "meta.json"
@@ -300,6 +311,16 @@ def _is_local_request(request: Request) -> bool:
     host = (request.client.host if request.client else "") or ""
     return host in {"127.0.0.1", "::1"}
 
+def _safe_output_filename(filename: str) -> Optional[str]:
+    name = (filename or "").strip().replace("\x00", "")
+    if not name:
+        return None
+    if Path(name).name != name:
+        return None
+    if name in {".", ".."} or ".." in name:
+        return None
+    return name
+
 def _update_git_supported() -> bool:
     return (ROOT_DIR / ".git").exists() and (shutil.which("git") is not None)
 
@@ -363,6 +384,9 @@ def result_page(request: Request, job_id: str):
     meta = _read_job_meta(job_dir)
     display_filename = str(meta.get("original_filename") or "") or job_id
 
+    score_hist = job_dir / "analysis_score_hist.png"
+    item_plot = job_dir / "analysis_item_plot.png"
+
     return template_response(
         request,
         "result.html",
@@ -371,11 +395,12 @@ def result_page(request: Request, job_id: str):
             "display_filename": display_filename,
             "csv_url": f"/outputs/{job_id}/results.csv",
             "pdf_url": f"/outputs/{job_id}/annotated.pdf",
-            "answer_key_url": (f"/outputs/{job_id}/answer_key.xlsx" if (job_dir / "answer_key.xlsx").exists() else None),
             "showwrong_url": (f"/outputs/{job_id}/showwrong.xlsx" if (job_dir / "showwrong.xlsx").exists() else None),
             "analysis_error": (str(meta.get("analysis_error") or "") or None),
             "analysis_message": (str(meta.get("analysis_message") or "") or None),
             "analysis_files": _analysis_file_links(job_id),
+            "analysis_score_hist_inline_url": (f"/outputs_inline/{job_id}/analysis_score_hist.png" if score_hist.exists() else None),
+            "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
         },
     )
 
@@ -823,8 +848,6 @@ async def api_process(
         {
             "original_filename": original_filename,
             "upload_base": _upload_base_name(original_filename),
-            "answer_key_filename": answer_key_filename,
-            "answer_key_saved_as": answer_key_upload_path.name,
             "created_at": int(time.time()),
             "num_questions": num_questions,
             "choices_count": choices_count,
@@ -851,7 +874,6 @@ async def api_process(
 
     analysis_error: Optional[str] = None
     analysis_message: Optional[str] = None
-    analysis_files: list[dict] = []
 
     template_path = job_dir / "analysis_template.csv"
     try:
@@ -1098,6 +1120,11 @@ def debug_page(request: Request, job_id: str = ""):
 
 @app.get("/outputs/{job_id}/{filename}")
 def download_output(job_id: str, filename: str):
+    job_id = (job_id or "").strip()
+    filename = _safe_output_filename(filename) or ""
+    if not _JOB_ID_RE.match(job_id) or not filename:
+        return RedirectResponse(url="/upload", status_code=302)
+
     job_dir = OUTPUTS_DIR / job_id
     file_path = job_dir / filename
     if not file_path.exists():
@@ -1117,8 +1144,6 @@ def download_output(job_id: str, filename: str):
         download_name = f"{upload_base_ascii}_{job_tag}_annotated.pdf"
     elif filename == "input.pdf":
         download_name = f"{upload_base_ascii}_{job_tag}_input.pdf"
-    elif filename == "answer_key.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_answer_key.csv"
     elif filename == "answer_key.xlsx":
         download_name = f"{upload_base_ascii}_{job_tag}_answer_key.xlsx"
     elif filename == "showwrong.xlsx":
@@ -1144,6 +1169,25 @@ def download_output(job_id: str, filename: str):
     if filename.lower().endswith(".png"):
         media = "image/png"
     return FileResponse(path=str(file_path), media_type=media, filename=download_name)
+
+@app.get("/outputs_inline/{job_id}/{filename}")
+def view_output_inline(job_id: str, filename: str):
+    job_id = (job_id or "").strip()
+    filename = _safe_output_filename(filename) or ""
+    if not _JOB_ID_RE.match(job_id) or filename not in _INLINE_OUTPUT_FILENAMES:
+        return RedirectResponse(url="/upload", status_code=302)
+
+    job_dir = OUTPUTS_DIR / job_id
+    file_path = job_dir / filename
+    if not file_path.exists():
+        return RedirectResponse(url="/upload", status_code=302)
+
+    return FileResponse(
+        path=str(file_path),
+        media_type="image/png",
+        filename=filename,
+        content_disposition_type="inline",
+    )
 
 
 def run():

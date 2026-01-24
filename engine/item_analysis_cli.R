@@ -261,7 +261,7 @@ p_hist <- ggplot(scores_df, aes(x = score)) +
     data = metric_lines,
     aes(xintercept = x, color = group, linetype = label),
     linewidth = 1.1,
-    show.legend = TRUE
+    show.legend = FALSE
   ) +
   geom_label(
     data = line_label_df,

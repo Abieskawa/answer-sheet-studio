@@ -16,7 +16,7 @@ from fastapi.templating import Jinja2Templates
 from engine.analysis import run_analysis_template
 from engine.generator import generate_answer_sheet_pdf, DEFAULT_TITLE as DEFAULT_SHEET_TITLE
 from engine.recognizer import process_pdf_to_csv_and_annotated_pdf
-from engine.xlsx import read_simple_xlsx_table, write_simple_xlsx
+from engine.xlsx import read_simple_xlsx_table, write_simple_xlsx, write_simple_xlsx_multi
 
 APP_DIR = Path(__file__).resolve().parent
 ROOT_DIR = APP_DIR.parent
@@ -95,7 +95,7 @@ I18N = {
         "result_download_annotated": "下載 annotated.pdf",
         "result_download_showwrong": "下載 showwrong.xlsx（只顯示錯題）",
         "result_back_to_downloads": "查看試題分析原始數據",
-        "result_view_item_analysis_data": "查看試題分析原始數據",
+        "result_view_item_analysis_data": "試題分析數據",
         "result_plots_title": "圖表",
         "result_plot_score_hist": "成績分佈",
         "result_plot_item_metrics": "題目分析",
@@ -176,7 +176,7 @@ I18N = {
         "result_download_annotated": "Download annotated.pdf",
         "result_download_showwrong": "Download showwrong.xlsx (wrong answers only)",
         "result_back_to_downloads": "View item analysis raw data",
-        "result_view_item_analysis_data": "View item analysis raw data",
+        "result_view_item_analysis_data": "Item analysis data",
         "result_plots_title": "Plots",
         "result_plot_score_hist": "Score distribution",
         "result_plot_item_metrics": "Item analysis",
@@ -420,7 +420,6 @@ def result_page(request: Request, job_id: str):
             "analysis_error": (str(meta.get("analysis_error") or "") or None),
             "analysis_message": (str(meta.get("analysis_message") or "") or None),
             "analysis_discrimination_note_key": discr_note_key,
-            "analysis_files": _analysis_file_links(job_id),
             "analysis_score_hist_inline_url": (f"/outputs_inline/{job_id}/analysis_score_hist.png" if score_hist.exists() else None),
             "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
         },
@@ -442,6 +441,7 @@ def result_charts_page(request: Request, job_id: str):
 
     score_hist = job_dir / "analysis_score_hist.png"
     item_plot = job_dir / "analysis_item_plot.png"
+    scores_by_class = job_dir / "analysis_scores_by_class.xlsx"
     item_table = _read_analysis_item_table(job_dir)
     discr_note_key = _discrimination_note_key(job_dir)
 
@@ -459,6 +459,7 @@ def result_charts_page(request: Request, job_id: str):
             "analysis_discrimination_note_key": discr_note_key,
             "analysis_score_hist_inline_url": (f"/outputs_inline/{job_id}/analysis_score_hist.png" if score_hist.exists() else None),
             "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
+            "analysis_scores_by_class_url": (f"/outputs/{job_id}/analysis_scores_by_class.xlsx" if scores_by_class.exists() else None),
             "analysis_item_table": item_table,
         },
     )
@@ -854,7 +855,80 @@ def _write_showwrong_xlsx(
 
     out_rows.append(["score", "", *[score_out(student_scores[s]) for s in student_cols]])
 
-    write_simple_xlsx(Path(out_xlsx_path), rows=out_rows, sheet_name="showwrong")
+    # If roster.csv exists, split into per-class worksheets (same class on same sheet).
+    roster_path = Path(results_csv_path).with_name("roster.csv")
+    roster_by_person: dict[str, dict[str, str]] = {}
+    try:
+        if roster_path.exists():
+            with open(roster_path, "r", newline="", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for r in reader:
+                    pid = str((r.get("person_id") or "")).strip()
+                    if not pid:
+                        continue
+                    roster_by_person[pid] = {
+                        "grade": str(r.get("grade") or "").strip(),
+                        "class_no": str(r.get("class_no") or "").strip(),
+                        "seat_no": str(r.get("seat_no") or "").strip(),
+                    }
+    except Exception:
+        roster_by_person = {}
+
+    def class_key(meta: dict[str, str]) -> str:
+        g = (meta.get("grade") or "").strip()
+        c = (meta.get("class_no") or "").strip()
+        if g and c:
+            return f"{g}-{c}"
+        if g:
+            return f"{g}-?"
+        if c:
+            return f"?-{c}"
+        return "Unknown"
+
+    grouped_students: dict[str, list[str]] = {}
+    if roster_by_person:
+        for s in student_cols:
+            meta = roster_by_person.get(str(s).strip(), {})
+            grouped_students.setdefault(class_key(meta), []).append(s)
+
+    def student_sort_key(student_id: str) -> tuple[int, int, str]:
+        meta = roster_by_person.get(str(student_id).strip(), {})
+        seat_s = (meta.get("seat_no") or "").strip()
+        try:
+            seat_n = int(float(seat_s)) if seat_s != "" else 10**9
+        except Exception:
+            seat_n = 10**9
+        return (0 if seat_n != 10**9 else 1, seat_n, str(student_id))
+
+    if grouped_students:
+        sheets: list[tuple[str, list[list[object]]]] = []
+        for key in sorted(grouped_students.keys()):
+            students = grouped_students[key]
+            students.sort(key=student_sort_key)
+
+            rows_for_sheet: list[list[object]] = []
+            rows_for_sheet.append(["number", "correct", *students])
+
+            for i, qno in enumerate(q_numbers):
+                correct = corrects[i] if i < len(corrects) else ""
+                row_out: list[object] = [qno, correct]
+                if not correct:
+                    row_out.extend(["" for _ in students])
+                    rows_for_sheet.append(row_out)
+                    continue
+
+                for student in students:
+                    answers = answers_by_student.get(student, [])
+                    ans = answers[i] if i < len(answers) else ""
+                    row_out.append("" if ans == correct else (blank_label if ans == "" else ans))
+                rows_for_sheet.append(row_out)
+
+            rows_for_sheet.append(["score", "", *[score_out(student_scores[s]) for s in students]])
+            sheets.append((f"Class {key}", rows_for_sheet))
+
+        write_simple_xlsx_multi(Path(out_xlsx_path), sheets=sheets)
+    else:
+        write_simple_xlsx(Path(out_xlsx_path), rows=out_rows, sheet_name="showwrong")
 
 
 @app.get("/update", response_class=HTMLResponse)

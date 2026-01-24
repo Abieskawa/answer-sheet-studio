@@ -22,14 +22,6 @@
   <p class="hint">{{ t[analysis_discrimination_note_key] }}</p>
 {% endif %}
 
-{% if analysis_files %}
-  <div class="downloads">
-    {% for f in analysis_files %}
-      <a class="download" href="{{ f.url }}">{{ f.label }}</a>
-    {% endfor %}
-  </div>
-{% endif %}
-
 {% if analysis_score_hist_inline_url or analysis_item_plot_inline_url %}
   <h2>{{ t.result_plots_title }}</h2>
   <div class="plots">

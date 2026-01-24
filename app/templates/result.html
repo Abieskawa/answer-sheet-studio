@@ -27,5 +27,23 @@
   </div>
 {% endif %}
 
+{% if analysis_score_hist_inline_url or analysis_item_plot_inline_url %}
+  <h2>{{ t.result_plots_title }}</h2>
+  <div class="plots">
+    {% if analysis_score_hist_inline_url %}
+      <div class="plot-card">
+        <p class="hint">{{ t.result_plot_score_hist }}</p>
+        <img class="plot" src="{{ analysis_score_hist_inline_url }}" alt="{{ t.result_plot_score_hist }}" loading="lazy" />
+      </div>
+    {% endif %}
+    {% if analysis_item_plot_inline_url %}
+      <div class="plot-card">
+        <p class="hint">{{ t.result_plot_item_metrics }}</p>
+        <img class="plot" src="{{ analysis_item_plot_inline_url }}" alt="{{ t.result_plot_item_metrics }}" loading="lazy" />
+      </div>
+    {% endif %}
+  </div>
+{% endif %}
+
 <p class="hint">{{ t.result_hint_unstable }}</p>
 {% endblock %}

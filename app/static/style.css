@@ -29,4 +29,7 @@ button:hover{background:#263244}
 .downloads{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
 .download{display:inline-block;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#0f172a}
 .download:hover{background:#111f3a}
+.plots{display:flex;flex-direction:column;gap:14px;margin:12px 0}
+.plot-card{padding:12px;border:1px solid var(--line);border-radius:12px;background:#0f172a}
+.plot{display:block;width:100%;height:auto;border-radius:10px;border:1px solid #1f2a3a;background:#0b0e14}
 code{background:#0f172a;border:1px solid var(--line);padding:2px 6px;border-radius:8px}

@@ -39,6 +39,158 @@ Function DetectLatestRWindowsExe()
     DetectLatestRWindowsExe = Trim(out)
 End Function
 
+Function NormalizeEnvPath(value)
+    On Error Resume Next
+    Dim v
+    v = Trim(CStr(value))
+    ' If the env var is undefined, ExpandEnvironmentStrings returns "%NAME%".
+    If InStr(v, "%") > 0 Then
+        v = ""
+    End If
+    NormalizeEnvPath = v
+End Function
+
+Function VersionGreater(a, b)
+    On Error Resume Next
+    Dim aParts, bParts, i, ai, bi
+    aParts = Split(CStr(a), ".")
+    bParts = Split(CStr(b), ".")
+    For i = 0 To 2
+        ai = 0
+        bi = 0
+        If i <= UBound(aParts) Then ai = CLng(Val(aParts(i)))
+        If i <= UBound(bParts) Then bi = CLng(Val(bParts(i)))
+        If ai > bi Then
+            VersionGreater = True
+            Exit Function
+        End If
+        If ai < bi Then
+            VersionGreater = False
+            Exit Function
+        End If
+    Next
+    VersionGreater = False
+End Function
+
+Function RegReadString(key)
+    On Error Resume Next
+    Dim v
+    v = ""
+    v = WshShell.RegRead(key)
+    If Err.Number <> 0 Then
+        Err.Clear
+        v = ""
+    End If
+    RegReadString = Trim(CStr(v))
+End Function
+
+Function FindRscriptFromInstallPath(installPath)
+    On Error Resume Next
+    Dim base, candidate
+    base = Trim(CStr(installPath))
+    If base = "" Then
+        FindRscriptFromInstallPath = ""
+        Exit Function
+    End If
+    If Right(base, 1) = "\" Then
+        base = Left(base, Len(base) - 1)
+    End If
+    candidate = base & "\bin\Rscript.exe"
+    If Not fso.FileExists(candidate) Then
+        candidate = base & "\bin\x64\Rscript.exe"
+    End If
+    If Not fso.FileExists(candidate) Then
+        candidate = base & "\bin\i386\Rscript.exe"
+    End If
+    If fso.FileExists(candidate) Then
+        FindRscriptFromInstallPath = candidate
+        Exit Function
+    End If
+    FindRscriptFromInstallPath = ""
+End Function
+
+Function FindRscriptFromRegistry()
+    On Error Resume Next
+    Dim keys, key, installPath, cand
+    keys = Array( _
+        "HKLM\SOFTWARE\R-core\R\InstallPath", _
+        "HKLM\SOFTWARE\R-core\R64\InstallPath", _
+        "HKLM\SOFTWARE\WOW6432Node\R-core\R\InstallPath", _
+        "HKLM\SOFTWARE\WOW6432Node\R-core\R64\InstallPath", _
+        "HKCU\SOFTWARE\R-core\R\InstallPath", _
+        "HKCU\SOFTWARE\R-core\R64\InstallPath", _
+        "HKCU\SOFTWARE\WOW6432Node\R-core\R\InstallPath", _
+        "HKCU\SOFTWARE\WOW6432Node\R-core\R64\InstallPath" _
+    )
+    For Each key In keys
+        installPath = RegReadString(key)
+        cand = FindRscriptFromInstallPath(installPath)
+        If cand <> "" Then
+            FindRscriptFromRegistry = cand
+            Exit Function
+        End If
+    Next
+    FindRscriptFromRegistry = ""
+End Function
+
+Function FindRscriptExe()
+    On Error Resume Next
+    Dim localAppData, programFiles, programFilesX86, programW6432, roots, root, rRoot, folder, subfolder
+    Dim localPrograms
+    Dim name, ver, bestVer, bestPath, candidate
+
+    bestVer = ""
+    bestPath = ""
+
+    localAppData = NormalizeEnvPath(WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%"))
+    programFiles = NormalizeEnvPath(WshShell.ExpandEnvironmentStrings("%ProgramFiles%"))
+    programFilesX86 = NormalizeEnvPath(WshShell.ExpandEnvironmentStrings("%ProgramFiles(x86)%"))
+    programW6432 = NormalizeEnvPath(WshShell.ExpandEnvironmentStrings("%ProgramW6432%"))
+
+    localPrograms = ""
+    If localAppData <> "" Then
+        localPrograms = localAppData & "\Programs"
+    End If
+
+    roots = Array(localPrograms, programW6432, programFiles, programFilesX86)
+
+    For Each root In roots
+        If root <> "" Then
+            rRoot = root & "\R"
+            If fso.FolderExists(rRoot) Then
+                Set folder = fso.GetFolder(rRoot)
+                For Each subfolder In folder.SubFolders
+                    name = subfolder.Name
+                    If LCase(Left(name, 2)) = "r-" Then
+                        ver = Mid(name, 3)
+
+                        candidate = subfolder.Path & "\bin\Rscript.exe"
+                        If Not fso.FileExists(candidate) Then
+                            candidate = subfolder.Path & "\bin\x64\Rscript.exe"
+                        End If
+                        If Not fso.FileExists(candidate) Then
+                            candidate = subfolder.Path & "\bin\i386\Rscript.exe"
+                        End If
+
+                        If fso.FileExists(candidate) Then
+                            If bestVer = "" Or VersionGreater(ver, bestVer) Then
+                                bestVer = ver
+                                bestPath = candidate
+                            End If
+                        End If
+                    End If
+                Next
+            End If
+        End If
+    Next
+
+    If bestPath = "" Then
+        bestPath = FindRscriptFromRegistry()
+    End If
+
+    FindRscriptExe = bestPath
+End Function
+
 Function DownloadAndInstallR()
     On Error Resume Next
     Dim exeName, url, tempDir, outPath, ps, cmd, rc
@@ -57,7 +209,7 @@ Function DownloadAndInstallR()
          "$out='" & Replace(outPath, "'", "''") & "';" & _
          "try { Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing } catch { (New-Object Net.WebClient).DownloadFile($url, $out) };" & _
          "try { $sig=Get-AuthenticodeSignature -FilePath $out; if ($sig.Status -ne 'Valid') { throw ('Invalid installer signature: ' + $sig.Status) } } catch { throw };" & _
-         "try { Start-Process -FilePath $out -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART' -Wait } catch { Start-Process -FilePath $out -Wait };"
+         "Start-Process -FilePath $out;"
 
     cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command " & q & ps & q
     rc = WshShell.Run(cmd, 0, True)
@@ -69,16 +221,31 @@ Sub EnsureRInstalledOrExit()
     If CanRun("Rscript -e " & q & "quit(status=0)" & q) Then
         Exit Sub
     End If
-    ' No prompt: automatically download and start installing R from CRAN.
-    If DownloadAndInstallR() Then
-        ' After installation, ask user to rerun (Start Menu shortcuts and PATH may update).
-        WshShell.Popup "R installer finished. Please run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
-        WScript.Quit
+
+    Dim rscriptExe
+    rscriptExe = FindRscriptExe()
+    If rscriptExe <> "" Then
+        If CanRun(q & rscriptExe & q & " -e " & q & "quit(status=0)" & q) Then
+            Exit Sub
+        End If
     End If
-    WshShell.Popup "Failed to download or install R automatically." & vbCrLf & vbCrLf & "Please install R from CRAN, then run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 48
-    On Error Resume Next
-    WshShell.Run "https://cran.r-project.org/bin/windows/base/", 1, False
-    WScript.Quit
+    ' R is optional; skip installing unless explicitly enabled.
+    Dim installR
+    installR = LCase(Trim(WshShell.Environment("Process")("ANSWER_SHEET_INSTALL_R")))
+    If installR <> "1" And installR <> "true" And installR <> "yes" Then
+        Exit Sub
+    End If
+
+    ' Optional: download and start installing R from CRAN, but do not block startup.
+    If DownloadAndInstallR() Then
+        WshShell.Popup "R installer started (optional)." & vbCrLf & vbCrLf & _
+            "Answer Sheet Studio will continue without R. Restart after installing R to enable ggplot2 plots.", 0, "Answer Sheet Studio", 64
+    Else
+        WshShell.Popup "R was not found." & vbCrLf & vbCrLf & _
+            "Answer Sheet Studio will continue without R. Install R from CRAN to enable ggplot2 plots.", 0, "Answer Sheet Studio", 48
+        On Error Resume Next
+        WshShell.Run "https://cran.r-project.org/bin/windows/base/", 1, False
+    End If
 End Sub
 
 Function CanRun(cmd)

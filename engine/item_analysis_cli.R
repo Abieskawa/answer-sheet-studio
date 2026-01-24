@@ -153,17 +153,25 @@ for (nm in names(choice_rates)) {
 
 write_excel_csv(item_df, file.path(outdir, "analysis_item.csv"))
 
+score_vec <- scores_df$score
+qv <- as.numeric(quantile(score_vec, c(0.88, 0.75, 0.5, 0.25, 0.12), na.rm = TRUE))
+q88 <- qv[1]
+q75 <- qv[2]
+q50 <- qv[3]
+q25 <- qv[4]
+q12 <- qv[5]
+
 summary_df <- tibble(
   students = s_count,
   questions = q_count,
   total_possible = total_possible,
-  mean = round(mean(scores_df$score), 3),
-  sd = round(sd(scores_df$score), 3),
-  p88 = round(quantile(scores_df$score, 0.88, na.rm = TRUE), 3),
-  p75 = round(quantile(scores_df$score, 0.75, na.rm = TRUE), 3),
-  median = round(quantile(scores_df$score, 0.5, na.rm = TRUE), 3),
-  p25 = round(quantile(scores_df$score, 0.25, na.rm = TRUE), 3),
-  p12 = round(quantile(scores_df$score, 0.12, na.rm = TRUE), 3)
+  mean = round(mean(score_vec, na.rm = TRUE), 3),
+  sd = round(sd(score_vec, na.rm = TRUE), 3),
+  p88 = round(q88, 3),
+  p75 = round(q75, 3),
+  median = round(q50, 3),
+  p25 = round(q25, 3),
+  p12 = round(q12, 3)
 )
 write_excel_csv(summary_df, file.path(outdir, "analysis_summary.csv"))
 
@@ -174,8 +182,9 @@ if (!is.na(total_possible) && total_possible > 0) {
 
 p_hist <- ggplot(scores_df, aes(x = score)) +
   geom_histogram(binwidth = binwidth, fill = "#0ea5e9", color = "white", alpha = 0.9) +
-  geom_vline(xintercept = mean(scores_df$score), color = "#ef4444", linewidth = 1) +
-  geom_vline(xintercept = median(scores_df$score), color = "#3b82f6", linewidth = 1) +
+  geom_vline(xintercept = mean(score_vec, na.rm = TRUE), color = "#ef4444", linewidth = 1.1) +
+  geom_vline(xintercept = c(q88, q75, q25, q12), color = "#9ca3af", linewidth = 1, linetype = "dashed") +
+  geom_vline(xintercept = q50, color = "#3b82f6", linewidth = 1.1) +
   theme_minimal(base_size = 14) +
   labs(title = "Score distribution", x = "Score", y = "Students") +
   theme(plot.title = element_text(face = "bold"))

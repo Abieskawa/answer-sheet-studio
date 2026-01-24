@@ -9,6 +9,34 @@ If recommendedPython = "" Then
     recommendedPython = "3.11.8"
 End If
 
+Function ReadTextFile(path)
+    On Error Resume Next
+    Dim f, t
+    ReadTextFile = ""
+    If Not fso.FileExists(path) Then
+        Exit Function
+    End If
+    Set f = fso.OpenTextFile(path, 1, False)
+    t = f.ReadAll
+    f.Close
+    ReadTextFile = Trim(CStr(t))
+End Function
+
+Sub TryOpenProgressPage()
+    On Error Resume Next
+    Dim outDir, urlPath, i, u
+    outDir = repo & "\outputs"
+    urlPath = outDir & "\progress_url.txt"
+    For i = 1 To 50 ' ~5s
+        u = ReadTextFile(urlPath)
+        If u <> "" Then
+            WshShell.Run u, 1, False
+            Exit Sub
+        End If
+        WScript.Sleep 100
+    Next
+End Sub
+
 Function DetectLatestRWindowsExe()
     On Error Resume Next
     Dim ps, cmd, rc, out, tempDir, outPath, f
@@ -286,11 +314,13 @@ Sub TryRunFromKnownInstall(tag)
     If fso.FileExists(pythonw) Then
         EnsureRInstalledOrExit
         RunAsync q & pythonw & q & " " & q & launcher & q
+        TryOpenProgressPage
         WScript.Quit
     End If
     If fso.FileExists(python) Then
         EnsureRInstalledOrExit
         RunAsync q & python & q & " " & q & launcher & q
+        TryOpenProgressPage
         WScript.Quit
     End If
 
@@ -299,11 +329,13 @@ Sub TryRunFromKnownInstall(tag)
     If fso.FileExists(pythonw) Then
         EnsureRInstalledOrExit
         RunAsync q & pythonw & q & " " & q & launcher & q
+        TryOpenProgressPage
         WScript.Quit
     End If
     If fso.FileExists(python) Then
         EnsureRInstalledOrExit
         RunAsync q & python & q & " " & q & launcher & q
+        TryOpenProgressPage
         WScript.Quit
     End If
 End Sub
@@ -350,21 +382,25 @@ probe = q & "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 
 If CanRun("pyw -3.10 -c " & probe) Then
     EnsureRInstalledOrExit
     RunAsync "pyw -3.10 " & q & launcher & q
+    TryOpenProgressPage
     WScript.Quit
 End If
 If CanRun("pyw -3.11 -c " & probe) Then
     EnsureRInstalledOrExit
     RunAsync "pyw -3.11 " & q & launcher & q
+    TryOpenProgressPage
     WScript.Quit
 End If
 If CanRun("pyw -3.12 -c " & probe) Then
     EnsureRInstalledOrExit
     RunAsync "pyw -3.12 " & q & launcher & q
+    TryOpenProgressPage
     WScript.Quit
 End If
 If CanRun("pyw -3.13 -c " & probe) Then
     EnsureRInstalledOrExit
     RunAsync "pyw -3.13 " & q & launcher & q
+    TryOpenProgressPage
     WScript.Quit
 End If
 
@@ -372,6 +408,7 @@ End If
 If CanRun("pythonw -c " & probe) Then
     EnsureRInstalledOrExit
     RunAsync "pythonw " & q & launcher & q
+    TryOpenProgressPage
     WScript.Quit
 End If
 

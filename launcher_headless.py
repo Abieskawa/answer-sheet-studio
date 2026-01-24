@@ -22,13 +22,12 @@ APP_URL = f"http://{APP_HOST}:{APP_PORT}"
 OPEN_BROWSER = os.environ.get("ANSWER_SHEET_OPEN_BROWSER", "1").strip().lower() not in {"0", "false", "no"}
 
 REPO_DIR = Path(__file__).resolve().parent
-VENV_DIR = REPO_DIR / ".venv"
 REQ_PATH = REPO_DIR / "requirements.txt"
-MARKER_PATH = REPO_DIR / ".answer_sheet_studio_install.json"
 OUTPUTS_DIR = REPO_DIR / "outputs"
 OUTPUTS_DIR.mkdir(exist_ok=True)
 LAUNCHER_LOG = OUTPUTS_DIR / "launcher.log"
 SERVER_LOG = OUTPUTS_DIR / "server.log"
+PROGRESS_URL_PATH = OUTPUTS_DIR / "progress_url.txt"
 
 _PROGRESS_STATE: dict = {
     "phase": "starting",
@@ -177,6 +176,10 @@ class _ProgressServer:
         self._httpd = httpd
         host, port = httpd.server_address[:2]
         self.url = f"http://{host}:{port}/"
+        try:
+            PROGRESS_URL_PATH.write_text(self.url, encoding="utf-8")
+        except Exception:
+            pass
         Thread(target=httpd.serve_forever, daemon=True).start()
 
     def stop(self) -> None:
@@ -204,28 +207,63 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+def _venv_root_dir() -> Path:
+    explicit = os.environ.get("ANSWER_SHEET_VENV_DIR", "").strip()
+    if explicit:
+        return Path(explicit).expanduser()
+
+    # Windows: reuse a stable venv across re-downloads/unzips of the repo.
+    if os.name == "nt":
+        base = os.environ.get("LOCALAPPDATA") or str(Path.home())
+        return Path(base) / "AnswerSheetStudio" / "venvs"
+
+    return REPO_DIR / ".venv"
+
+
+def _venv_dir() -> Path:
+    root = _venv_root_dir()
+    if root == REPO_DIR / ".venv":
+        return root
+    try:
+        req_sha = _sha256_file(REQ_PATH) if REQ_PATH.exists() else "default"
+    except Exception:
+        req_sha = "default"
+    return root / req_sha[:12]
+
+
+def _marker_path() -> Path:
+    venv_dir = _venv_dir()
+    if venv_dir == REPO_DIR / ".venv":
+        return REPO_DIR / ".answer_sheet_studio_install.json"
+    return venv_dir / ".answer_sheet_studio_install.json"
+
+
 def _read_marker() -> Optional[dict]:
-    if not MARKER_PATH.exists():
+    marker_path = _marker_path()
+    if not marker_path.exists():
         return None
     try:
-        return json.loads(MARKER_PATH.read_text(encoding="utf-8"))
+        return json.loads(marker_path.read_text(encoding="utf-8"))
     except Exception:
         return None
 
 
 def _write_marker(data: dict) -> None:
     try:
-        MARKER_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        marker_path = _marker_path()
+        marker_path.parent.mkdir(parents=True, exist_ok=True)
+        marker_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
         pass
 
 
 def _venv_python() -> Path:
+    venv_dir = _venv_dir()
     if os.name == "nt":
-        pyw = VENV_DIR / "Scripts" / "pythonw.exe"
-        return pyw if pyw.exists() else (VENV_DIR / "Scripts" / "python.exe")
-    py3 = VENV_DIR / "bin" / "python3"
-    return py3 if py3.exists() else (VENV_DIR / "bin" / "python")
+        pyw = venv_dir / "Scripts" / "pythonw.exe"
+        return pyw if pyw.exists() else (venv_dir / "Scripts" / "python.exe")
+    py3 = venv_dir / "bin" / "python3"
+    return py3 if py3.exists() else (venv_dir / "bin" / "python")
 
 
 def _run_logged(args: list[str]) -> int:
@@ -252,7 +290,12 @@ def ensure_venv() -> Path:
         return py
     _set_progress("venv", "Creating virtual environment…")
     _log("Creating .venv ...")
-    rc = _run_logged([sys.executable, "-m", "venv", str(VENV_DIR)])
+    venv_dir = _venv_dir()
+    try:
+        venv_dir.parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+    rc = _run_logged([sys.executable, "-m", "venv", str(venv_dir)])
     if rc != 0 or not py.exists():
         _set_progress("error", "Failed to create venv (see launcher.log).")
         raise SystemExit(f"Failed to create venv. See {LAUNCHER_LOG}")
@@ -329,20 +372,21 @@ def start_server(py: Path) -> None:
 
 
 def main() -> None:
-    if sys.version_info < (3, 10):
-        raise SystemExit("Answer Sheet Studio requires Python 3.10+.")
-
     progress = _ProgressServer()
-    if OPEN_BROWSER:
-        try:
-            progress.start()
-            _set_progress("starting", "Preparing installation…")
-            if progress.url:
-                webbrowser.open(progress.url)
-        except Exception:
-            pass
+    try:
+        progress.start()
+        _set_progress("starting", "Preparing installation…")
+        if OPEN_BROWSER and progress.url:
+            webbrowser.open(progress.url)
+    except Exception:
+        pass
 
     try:
+        if sys.version_info < (3, 10):
+            _log("ERROR: Python 3.10+ is required to run the app.")
+            _set_progress("error", "Python 3.10+ is required. Please install Python 3.11 (recommended).")
+            time.sleep(8)
+            raise SystemExit("Answer Sheet Studio requires Python 3.10+.")
         py = ensure_venv()
         ensure_requirements(py)
         start_server(py)

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="{{ 'en' if lang == 'en' else 'zh-Hant' }}">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ title or t.result_plots_title }}</title>
+  <style>
+    :root { color-scheme: light; }
+    body { margin: 0; background: #fff; color: #111827; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 24px 18px 40px; }
+    h1 { margin: 0 0 8px; font-size: 22px; }
+    .meta { margin: 0 0 18px; color: #6b7280; font-size: 13px; }
+    .meta code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 18px; }
+    .btn { display: inline-block; padding: 10px 12px; border-radius: 10px; border: 1px solid #e5e7eb; text-decoration: none; color: #111827; background: #fff; }
+    .btn:hover { background: #f9fafb; }
+    .plots { display: grid; gap: 14px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fff; }
+    .hint { margin: 0 0 8px; font-size: 13px; color: #6b7280; }
+    img { width: 100%; height: auto; display: block; background: #fff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>{{ t.result_plots_title }}</h1>
+    <p class="meta">{{ t.result_file }}<code>{{ display_filename }}</code> · {{ t.result_job_id }}<code>{{ job_id }}</code></p>
+
+    <div class="toolbar">
+      <a class="btn" href="/result/{{ job_id }}" target="_blank" rel="noopener noreferrer">{{ t.result_back_to_downloads }}</a>
+      <a class="btn" href="{{ csv_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_results }}</a>
+      <a class="btn" href="{{ pdf_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_annotated }}</a>
+      {% if showwrong_url %}
+        <a class="btn" href="{{ showwrong_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_showwrong }}</a>
+      {% endif %}
+    </div>
+
+    {% if analysis_error %}
+      <p class="hint" style="color:#b91c1c">{{ analysis_error }}</p>
+    {% endif %}
+    {% if analysis_message %}
+      <p class="hint">{{ analysis_message }}</p>
+    {% endif %}
+
+    <div class="plots">
+      {% if analysis_score_hist_inline_url %}
+        <div class="card">
+          <p class="hint">{{ t.result_plot_score_hist }}</p>
+          <img src="{{ analysis_score_hist_inline_url }}" alt="{{ t.result_plot_score_hist }}" loading="lazy" />
+        </div>
+      {% endif %}
+      {% if analysis_item_plot_inline_url %}
+        <div class="card">
+          <p class="hint">{{ t.result_plot_item_metrics }}</p>
+          <img src="{{ analysis_item_plot_inline_url }}" alt="{{ t.result_plot_item_metrics }}" loading="lazy" />
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
+

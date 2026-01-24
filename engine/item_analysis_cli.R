@@ -7,6 +7,25 @@ suppressPackageStartupMessages({
   library(ggplot2)
 })
 
+theme_answer_sheet <- function(base_size = 13) {
+  theme_minimal(base_size = base_size) +
+    theme(
+      plot.title = element_text(face = "bold", size = rel(1.15), margin = margin(b = 6)),
+      plot.subtitle = element_text(size = rel(0.95), color = "#4b5563", margin = margin(b = 10)),
+      plot.caption = element_text(size = rel(0.85), color = "#6b7280", margin = margin(t = 10)),
+      axis.title.x = element_text(margin = margin(t = 8)),
+      axis.title.y = element_text(margin = margin(r = 8)),
+      panel.grid.minor = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.major.y = element_line(color = "#e5e7eb", linewidth = 0.6),
+      legend.title = element_text(face = "bold"),
+      legend.position = "top",
+      strip.text = element_text(face = "bold"),
+      strip.background = element_rect(fill = "#f3f4f6", color = NA),
+      plot.background = element_rect(fill = "white", color = NA)
+    )
+}
+
 get_arg <- function(args, key, default = NULL) {
   idx <- which(args == key)
   if (length(idx) == 0) {
@@ -21,6 +40,7 @@ get_arg <- function(args, key, default = NULL) {
 args <- commandArgs(trailingOnly = TRUE)
 input_path <- get_arg(args, "--input")
 outdir <- get_arg(args, "--outdir")
+lang <- get_arg(args, "--lang", default = "")
 
 if (is.null(input_path) || input_path == "") {
   stop("Missing required --input <template.csv>")
@@ -30,6 +50,13 @@ if (is.null(outdir) || outdir == "") {
 }
 
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
+
+lang_norm <- tolower(gsub("-", "_", trimws(as.character(lang))))
+is_zh <- startsWith(lang_norm, "zh")
+
+tr <- function(zh, en) {
+  if (is_zh) zh else en
+}
 
 normalize_answer <- function(x) {
   x <- toupper(trimws(as.character(x)))
@@ -165,13 +192,13 @@ summary_df <- tibble(
   students = s_count,
   questions = q_count,
   total_possible = total_possible,
-  mean = round(mean(score_vec, na.rm = TRUE), 3),
-  sd = round(sd(score_vec, na.rm = TRUE), 3),
-  p88 = round(q88, 3),
-  p75 = round(q75, 3),
-  median = round(q50, 3),
-  p25 = round(q25, 3),
-  p12 = round(q12, 3)
+  mean = round(mean(score_vec, na.rm = TRUE), 2),
+  sd = round(sd(score_vec, na.rm = TRUE), 2),
+  p88 = round(q88, 2),
+  p75 = round(q75, 2),
+  median = round(q50, 2),
+  p25 = round(q25, 2),
+  p12 = round(q12, 2)
 )
 write_excel_csv(summary_df, file.path(outdir, "analysis_summary.csv"))
 
@@ -180,42 +207,119 @@ if (!is.na(total_possible) && total_possible > 0) {
   binwidth <- max(1, round(total_possible / 20))
 }
 
+metric_lines <- tibble(
+  x = c(mean(score_vec, na.rm = TRUE), q50, q88, q75, q25, q12),
+  label = c(tr("平均", "Mean"), tr("中位數", "Median"), "P88", "P75", "P25", "P12"),
+  group = c(tr("平均", "Mean"), tr("中位數", "Median"), tr("百分位數", "Percentiles"), tr("百分位數", "Percentiles"), tr("百分位數", "Percentiles"), tr("百分位數", "Percentiles"))
+)
+
+max_count <- max(as.integer(table(floor(score_vec / binwidth) * binwidth)), 1, na.rm = TRUE)
+line_label_df <- metric_lines %>%
+  mutate(
+    y = max_count + 0.35,
+    x = pmax(0, x)
+  )
+
 p_hist <- ggplot(scores_df, aes(x = score)) +
-  geom_histogram(binwidth = binwidth, fill = "#0ea5e9", color = "white", alpha = 0.9) +
-  geom_vline(xintercept = mean(score_vec, na.rm = TRUE), color = "#ef4444", linewidth = 1.1) +
-  geom_vline(xintercept = c(q88, q75, q25, q12), color = "#9ca3af", linewidth = 1, linetype = "dashed") +
-  geom_vline(xintercept = q50, color = "#3b82f6", linewidth = 1.1) +
-  theme_minimal(base_size = 14) +
-  labs(title = "Score distribution", x = "Score", y = "Students") +
-  theme(plot.title = element_text(face = "bold"))
+  geom_histogram(
+    binwidth = binwidth,
+    boundary = 0,
+    fill = "#0ea5e9",
+    color = "white",
+    alpha = 0.92
+  ) +
+  geom_vline(
+    data = metric_lines,
+    aes(xintercept = x, color = group, linetype = label),
+    linewidth = 1.1,
+    show.legend = TRUE
+  ) +
+  geom_label(
+    data = line_label_df,
+    aes(x = x, y = y, label = label, color = group),
+    size = 3.2,
+    linewidth = 0,
+    fill = "white",
+    alpha = 0.85,
+    show.legend = FALSE
+  ) +
+  scale_color_manual(
+    name = tr("指標線", "Reference lines"),
+    values = c(
+      tr("平均", "Mean") = "#ef4444",
+      tr("中位數", "Median") = "#2563eb",
+      tr("百分位數", "Percentiles") = "#6b7280"
+    )
+  ) +
+  scale_linetype_manual(
+    name = tr("指標線", "Reference lines"),
+    values = c(tr("平均", "Mean") = "solid", tr("中位數", "Median") = "solid", "P88" = "dashed", "P75" = "dashed", "P25" = "dashed", "P12" = "dashed")
+  ) +
+  scale_x_continuous(breaks = function(l) pretty(l, n = 10)) +
+  scale_y_continuous(
+    breaks = function(l) seq(0, ceiling(max(l, na.rm = TRUE)), by = 1),
+    expand = expansion(mult = c(0, 0.12))
+  ) +
+  theme_answer_sheet(base_size = 14) +
+  labs(
+    title = tr("成績分佈", "Score distribution"),
+    subtitle = if (is_zh) {
+      sprintf("學生數：%d｜滿分：%s｜binwidth：%s", s_count, format(total_possible, trim = TRUE), format(binwidth, trim = TRUE))
+    } else {
+      sprintf("Students: %d | Full score: %s | Binwidth: %s", s_count, format(total_possible, trim = TRUE), format(binwidth, trim = TRUE))
+    },
+    x = tr("分數", "Score"),
+    y = tr("學生人數", "Students")
+  )
 
 ggsave(
   filename = file.path(outdir, "analysis_score_hist.png"),
   plot = p_hist,
   width = 8,
   height = 4.5,
-  dpi = 160
+  dpi = 200,
+  bg = "white"
 )
 
 item_plot_df <- item_df %>%
-  select(number, difficulty, discrimination, blank_rate) %>%
-  pivot_longer(cols = c(difficulty, discrimination, blank_rate), names_to = "metric", values_to = "value")
+  select(number, difficulty, discrimination) %>%
+  pivot_longer(cols = c(difficulty, discrimination), names_to = "metric", values_to = "value") %>%
+  mutate(metric = recode(metric, difficulty = tr("難度（正答率）", "Difficulty (accuracy)"), discrimination = tr("鑑別度", "Discrimination")))
+
+ref_lines <- tibble(
+  metric = c(rep(tr("難度（正答率）", "Difficulty (accuracy)"), 3), rep(tr("鑑別度", "Discrimination"), 3)),
+  y = c(0.25, 0.5, 0.75, 0.0, 0.2, 0.4),
+  label = c("0.25", "0.50", "0.75", "0.00", "0.20", "0.40")
+)
 
 p_item <- ggplot(item_plot_df, aes(x = number, y = value)) +
-  geom_line(color = "#e5e7eb") +
-  geom_point(size = 1.6, color = "#e5e7eb") +
+  geom_hline(
+    data = ref_lines,
+    aes(yintercept = y),
+    linewidth = 0.6,
+    color = "#d1d5db",
+    linetype = "dashed",
+    inherit.aes = FALSE
+  ) +
+  geom_line(color = "#94a3b8", linewidth = 0.6, na.rm = TRUE) +
+  geom_point(size = 1.9, color = "#0ea5e9", alpha = 0.95, na.rm = TRUE) +
   facet_wrap(~metric, ncol = 1, scales = "free_y") +
-  theme_minimal(base_size = 13) +
-  labs(title = "Item metrics", x = "Question", y = NULL) +
-  theme(
-    plot.title = element_text(face = "bold"),
-    strip.text = element_text(face = "bold")
-  )
+  scale_y_continuous(labels = function(x) sprintf("%.2f", x)) +
+  scale_x_continuous(breaks = function(l) pretty(l, n = 12)) +
+  theme_answer_sheet(base_size = 13) +
+  labs(
+    title = tr("題目分析", "Item analysis"),
+    subtitle = tr("難度與鑑別度（虛線為常用參考線）", "Difficulty and discrimination (dashed lines are common references)"),
+    x = tr("題號", "Question"),
+    y = NULL
+  ) +
+  theme(legend.position = "none")
 
 ggsave(
   filename = file.path(outdir, "analysis_item_plot.png"),
   plot = p_item,
   width = 8,
   height = 7,
-  dpi = 160
+  dpi = 200,
+  bg = "white"
 )

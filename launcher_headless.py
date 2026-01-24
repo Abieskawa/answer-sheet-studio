@@ -6,7 +6,9 @@ import subprocess
 import sys
 import time
 import webbrowser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Thread
 from typing import Optional
 
 
@@ -28,6 +30,13 @@ OUTPUTS_DIR.mkdir(exist_ok=True)
 LAUNCHER_LOG = OUTPUTS_DIR / "launcher.log"
 SERVER_LOG = OUTPUTS_DIR / "server.log"
 
+_PROGRESS_STATE: dict = {
+    "phase": "starting",
+    "message": "Starting…",
+    "app_url": APP_URL,
+    "app_up": False,
+}
+
 
 def _log(line: str) -> None:
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -36,6 +45,147 @@ def _log(line: str) -> None:
             f.write(f"[{ts}] {line}\n")
     except Exception:
         pass
+
+
+def _set_progress(phase: str, message: str) -> None:
+    _PROGRESS_STATE["phase"] = phase
+    _PROGRESS_STATE["message"] = message
+    _PROGRESS_STATE["ts"] = int(time.time())
+
+
+def _tail_text(path: Path, max_lines: int = 80, max_bytes: int = 64 * 1024) -> str:
+    try:
+        if not path.exists():
+            return ""
+        size = path.stat().st_size
+        with open(path, "rb") as f:
+            f.seek(max(0, size - max_bytes))
+            data = f.read()
+        text = data.decode("utf-8", errors="replace")
+        lines = text.splitlines()
+        if len(lines) > max_lines:
+            lines = lines[-max_lines:]
+        return "\n".join(lines)
+    except Exception:
+        return ""
+
+
+class _ProgressHandler(BaseHTTPRequestHandler):
+    def log_message(self, fmt: str, *args) -> None:
+        return
+
+    def _send(self, status: int, content_type: str, body: bytes) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self) -> None:  # noqa: N802
+        if self.path.startswith("/status"):
+            payload = dict(_PROGRESS_STATE)
+            payload["log_tail"] = _tail_text(LAUNCHER_LOG)
+            body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            self._send(200, "application/json; charset=utf-8", body)
+            return
+
+        if self.path not in {"/", "/index.html"}:
+            self._send(404, "text/plain; charset=utf-8", b"Not found")
+            return
+
+        html = f"""<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Answer Sheet Studio - Installing</title>
+    <style>
+      :root {{ color-scheme: light dark; }}
+      body {{ font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 24px; }}
+      .card {{ max-width: 900px; margin: 0 auto; padding: 20px; border-radius: 12px; border: 1px solid rgba(127,127,127,.25); }}
+      .title {{ font-size: 20px; font-weight: 650; margin: 0 0 8px; }}
+      .muted {{ opacity: .8; margin: 0 0 12px; }}
+      .row {{ display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }}
+      .pill {{ font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(127,127,127,.35); }}
+      pre {{ white-space: pre-wrap; word-break: break-word; margin: 12px 0 0; padding: 12px; border-radius: 10px; border: 1px solid rgba(127,127,127,.25); max-height: 50vh; overflow: auto; }}
+      progress {{ width: 100%; height: 16px; }}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <p class="title">Answer Sheet Studio</p>
+      <p class="muted">Installing dependencies / starting server… This may take a few minutes on first run.</p>
+      <div class="row">
+        <span class="pill" id="phase">starting</span>
+        <span class="pill" id="msg">Starting…</span>
+      </div>
+      <div style="margin-top:12px">
+        <progress id="bar" max="100" value="10"></progress>
+      </div>
+      <pre id="log" aria-label="launcher log"></pre>
+    </div>
+    <script>
+      (() => {{
+        const phaseEl = document.getElementById("phase");
+        const msgEl = document.getElementById("msg");
+        const logEl = document.getElementById("log");
+        const bar = document.getElementById("bar");
+        const weights = {{
+          starting: 5,
+          venv: 15,
+          pip_upgrade: 30,
+          pip_install: 55,
+          server: 80,
+          done: 100,
+          error: 100
+        }};
+        const poll = async () => {{
+          try {{
+            const res = await fetch("/status", {{ cache: "no-store" }});
+            const j = await res.json();
+            phaseEl.textContent = j.phase || "starting";
+            msgEl.textContent = j.message || "";
+            bar.value = weights[j.phase] ?? 10;
+            if (j.log_tail) {{
+              logEl.textContent = j.log_tail;
+              logEl.scrollTop = logEl.scrollHeight;
+            }}
+            if (j.app_up && j.app_url) {{
+              window.location.href = j.app_url;
+            }}
+          }} catch (e) {{
+            // ignore transient errors
+          }}
+        }};
+        poll();
+        setInterval(poll, 1000);
+      }})();
+    </script>
+  </body>
+</html>
+"""
+        self._send(200, "text/html; charset=utf-8", html.encode("utf-8"))
+
+
+class _ProgressServer:
+    def __init__(self) -> None:
+        self._httpd: Optional[ThreadingHTTPServer] = None
+        self.url: Optional[str] = None
+
+    def start(self) -> None:
+        httpd = ThreadingHTTPServer(("127.0.0.1", 0), _ProgressHandler)
+        self._httpd = httpd
+        host, port = httpd.server_address[:2]
+        self.url = f"http://{host}:{port}/"
+        Thread(target=httpd.serve_forever, daemon=True).start()
+
+    def stop(self) -> None:
+        if not self._httpd:
+            return
+        try:
+            self._httpd.shutdown()
+        except Exception:
+            pass
 
 
 def is_port_open(host: str, port: int, timeout: float = 0.25) -> bool:
@@ -100,9 +250,11 @@ def ensure_venv() -> Path:
     py = _venv_python()
     if py.exists():
         return py
+    _set_progress("venv", "Creating virtual environment…")
     _log("Creating .venv ...")
     rc = _run_logged([sys.executable, "-m", "venv", str(VENV_DIR)])
     if rc != 0 or not py.exists():
+        _set_progress("error", "Failed to create venv (see launcher.log).")
         raise SystemExit(f"Failed to create venv. See {LAUNCHER_LOG}")
     return py
 
@@ -115,12 +267,15 @@ def ensure_requirements(py: Path) -> None:
     if marker.get("requirements_sha256") == req_sha:
         return
 
+    _set_progress("pip_upgrade", "Upgrading pip…")
     _log("Installing requirements ...")
     _run_logged([str(py), "-m", "pip", "install", "--upgrade", "pip"])
+    _set_progress("pip_install", "Installing Python packages…")
     rc = _run_logged([str(py), "-m", "pip", "install", "--only-binary=:all:", "-r", str(REQ_PATH)])
     if rc != 0:
         rc = _run_logged([str(py), "-m", "pip", "install", "-r", str(REQ_PATH)])
     if rc != 0:
+        _set_progress("error", "Failed to install requirements (see launcher.log).")
         raise SystemExit(f"Failed to install requirements. See {LAUNCHER_LOG}")
 
     _write_marker({"requirements_sha256": req_sha, "installed_at": int(time.time())})
@@ -129,10 +284,13 @@ def ensure_requirements(py: Path) -> None:
 def start_server(py: Path) -> None:
     if is_port_open(APP_HOST, APP_PORT):
         _log(f"Server already running at {APP_URL}")
+        _PROGRESS_STATE["app_up"] = True
+        _set_progress("done", "Server already running.")
         if OPEN_BROWSER:
             webbrowser.open(APP_URL)
         return
 
+    _set_progress("server", "Starting server…")
     _log("Starting server ...")
     with open(SERVER_LOG, "a", encoding="utf-8") as server_log:
         kwargs = {
@@ -156,19 +314,33 @@ def start_server(py: Path) -> None:
         for _ in range(60):  # ~30 seconds
             if is_port_open(APP_HOST, APP_PORT):
                 _log(f"Server running at {APP_URL}")
+                _PROGRESS_STATE["app_up"] = True
+                _set_progress("done", "Server is ready.")
                 if OPEN_BROWSER:
                     webbrowser.open(APP_URL)
                 return
             if proc.poll() is not None:
+                _set_progress("error", f"Server exited (code {proc.returncode}). See server.log.")
                 raise SystemExit(f"Server exited (code {proc.returncode}). See {SERVER_LOG}")
             time.sleep(0.5)
 
+    _set_progress("error", "Server not reachable (see server.log).")
     raise SystemExit(f"Server not reachable at {APP_URL}. See {SERVER_LOG}")
 
 
 def main() -> None:
     if sys.version_info < (3, 10):
         raise SystemExit("Answer Sheet Studio requires Python 3.10+.")
+
+    progress = _ProgressServer()
+    if OPEN_BROWSER:
+        try:
+            progress.start()
+            _set_progress("starting", "Preparing installation…")
+            if progress.url:
+                webbrowser.open(progress.url)
+        except Exception:
+            pass
 
     try:
         py = ensure_venv()
@@ -178,7 +350,13 @@ def main() -> None:
         raise
     except Exception as exc:
         _log(f"ERROR: {exc!r}")
+        _set_progress("error", f"Unexpected error: {exc!r}")
         raise
+    finally:
+        try:
+            progress.stop()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":

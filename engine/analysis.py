@@ -22,7 +22,19 @@ def _write_excel_csv(path: Path, header: List[str], rows: List[List[Any]]) -> No
         writer.writerows(rows)
 
 
-def _score_histogram_png(scores: List[float], total_possible: float, out_path: Path) -> None:
+def _score_histogram_png(scores: List[float], total_possible: float, out_path: Path, lang: str = "zh_TW") -> None:
+    lang_norm = (lang or "").strip().lower().replace("-", "_")
+    is_zh = lang_norm.startswith("zh")
+    s = {
+        "no_scores": "沒有成績資料" if is_zh else "No score data",
+        "title": "成績分佈" if is_zh else "Score distribution",
+        "x": "分數" if is_zh else "Score",
+        "y": "學生人數" if is_zh else "Students",
+        "mean": "平均" if is_zh else "Mean",
+        "median": "中位數" if is_zh else "Median",
+        "quantiles": "百分位數 (P88/P75/P25/P12)" if is_zh else "Percentiles (P88/P75/P25/P12)",
+    }
+
     width, height = 800, 450
     left, right, top, bottom = 70, 30, 50, 60
     plot_w = width - left - right
@@ -31,7 +43,7 @@ def _score_histogram_png(scores: List[float], total_possible: float, out_path: P
     img = np.full((height, width, 3), 255, dtype=np.uint8)
 
     if not scores:
-        cv2.putText(img, "No scores", (left, top + 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(img, s["no_scores"], (left, top + 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0), 2, cv2.LINE_AA)
         cv2.imwrite(str(out_path), img)
         return
 
@@ -57,6 +69,14 @@ def _score_histogram_png(scores: List[float], total_possible: float, out_path: P
     # Axes
     cv2.line(img, (left, height - bottom), (left + plot_w, height - bottom), axis_color, 2)
     cv2.line(img, (left, top), (left, height - bottom), axis_color, 2)
+
+    # Y ticks (integer students)
+    tick_color = (160, 160, 160)
+    for yv in range(0, y_max + 1):
+        y = int(height - bottom - yv * y_scale)
+        cv2.line(img, (left - 5, y), (left, y), axis_color, 2)
+        cv2.line(img, (left, y), (left + plot_w, y), tick_color, 1)
+        cv2.putText(img, str(yv), (left - 42, y + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.55, axis_color, 2, cv2.LINE_AA)
 
     # Bars
     for i, c in enumerate(counts.tolist()):
@@ -85,23 +105,42 @@ def _score_histogram_png(scores: List[float], total_possible: float, out_path: P
     cv2.line(img, (x_of(mean_v), top), (x_of(mean_v), height - bottom), mean_color, 2)
     cv2.line(img, (x_of(median_v), top), (x_of(median_v), height - bottom), median_color, 2)
 
-    cv2.putText(
-        img,
-        "Score distribution",
-        (left, 32),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.9,
-        axis_color,
-        2,
-        cv2.LINE_AA,
-    )
-    cv2.putText(img, "score", (left + plot_w // 2 - 20, height - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.7, axis_color, 2, cv2.LINE_AA)
-    cv2.putText(img, "students", (12, top + plot_h // 2), cv2.FONT_HERSHEY_SIMPLEX, 0.7, axis_color, 2, cv2.LINE_AA)
+    cv2.putText(img, s["title"], (left, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.9, axis_color, 2, cv2.LINE_AA)
+    cv2.putText(img, s["x"], (left + plot_w // 2 - 20, height - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.7, axis_color, 2, cv2.LINE_AA)
+    cv2.putText(img, s["y"], (12, top + plot_h // 2), cv2.FONT_HERSHEY_SIMPLEX, 0.7, axis_color, 2, cv2.LINE_AA)
+
+    # Legend for lines
+    legend_x = left + plot_w - 290
+    legend_y = top + 10
+    legend_w = 280
+    legend_h = 86
+    cv2.rectangle(img, (legend_x, legend_y), (legend_x + legend_w, legend_y + legend_h), (255, 255, 255), thickness=-1)
+    cv2.rectangle(img, (legend_x, legend_y), (legend_x + legend_w, legend_y + legend_h), (210, 210, 210), thickness=1)
+    items = [
+        (mean_color, s["mean"]),
+        (median_color, s["median"]),
+        (q_color, s["quantiles"]),
+    ]
+    for i, (c, label) in enumerate(items):
+        y = legend_y + 24 + i * 22
+        cv2.line(img, (legend_x + 12, y - 6), (legend_x + 52, y - 6), c, 3)
+        cv2.putText(img, label, (legend_x + 62, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, axis_color, 2, cv2.LINE_AA)
 
     cv2.imwrite(str(out_path), img)
 
 
-def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]], out_path: Path) -> None:
+def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]], out_path: Path, lang: str = "zh_TW") -> None:
+    lang_norm = (lang or "").strip().lower().replace("-", "_")
+    is_zh = lang_norm.startswith("zh")
+    s = {
+        "no_items": "沒有題目資料" if is_zh else "No item data",
+        "title": "題目分析" if is_zh else "Item analysis",
+        "x": "題號" if is_zh else "Question",
+        "difficulty": "難度（正答率）" if is_zh else "Difficulty (accuracy)",
+        "discrimination": "鑑別度" if is_zh else "Discrimination",
+        "blank_rate": "空白率" if is_zh else "Blank rate",
+    }
+
     width, height = 800, 700
     left, right, top, bottom = 70, 30, 40, 50
     panel_gap = 22
@@ -116,7 +155,7 @@ def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]],
     point = (120, 120, 120)
 
     if not numbers:
-        cv2.putText(img, "No items", (left, top + 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, axis, 2, cv2.LINE_AA)
+        cv2.putText(img, s["no_items"], (left, top + 30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, axis, 2, cv2.LINE_AA)
         cv2.imwrite(str(out_path), img)
         return
 
@@ -133,7 +172,12 @@ def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]],
         y0 = top + idx * (panel_h + panel_gap)
         y1 = y0 + panel_h
 
-        cv2.putText(img, metric, (left, y0 - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.8, axis, 2, cv2.LINE_AA)
+        label = {
+            "difficulty": s["difficulty"],
+            "discrimination": s["discrimination"],
+            "blank_rate": s["blank_rate"],
+        }.get(metric, metric)
+        cv2.putText(img, label, (left, y0 - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.8, axis, 2, cv2.LINE_AA)
         cv2.rectangle(img, (left, y0), (left + plot_w, y1), (245, 245, 245), thickness=-1)
         cv2.rectangle(img, (left, y0), (left + plot_w, y1), axis, thickness=1)
 
@@ -164,12 +208,12 @@ def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]],
             cv2.circle(img, pt, 2, point, thickness=-1)
             last_pt = pt
 
-    cv2.putText(img, "Item metrics", (left, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.9, axis, 2, cv2.LINE_AA)
-    cv2.putText(img, "question", (left + plot_w // 2 - 30, height - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.7, axis, 2, cv2.LINE_AA)
+    cv2.putText(img, s["title"], (left, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.9, axis, 2, cv2.LINE_AA)
+    cv2.putText(img, s["x"], (left + plot_w // 2 - 18, height - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.7, axis, 2, cv2.LINE_AA)
     cv2.imwrite(str(out_path), img)
 
 
-def run_analysis_template(template_csv_path: Path, outdir: Path) -> None:
+def run_analysis_template(template_csv_path: Path, outdir: Path, lang: str = "zh_TW") -> None:
     template_csv_path = Path(template_csv_path)
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
@@ -343,24 +387,24 @@ def run_analysis_template(template_csv_path: Path, outdir: Path) -> None:
                 int(s_count),
                 int(q_count),
                 round(total_possible, 2),
-                round(mean_v, 3),
-                round(sd_v, 3),
-                round(float(q88), 3),
-                round(float(q75), 3),
-                round(float(q50), 3),
-                round(float(q25), 3),
-                round(float(q12), 3),
+                round(mean_v, 2),
+                round(sd_v, 2),
+                round(float(q88), 2),
+                round(float(q75), 2),
+                round(float(q50), 2),
+                round(float(q25), 2),
+                round(float(q12), 2),
             ]
         ],
     )
 
-    _score_histogram_png([float(x) for x in all_scores.tolist()], total_possible, outdir / "analysis_score_hist.png")
+    _score_histogram_png([float(x) for x in all_scores.tolist()], total_possible, outdir / "analysis_score_hist.png", lang=lang)
     _item_plot_png(
         q_numbers,
         {
             "difficulty": [None if v == "" else float(v) for v in [r[3] for r in item_rows]],
             "discrimination": [None if v == "" else float(v) for v in [r[4] for r in item_rows]],
-            "blank_rate": [float(r[5]) for r in item_rows],
         },
         outdir / "analysis_item_plot.png",
+        lang=lang,
     )

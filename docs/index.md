@@ -20,7 +20,7 @@ Use the Download page to download the answer-sheet PDF and the teacher answer ke
 - multi-page scanned PDF (one student per page)
 - teacher answer key (`answer_key.xlsx`)
 
-The Upload page runs recognition + analysis and lets you download tables and plots. For best-looking plots, install R (`Rscript`) and packages: `readr`, `dplyr`, `tidyr`, `ggplot2` (the app still works with built-in plots without R).
+The Upload page runs recognition + analysis and lets you download tables and plots (plots follow the selected UI language). For best-looking plots, install R (`Rscript`) and packages: `readr`, `dplyr`, `tidyr`, `ggplot2` (the app still works with built-in plots without R).
 
 ## Docs / README
 

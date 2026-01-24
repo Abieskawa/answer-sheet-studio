@@ -290,8 +290,10 @@ def draw_identity(c: canvas.Canvas):
 
     # Labels for tens / ones
     set_font_cjk(c, 9)
-    c.drawString(SEAT_BOX_X0 + 6, SEAT_TOP_Y + 10, "十位")
-    c.drawString(SEAT_BOX_X0 + 6, SEAT_BOTTOM_Y + 7, "個位")
+    label_x = SEAT_BOX_X0 + 4
+    label_dy = -3
+    c.drawString(label_x, SEAT_TOP_Y + label_dy, "十位")
+    c.drawString(label_x, SEAT_BOTTOM_Y + label_dy, "個位")
 
     set_font_lat(c, 8, bold=False)
     for i, d in enumerate(SEAT_DIGITS):

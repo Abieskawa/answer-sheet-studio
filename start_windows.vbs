@@ -23,7 +23,7 @@ Function DetectLatestRWindowsExe()
          "if($vers.Count -eq 0){ throw 'No R installer found' };" & _
          "$v=($vers | Sort-Object -Descending | Select-Object -First 1);" & _
          "('R-' + $v.ToString() + '-win.exe') | Set-Content -Encoding ASCII -NoNewline '" & Replace(outPath, "\", "\\") & "';"
-    cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command " & q & ps & q
+    cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command " & q & ps & q
     rc = WshShell.Run(cmd, 0, True)
     If rc <> 0 Then
         DetectLatestRWindowsExe = ""
@@ -211,7 +211,7 @@ Function DownloadAndInstallR()
          "try { $sig=Get-AuthenticodeSignature -FilePath $out; if ($sig.Status -ne 'Valid') { throw ('Invalid installer signature: ' + $sig.Status) } } catch { throw };" & _
          "Start-Process -FilePath $out;"
 
-    cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command " & q & ps & q
+    cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command " & q & ps & q
     rc = WshShell.Run(cmd, 0, True)
     DownloadAndInstallR = (rc = 0)
 End Function
@@ -339,7 +339,7 @@ Function DownloadAndInstallPython(version)
          "try { $sig=Get-AuthenticodeSignature -FilePath $out; if ($sig.Status -ne 'Valid') { throw ('Invalid installer signature: ' + $sig.Status) } } catch { throw };" & _
          "Start-Process -FilePath $out -ArgumentList '/passive','InstallAllUsers=0','PrependPath=1','Include_pip=1','Include_launcher=1','Include_test=0' -Wait;"
 
-    cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command " & q & ps & q
+    cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command " & q & ps & q
     rc = WshShell.Run(cmd, 0, True)
     DownloadAndInstallPython = (rc = 0)
 End Function

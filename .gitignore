@@ -12,6 +12,7 @@ venv/
 # App-generated output
 outputs/
 _incoming/
+test/
 
 # Docs build output
 build/

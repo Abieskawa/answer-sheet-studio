@@ -34,7 +34,6 @@ macOS
 
 Windows 11
 1. 雙擊 `start_windows.vbs`。若尚未安裝 Python，會提示自動下載/安裝 Python 3.11（建議）。
-   - 若公司/系統政策停用 Windows Script Host 導致 `.vbs` 無法執行，可改用 `start_windows.bat`。
    - 若要做「一直按下一步」的安裝精靈（Setup.exe），見 `installer/windows/README.md`。
 2. 若你選擇手動安裝 Python，請勾選「Add python.exe to PATH」（並保留 `py` launcher）。
 3. 若未安裝 R（可選，用於 ggplot2 圖表），啟動器會詢問是否要自動下載/安裝（來源 CRAN）。

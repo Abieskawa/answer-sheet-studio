@@ -448,9 +448,12 @@ def main() -> None:
         try:
             if not CLI_PROGRESS:
                 if progress_started:
-                    # Give the progress page time to fetch "done" and navigate away.
+                    # Give the progress page time to load and navigate away.
+                    # When OPEN_BROWSER=0 (e.g. start_windows.vbs opens the progress URL itself),
+                    # keep the progress server alive longer to avoid a race where the launcher
+                    # exits before the browser actually loads the page.
                     try:
-                        time.sleep(3)
+                        time.sleep(15 if not OPEN_BROWSER else 3)
                     except Exception:
                         pass
                 progress.stop()

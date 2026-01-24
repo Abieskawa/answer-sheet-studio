@@ -35,6 +35,11 @@ LANG_COOKIE_NAME = "lang"
 SUPPORTED_LANGS = ("zh-Hant", "en")
 DEFAULT_LANG = "zh-Hant"
 
+DOCS_URL_BY_LANG = {
+    "zh-Hant": "https://answer-sheet-studio.readthedocs.io/zh-tw/latest/",
+    "en": "https://answer-sheet-studio.readthedocs.io/en/latest/",
+}
+
 I18N = {
     "zh-Hant": {
         "lang_zh": "繁體中文",
@@ -89,9 +94,10 @@ I18N = {
         "result_download_results": "下載 results.csv",
         "result_download_annotated": "下載 annotated.pdf",
         "result_download_showwrong": "下載 showwrong.xlsx（只顯示錯題）",
+        "result_back_to_downloads": "回到結果頁（下載）",
         "result_plots_title": "圖表",
         "result_plot_score_hist": "成績分佈",
-        "result_plot_item_metrics": "題目指標",
+        "result_plot_item_metrics": "題目分析",
         "result_hint_unstable": "如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。",
         "result_debug_hint": "需要回報問題時，可到 Debug Mode 下載診斷檔案（輸入 Job ID）。",
         "result_debug_open": "開啟 Debug Mode",
@@ -166,9 +172,10 @@ I18N = {
         "result_download_results": "Download results.csv",
         "result_download_annotated": "Download annotated.pdf",
         "result_download_showwrong": "Download showwrong.xlsx (wrong answers only)",
+        "result_back_to_downloads": "Back to result page (downloads)",
         "result_plots_title": "Plots",
         "result_plot_score_hist": "Score distribution",
-        "result_plot_item_metrics": "Item metrics",
+        "result_plot_item_metrics": "Item analysis",
         "result_hint_unstable": "If results are unstable, scans may be skewed or too light. Try 300dpi or a darker pen.",
         "result_debug_hint": "For reporting/debugging, open Debug Mode and enter the Job ID to download diagnostic files.",
         "result_debug_open": "Open Debug Mode",
@@ -297,7 +304,13 @@ def resolve_lang(request: Request) -> str:
 def template_response(request: Request, name: str, ctx: Optional[dict] = None):
     lang = resolve_lang(request)
     t = I18N.get(lang, I18N[DEFAULT_LANG])
-    merged = {"request": request, "lang": lang, "t": t, "heartbeat_interval_sec": _HEARTBEAT_INTERVAL_SEC}
+    merged = {
+        "request": request,
+        "lang": lang,
+        "t": t,
+        "docs_url": DOCS_URL_BY_LANG.get(lang, DOCS_URL_BY_LANG[DEFAULT_LANG]),
+        "heartbeat_interval_sec": _HEARTBEAT_INTERVAL_SEC,
+    }
     if ctx:
         merged.update(ctx)
     resp = templates.TemplateResponse(name, merged)
@@ -399,6 +412,39 @@ def result_page(request: Request, job_id: str):
             "analysis_error": (str(meta.get("analysis_error") or "") or None),
             "analysis_message": (str(meta.get("analysis_message") or "") or None),
             "analysis_files": _analysis_file_links(job_id),
+            "analysis_score_hist_inline_url": (f"/outputs_inline/{job_id}/analysis_score_hist.png" if score_hist.exists() else None),
+            "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
+        },
+    )
+
+
+@app.get("/result/{job_id}/charts", response_class=HTMLResponse)
+def result_charts_page(request: Request, job_id: str):
+    job_id = (job_id or "").strip()
+    if not _JOB_ID_RE.match(job_id):
+        return RedirectResponse(url="/upload", status_code=302)
+
+    job_dir = OUTPUTS_DIR / job_id
+    if not job_dir.exists():
+        return RedirectResponse(url="/upload", status_code=302)
+
+    meta = _read_job_meta(job_dir)
+    display_filename = str(meta.get("original_filename") or "") or job_id
+
+    score_hist = job_dir / "analysis_score_hist.png"
+    item_plot = job_dir / "analysis_item_plot.png"
+
+    return template_response(
+        request,
+        "result_charts.html",
+        {
+            "job_id": job_id,
+            "display_filename": display_filename,
+            "csv_url": f"/outputs/{job_id}/results.csv",
+            "pdf_url": f"/outputs/{job_id}/annotated.pdf",
+            "showwrong_url": (f"/outputs/{job_id}/showwrong.xlsx" if (job_dir / "showwrong.xlsx").exists() else None),
+            "analysis_error": (str(meta.get("analysis_error") or "") or None),
+            "analysis_message": (str(meta.get("analysis_message") or "") or None),
             "analysis_score_hist_inline_url": (f"/outputs_inline/{job_id}/analysis_score_hist.png" if score_hist.exists() else None),
             "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
         },
@@ -912,7 +958,7 @@ async def api_process(
                 import subprocess
 
                 proc = subprocess.run(
-                    [rscript, str(script_path), "--input", str(template_path), "--outdir", str(job_dir)],
+                    [rscript, str(script_path), "--input", str(template_path), "--outdir", str(job_dir), "--lang", str(lang)],
                     cwd=str(ROOT_DIR),
                     capture_output=True,
                     text=True,
@@ -930,7 +976,7 @@ async def api_process(
                 analysis_message = t["analysis_message_done"]
             else:
                 try:
-                    run_analysis_template(template_path, job_dir)
+                    run_analysis_template(template_path, job_dir, lang=lang)
                 except Exception as exc:
                     analysis_error = f"{t['analysis_error_builtin_failed']} {exc}"
                     if rscript is not None:
@@ -957,7 +1003,7 @@ async def api_process(
         meta.pop("analysis_message", None)
     _write_job_meta(job_dir, meta)
 
-    return RedirectResponse(url=f"/result/{job_id}", status_code=303)
+    return RedirectResponse(url=f"/result/{job_id}/charts", status_code=303)
 
 
 @app.post("/api/update/apply_zip", response_class=HTMLResponse)

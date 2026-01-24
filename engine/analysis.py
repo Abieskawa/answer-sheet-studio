@@ -6,8 +6,9 @@ import statistics
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-import cv2
 import numpy as np
+
+from .xlsx import write_simple_xlsx_multi
 
 
 def _normalize_cell(value: Any) -> str:
@@ -23,6 +24,11 @@ def _write_excel_csv(path: Path, header: List[str], rows: List[List[Any]]) -> No
 
 
 def _score_histogram_png(scores: List[float], total_possible: float, out_path: Path, lang: str = "zh_TW") -> None:
+    try:
+        import cv2  # type: ignore
+    except Exception:
+        return
+
     lang_norm = (lang or "").strip().lower().replace("-", "_")
     is_zh = lang_norm.startswith("zh")
     s = {
@@ -109,27 +115,15 @@ def _score_histogram_png(scores: List[float], total_possible: float, out_path: P
     cv2.putText(img, s["x"], (left + plot_w // 2 - 20, height - 18), cv2.FONT_HERSHEY_SIMPLEX, 0.7, axis_color, 2, cv2.LINE_AA)
     cv2.putText(img, s["y"], (12, top + plot_h // 2), cv2.FONT_HERSHEY_SIMPLEX, 0.7, axis_color, 2, cv2.LINE_AA)
 
-    # Legend for lines
-    legend_x = left + plot_w - 290
-    legend_y = top + 10
-    legend_w = 280
-    legend_h = 86
-    cv2.rectangle(img, (legend_x, legend_y), (legend_x + legend_w, legend_y + legend_h), (255, 255, 255), thickness=-1)
-    cv2.rectangle(img, (legend_x, legend_y), (legend_x + legend_w, legend_y + legend_h), (210, 210, 210), thickness=1)
-    items = [
-        (mean_color, s["mean"]),
-        (median_color, s["median"]),
-        (q_color, s["quantiles"]),
-    ]
-    for i, (c, label) in enumerate(items):
-        y = legend_y + 24 + i * 22
-        cv2.line(img, (legend_x + 12, y - 6), (legend_x + 52, y - 6), c, 3)
-        cv2.putText(img, label, (legend_x + 62, y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, axis_color, 2, cv2.LINE_AA)
-
     cv2.imwrite(str(out_path), img)
 
 
 def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]], out_path: Path, lang: str = "zh_TW") -> None:
+    try:
+        import cv2  # type: ignore
+    except Exception:
+        return
+
     lang_norm = (lang or "").strip().lower().replace("-", "_")
     is_zh = lang_norm.startswith("zh")
     s = {
@@ -305,6 +299,7 @@ def run_analysis_template(template_csv_path: Path, outdir: Path, lang: str = "zh
         ["person_id", "score", "blank_count", "total_possible", "percent"],
         scores_rows,
     )
+    _write_analysis_scores_by_class_xlsx(outdir)
 
     # Per-item stats
     choices = ["A", "B", "C", "D", "E"]
@@ -312,8 +307,9 @@ def run_analysis_template(template_csv_path: Path, outdir: Path, lang: str = "zh
 
     all_scores = np.array([student_scores[s] for s in student_cols], dtype=float)
     student_order = np.argsort(all_scores, kind="mergesort")
-    # Discrimination index: top vs bottom 27% (common rule of thumb).
-    group_n = int(math.floor(s_count * 0.27))
+    # Discrimination index: mean(correct_high) - mean(correct_low).
+    # If students > 30, use top/bottom 27%; otherwise use top/bottom 50%.
+    group_n = int(math.floor(s_count * 0.27)) if s_count > 30 else int(math.floor(s_count / 2.0))
     low_idx = student_order[:group_n] if group_n > 0 else np.array([], dtype=int)
     high_idx = student_order[-group_n:] if group_n > 0 else np.array([], dtype=int)
 
@@ -409,3 +405,98 @@ def run_analysis_template(template_csv_path: Path, outdir: Path, lang: str = "zh
         outdir / "analysis_item_plot.png",
         lang=lang,
     )
+
+
+def _write_analysis_scores_by_class_xlsx(outdir: Path) -> None:
+    roster_path = Path(outdir) / "roster.csv"
+    scores_path = Path(outdir) / "analysis_scores.csv"
+    out_path = Path(outdir) / "analysis_scores_by_class.xlsx"
+    try:
+        if not roster_path.exists() or not scores_path.exists():
+            return
+    except Exception:
+        return
+
+    try:
+        with open(roster_path, "r", newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            roster_rows = list(reader)
+    except Exception:
+        return
+
+    if not roster_rows:
+        return
+
+    roster_by_person: Dict[str, Dict[str, str]] = {}
+    for r in roster_rows:
+        pid = str((r.get("person_id") or "")).strip()
+        if not pid:
+            continue
+        roster_by_person[pid] = {
+            "grade": str(r.get("grade") or "").strip(),
+            "class_no": str(r.get("class_no") or "").strip(),
+            "seat_no": str(r.get("seat_no") or "").strip(),
+        }
+
+    try:
+        with open(scores_path, "r", newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            score_rows = list(reader)
+    except Exception:
+        return
+
+    if not score_rows:
+        return
+
+    def class_key(meta: Dict[str, str]) -> str:
+        g = (meta.get("grade") or "").strip()
+        c = (meta.get("class_no") or "").strip()
+        if g and c:
+            return f"{g}-{c}"
+        if g:
+            return f"{g}-?"
+        if c:
+            return f"?-{c}"
+        return "Unknown"
+
+    grouped: Dict[str, List[List[Any]]] = {}
+    header = ["grade", "class_no", "seat_no", "person_id", "score", "blank_count", "total_possible", "percent"]
+    for row in score_rows:
+        pid = str(row.get("person_id") or "").strip()
+        meta = roster_by_person.get(pid, {})
+        g = meta.get("grade", "")
+        c = meta.get("class_no", "")
+        seat = meta.get("seat_no", "")
+        key = class_key(meta)
+        grouped.setdefault(key, []).append(
+            [
+                g,
+                c,
+                seat,
+                pid,
+                row.get("score", ""),
+                row.get("blank_count", ""),
+                row.get("total_possible", ""),
+                row.get("percent", ""),
+            ]
+        )
+
+    sheets: List[Tuple[str, List[List[Any]]]] = []
+    for key in sorted(grouped.keys()):
+        body = grouped[key]
+        # Try to sort by seat_no numeric if possible.
+        def seat_sort(r: List[Any]) -> Tuple[int, int, str]:
+            seat_s = str(r[2] or "").strip()
+            try:
+                seat_n = int(float(seat_s)) if seat_s != "" else 10**9
+            except Exception:
+                seat_n = 10**9
+            return (0 if seat_n != 10**9 else 1, seat_n, str(r[3]))
+
+        body.sort(key=seat_sort)
+        sheets.append((f"Class {key}", [header, *body]))
+
+    try:
+        write_simple_xlsx_multi(out_path, sheets)
+    except Exception:
+        return

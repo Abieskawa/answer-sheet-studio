@@ -672,10 +672,12 @@ def process_pdf_to_csv_and_annotated_pdf(
     choices_count: int = DEFAULT_CHOICES_COUNT,
     dpi: int = 200,
     out_ambiguity_csv_path: Optional[str] = None,
+    out_roster_csv_path: Optional[str] = None,
 ):
     num_questions = max(1, min(MAX_QUESTIONS, int(num_questions)))
     choices_count = max(3, min(5, int(choices_count)))
     out_ambiguity_csv_path = out_ambiguity_csv_path or str(Path(out_csv_path).with_name("ambiguity.csv"))
+    out_roster_csv_path = out_roster_csv_path or str(Path(out_csv_path).with_name("roster.csv"))
 
     doc = fitz.open(input_pdf_path)
     people: List[Dict[str, Any]] = []
@@ -738,6 +740,22 @@ def process_pdf_to_csv_and_annotated_pdf(
 
     people_sorted = sorted(people, key=lambda row: person_sort_key(str(row.get("person_id", ""))))
     person_ids = [str(row.get("person_id", "")) for row in people_sorted]
+
+    # Roster (per-student metadata used for grouping/reporting).
+    roster_fields = ["person_id", "grade", "class_no", "seat_no", "page"]
+    with open(out_roster_csv_path, "w", newline="", encoding="utf-8-sig") as f:
+        writer = csv.DictWriter(f, fieldnames=roster_fields)
+        writer.writeheader()
+        for row in people_sorted:
+            writer.writerow(
+                {
+                    "person_id": str(row.get("person_id", "") or ""),
+                    "grade": str(row.get("grade", "") or ""),
+                    "class_no": str(row.get("class_no", "") or ""),
+                    "seat_no": str(row.get("seat_no", "") or ""),
+                    "page": str(row.get("page", "") or ""),
+                }
+            )
 
     # Transposed output: columns=people, rows=questions
     results_fields = ["number", *person_ids]

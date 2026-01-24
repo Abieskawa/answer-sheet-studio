@@ -18,6 +18,10 @@
     .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fff; }
     .hint { margin: 0 0 8px; font-size: 13px; color: #6b7280; }
     img { width: 100%; height: auto; display: block; background: #fff; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; white-space: nowrap; }
+    thead th { position: sticky; top: 0; background: #f9fafb; z-index: 1; border-bottom: 1px solid #d1d5db; }
   </style>
 </head>
 <body>
@@ -26,7 +30,6 @@
     <p class="meta">{{ t.result_file }}<code>{{ display_filename }}</code> · {{ t.result_job_id }}<code>{{ job_id }}</code></p>
 
     <div class="toolbar">
-      <a class="btn" href="/result/{{ job_id }}" target="_blank" rel="noopener noreferrer">{{ t.result_view_item_analysis_data }}</a>
       <a class="btn" href="{{ csv_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_results }}</a>
       <a class="btn" href="{{ pdf_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_annotated }}</a>
       {% if showwrong_url %}
@@ -39,6 +42,9 @@
     {% endif %}
     {% if analysis_message %}
       <p class="hint">{{ analysis_message }}</p>
+    {% endif %}
+    {% if analysis_discrimination_note_key %}
+      <p class="hint">{{ t[analysis_discrimination_note_key] }}</p>
     {% endif %}
 
     <div class="plots">
@@ -55,6 +61,35 @@
         </div>
       {% endif %}
     </div>
+
+    {% if analysis_item_table %}
+      <div class="card" style="margin-top:14px">
+        <p class="hint">{{ t.result_view_item_analysis_data }}</p>
+        {% if analysis_item_table.truncated %}
+          <p class="hint">({{ analysis_item_table.total_rows }} rows, showing first 200)</p>
+        {% endif %}
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                {% for h in analysis_item_table.header %}
+                  <th>{{ h }}</th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in analysis_item_table.rows %}
+                <tr>
+                  {% for cell in r %}
+                    <td>{{ cell }}</td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
   </div>
 </body>
 </html>

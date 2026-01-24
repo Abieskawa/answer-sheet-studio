@@ -129,6 +129,117 @@ def write_simple_xlsx(path: Path, rows: List[List[Any]], sheet_name: str = "Shee
         zf.writestr("xl/worksheets/sheet1.xml", sheet_xml)
 
 
+def write_simple_xlsx_multi(path: Path, sheets: List[Tuple[str, List[List[Any]]]]) -> None:
+    """
+    Write a minimal .xlsx with multiple sheets using inline strings (no styles/sharedStrings).
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    def esc(s: str) -> str:
+        return html.escape(s, quote=False)
+
+    if not sheets:
+        sheets = [("Sheet1", [[""]])]
+
+    norm_sheets: List[Tuple[str, List[List[Any]]]] = []
+    used_names: set[str] = set()
+    for idx, (name, rows) in enumerate(sheets, start=1):
+        base = (name or f"Sheet{idx}").strip() or f"Sheet{idx}"
+        base = base[:31]
+        sheet_name = base
+        suffix = 2
+        while sheet_name in used_names:
+            tail = f"_{suffix}"
+            sheet_name = (base[: max(0, 31 - len(tail))] + tail) if len(base) + len(tail) > 31 else (base + tail)
+            suffix += 1
+        used_names.add(sheet_name)
+        norm_sheets.append((sheet_name, rows or [[""]]))
+
+    sheet_xml_by_idx: Dict[int, str] = {}
+    for i, (_, rows) in enumerate(norm_sheets, start=1):
+        sheet_rows: List[str] = []
+        for r_idx0, row in enumerate(rows):
+            r1 = r_idx0 + 1
+            cells: List[str] = []
+            for c_idx0, value in enumerate(row):
+                ref = _cell_ref(c_idx0, r1)
+                if value is None or value == "":
+                    continue
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    cells.append(f'<c r="{ref}"><v>{value}</v></c>')
+                else:
+                    text = esc(str(value))
+                    cells.append(f'<c r="{ref}" t="inlineStr"><is><t>{text}</t></is></c>')
+            if cells:
+                sheet_rows.append(f'<row r="{r1}">{"".join(cells)}</row>')
+            else:
+                sheet_rows.append(f'<row r="{r1}"/>')
+        sheet_xml_by_idx[i] = (
+            f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            f'<worksheet xmlns="{_NS_MAIN}"><sheetData>'
+            f'{"".join(sheet_rows)}'
+            f"</sheetData></worksheet>"
+        )
+
+    sheet_nodes: List[str] = []
+    for i, (name, _) in enumerate(norm_sheets, start=1):
+        sheet_nodes.append(f'<sheet name="{esc(name)}" sheetId="{i}" r:id="rId{i}"/>')
+    workbook_xml = (
+        f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        f'<workbook xmlns="{_NS_MAIN}" xmlns:r="{_NS_REL}">'
+        f"<sheets>{''.join(sheet_nodes)}</sheets>"
+        f"</workbook>"
+    )
+
+    rel_nodes: List[str] = []
+    for i in range(1, len(norm_sheets) + 1):
+        rel_nodes.append(
+            f'<Relationship Id="rId{i}" '
+            f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" '
+            f'Target="worksheets/sheet{i}.xml"/>'
+        )
+    workbook_rels = (
+        f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        f'<Relationships xmlns="{_NS_PKG_REL}">{"".join(rel_nodes)}</Relationships>'
+    )
+
+    rels = (
+        f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        f'<Relationships xmlns="{_NS_PKG_REL}">'
+        f'<Relationship Id="rId1" '
+        f'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+        f'Target="xl/workbook.xml"/>'
+        f"</Relationships>"
+    )
+
+    overrides = [
+        '<Override PartName="/xl/workbook.xml" '
+        'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+    ]
+    for i in range(1, len(norm_sheets) + 1):
+        overrides.append(
+            f'<Override PartName="/xl/worksheets/sheet{i}.xml" '
+            f'ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        )
+    content_types = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+        '<Default Extension="xml" ContentType="application/xml"/>'
+        f"{''.join(overrides)}"
+        "</Types>"
+    )
+
+    with zipfile.ZipFile(path, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("[Content_Types].xml", content_types)
+        zf.writestr("_rels/.rels", rels)
+        zf.writestr("xl/workbook.xml", workbook_xml)
+        zf.writestr("xl/_rels/workbook.xml.rels", workbook_rels)
+        for i, xml in sheet_xml_by_idx.items():
+            zf.writestr(f"xl/worksheets/sheet{i}.xml", xml)
+
+
 def _xml_text(el: Optional[ET.Element]) -> str:
     if el is None:
         return ""
@@ -224,4 +335,3 @@ def read_simple_xlsx_table(path: Path, max_rows: int = 5000, max_cols: int = 200
             row_out.append(cells.get((r1, c0), ""))
         table.append(row_out)
     return table
-

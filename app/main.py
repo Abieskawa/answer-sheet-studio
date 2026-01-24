@@ -119,6 +119,8 @@ I18N = {
         "analysis_error_builtin_failed": "內建分析失敗：",
         "analysis_message_done": "分析完成，可下載報表與圖表。",
         "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請確認已安裝 R。程式會在需要時自動嘗試安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
+        "analysis_note_discrimination_rule_27": "鑑別度：學生數 > 30 時採前後 27%（高分組答對率 − 低分組答對率）。",
+        "analysis_note_discrimination_rule_50": "鑑別度：學生數 ≤ 30 時採前後 50%（高分組答對率 − 低分組答對率）。",
     },
     "en": {
         "lang_zh": "繁體中文",
@@ -198,6 +200,8 @@ I18N = {
         "analysis_error_builtin_failed": "Built-in analysis failed:",
         "analysis_message_done": "Analysis complete. Download reports and plots below.",
         "analysis_message_done_fallback": "Analysis complete (built-in analysis used; to enable ggplot2 plots, ensure R is installed. The app will auto-attempt to install R packages when needed: readr, dplyr, tidyr, ggplot2).",
+        "analysis_note_discrimination_rule_27": "Discrimination: if students > 30, uses top/bottom 27% (correct_high − correct_low).",
+        "analysis_note_discrimination_rule_50": "Discrimination: if students ≤ 30, uses top/bottom 50% (correct_high − correct_low).",
     },
 }
 
@@ -401,6 +405,7 @@ def result_page(request: Request, job_id: str):
 
     score_hist = job_dir / "analysis_score_hist.png"
     item_plot = job_dir / "analysis_item_plot.png"
+    discr_note_key = _discrimination_note_key(job_dir)
 
     return template_response(
         request,
@@ -414,6 +419,7 @@ def result_page(request: Request, job_id: str):
             "showwrong_url": (f"/outputs/{job_id}/showwrong.xlsx" if (job_dir / "showwrong.xlsx").exists() else None),
             "analysis_error": (str(meta.get("analysis_error") or "") or None),
             "analysis_message": (str(meta.get("analysis_message") or "") or None),
+            "analysis_discrimination_note_key": discr_note_key,
             "analysis_files": _analysis_file_links(job_id),
             "analysis_score_hist_inline_url": (f"/outputs_inline/{job_id}/analysis_score_hist.png" if score_hist.exists() else None),
             "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
@@ -436,6 +442,8 @@ def result_charts_page(request: Request, job_id: str):
 
     score_hist = job_dir / "analysis_score_hist.png"
     item_plot = job_dir / "analysis_item_plot.png"
+    item_table = _read_analysis_item_table(job_dir)
+    discr_note_key = _discrimination_note_key(job_dir)
 
     return template_response(
         request,
@@ -448,17 +456,77 @@ def result_charts_page(request: Request, job_id: str):
             "showwrong_url": (f"/outputs/{job_id}/showwrong.xlsx" if (job_dir / "showwrong.xlsx").exists() else None),
             "analysis_error": (str(meta.get("analysis_error") or "") or None),
             "analysis_message": (str(meta.get("analysis_message") or "") or None),
+            "analysis_discrimination_note_key": discr_note_key,
             "analysis_score_hist_inline_url": (f"/outputs_inline/{job_id}/analysis_score_hist.png" if score_hist.exists() else None),
             "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
+            "analysis_item_table": item_table,
         },
     )
+
+
+def _discrimination_note_key(job_dir: Path) -> Optional[str]:
+    path = Path(job_dir) / "analysis_summary.csv"
+    try:
+        if not path.exists():
+            return None
+    except Exception:
+        return None
+
+    try:
+        with open(path, "r", newline="", encoding="utf-8-sig") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+    except Exception:
+        return None
+
+    if len(rows) < 2 or not rows[1]:
+        return None
+
+    header = [str(x or "").strip().lower() for x in rows[0]]
+    try:
+        idx = header.index("students")
+    except ValueError:
+        return None
+
+    try:
+        students = int(float(str(rows[1][idx] or "").strip()))
+    except Exception:
+        return None
+
+    return "analysis_note_discrimination_rule_27" if students > 30 else "analysis_note_discrimination_rule_50"
+
+
+def _read_analysis_item_table(job_dir: Path, max_rows: int = 200) -> Optional[dict]:
+    path = Path(job_dir) / "analysis_item.csv"
+    try:
+        if not path.exists():
+            return None
+    except Exception:
+        return None
+
+    try:
+        with open(path, "r", newline="", encoding="utf-8-sig") as f:
+            reader = csv.reader(f)
+            rows = list(reader)
+    except Exception:
+        return None
+
+    if not rows:
+        return None
+
+    header = [str(x or "").strip() for x in rows[0]]
+    body = [[str(x or "") for x in r] for r in rows[1 : 1 + max_rows]]
+    truncated = len(rows) - 1 > max_rows
+    return {"header": header, "rows": body, "truncated": truncated, "total_rows": max(0, len(rows) - 1)}
 
 
 def _analysis_file_links(job_id: str) -> list[dict]:
     job_dir = OUTPUTS_DIR / job_id
     files: list[dict] = []
     label_by_name = {
+        "roster.csv": "roster.csv",
         "analysis_scores.csv": "analysis_scores.csv",
+        "analysis_scores_by_class.xlsx": "analysis_scores_by_class.xlsx",
         "analysis_item.csv": "analysis_item.csv",
         "analysis_summary.csv": "analysis_summary.csv",
         "analysis_score_hist.png": "analysis_score_hist.png",

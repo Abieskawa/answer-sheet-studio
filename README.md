@@ -11,6 +11,8 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 - **下載老師答案檔**：下載 `answer_key.xlsx`（Excel），填入 `correct/points` 之後到「上傳處理」上傳。
 - **上傳處理（辨識＋分析）**：上傳多頁 PDF（每頁一位學生）＋老師答案檔 `answer_key.xlsx`。完成後會提供「開啟結果頁」按鈕（可用新分頁開啟），並輸出 `results.csv`（題號為列、學生為欄）、`ambiguity.csv`（空白/模稜兩可/多選）、`annotated.pdf`（標註辨識結果）與分析報表/圖表（圖表會依介面語言顯示；建議安裝 R 用 `ggplot2` 出圖）。
 - **啟動器**：雙擊啟動器（`start_mac.command` 或 `start_windows.vbs`）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 `http://127.0.0.1:8000`。
+  - Windows 會把虛擬環境放在 `%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>`，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
+  - 如需自訂位置，可設定環境變數 `ANSWER_SHEET_VENV_DIR`（指向 venv 根目錄）。
 - 網頁介面支援 **English / 繁體中文**，可用頁首的語言切換。
 
 ### 系統需求

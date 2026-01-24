@@ -3,6 +3,7 @@
 ## 繁體中文
 
 點此下載程式（ZIP）：https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip  
+GitHub Releases（推薦）：https://github.com/Abieskawa/answer-sheet-studio/releases/latest  
 線上文件（Read the Docs）：https://answer-sheet-studio.readthedocs.io/zh-tw/latest/
 
 Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進行影像辨識（不會上傳到雲端）：
@@ -78,6 +79,7 @@ Windows 11
 ## English
 
 Download (ZIP): https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip  
+GitHub Releases (recommended): https://github.com/Abieskawa/answer-sheet-studio/releases/latest  
 Docs (Read the Docs): https://answer-sheet-studio.readthedocs.io/en/latest/
 
 Answer Sheet Studio lets teachers generate printable answer sheets and run local OMR recognition (no cloud upload):
@@ -139,3 +141,13 @@ After recognition, files are written under `outputs/<job_id>/`:
 - **pip install failed** – Check the launcher log; ensure network access and Python 3.10+. If you’re on Python 3.14, try Python 3.10–3.13.
 - **Port already in use / permission denied** – The launcher checks port availability. If macOS firewall blocks Python, allow incoming connections in System Settings > Network > Firewall.
 - **Server not opening** – Use the launcher log to identify crashes; you can also run `python run_app.py` inside `.venv` manually for debugging.
+
+### Documentation (Sphinx / Read the Docs)
+
+Build the docs locally:
+
+1. `python -m venv .venv && source .venv/bin/activate` (or your preferred venv)
+2. `pip install -r docs/requirements.txt`
+3. `make html`
+
+The Sphinx source lives in `source/`. Read the Docs uses the same config (`source/conf.py`) and builds `en` / `zh-tw` based on the RTD language setting.

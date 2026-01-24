@@ -406,6 +406,7 @@ def result_page(request: Request, job_id: str):
         request,
         "result.html",
         {
+            "body_class": "theme-light",
             "job_id": job_id,
             "display_filename": display_filename,
             "csv_url": f"/outputs/{job_id}/results.csv",

@@ -245,6 +245,10 @@ line_label_df <- metric_lines %>%
     x = pmax(0, x)
   )
 
+mean_label <- tr("平均", "Mean")
+median_label <- tr("中位數", "Median")
+percentiles_label <- tr("百分位數", "Percentiles")
+
 p_hist <- ggplot(scores_df, aes(x = score)) +
   geom_histogram(
     binwidth = binwidth,
@@ -270,15 +274,14 @@ p_hist <- ggplot(scores_df, aes(x = score)) +
   ) +
   scale_color_manual(
     name = tr("指標線", "Reference lines"),
-    values = c(
-      tr("平均", "Mean") = "#ef4444",
-      tr("中位數", "Median") = "#2563eb",
-      tr("百分位數", "Percentiles") = "#6b7280"
-    )
+    values = setNames(c("#ef4444", "#2563eb", "#6b7280"), c(mean_label, median_label, percentiles_label))
   ) +
   scale_linetype_manual(
     name = tr("指標線", "Reference lines"),
-    values = c(tr("平均", "Mean") = "solid", tr("中位數", "Median") = "solid", "P88" = "dashed", "P75" = "dashed", "P25" = "dashed", "P12" = "dashed")
+    values = setNames(
+      c("solid", "solid", "dashed", "dashed", "dashed", "dashed"),
+      c(mean_label, median_label, "P88", "P75", "P25", "P12")
+    )
   ) +
   scale_x_continuous(breaks = function(l) pretty(l, n = 10)) +
   scale_y_continuous(

@@ -6,7 +6,7 @@
   <title>{{ title or "Answer Sheet Studio" }}</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
-<body>
+<body class="{{ body_class|default('') }}">
   <div class="container">
     <header class="header">
       <div class="brand">Answer Sheet Studio</div>

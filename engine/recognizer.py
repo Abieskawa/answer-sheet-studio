@@ -425,12 +425,15 @@ def process_page(
             }
         )
 
-    # Seat number (00-99): top row = tens, bottom row = ones
-    digit_labels = [str(d) for d in range(10)]
+    # Seat number (00-99): support legacy digit order variants.
+    # Default: 0-9 left-to-right; Legacy: 1-9 then 0.
+    digit_labels_default = [str(d) for d in range(10)]
+    digit_labels_legacy = [str(d) for d in range(1, 10)] + ["0"]
+
     def pick_digit_row(
         y_pt: float,
-        prefix: str,
-    ) -> Tuple[str, str, float, int, Optional[str], float, List[Tuple[int, int, int, int]], List[int]]:
+        digit_labels: List[str],
+    ) -> Tuple[str, str, float, int, Optional[str], float, List[Tuple[int, int, int, int]], List[int], List[float]]:
         bboxes: List[Tuple[int, int, int, int]] = []
         scores: List[float] = []
         for i in range(10):
@@ -451,51 +454,98 @@ def process_page(
             second_idx = int(picked_by_score[1]) if len(picked_by_score) >= 2 else best_idx
             second_label = digit_labels[second_idx] if len(digit_labels) > second_idx else None
             second_score = float(scores[second_idx]) if len(scores) > second_idx else 0.0
-            return value, "MULTI", best_score, best_idx, second_label, second_score, bboxes, picked_sorted
+            return value, "MULTI", best_score, best_idx, second_label, second_score, bboxes, picked_sorted, scores
 
         val, status, best_score, idx, second_label, second_score = pick_one(
             scores, digit_labels, min_score=MIN_SCORE_SEAT, amb_delta=0.02
         )
         val_out = str(val) if (val is not None) else ""
-        return val_out, status, float(best_score), int(idx), second_label, float(second_score), bboxes, [int(idx)]
+        return val_out, status, float(best_score), int(idx), second_label, float(second_score), bboxes, [int(idx)], scores
 
-    tens, t_status, _, t_idx, t_second_label, _, t_bboxes, t_picked = pick_digit_row(SEAT_TOP_ROW_Y, "T")
-    ones, o_status, _, o_idx, o_second_label, _, o_bboxes, o_picked = pick_digit_row(SEAT_BOTTOM_ROW_Y, "O")
+    def seat_candidate_from_rows(
+        tens_val: str,
+        tens_status: str,
+        tens_best_score: float,
+        ones_val: str,
+        ones_status: str,
+        ones_best_score: float,
+    ) -> Tuple[Optional[str], str]:
+        seat_no: Optional[str] = None
+        if tens_status == "OK" and ones_status == "OK" and tens_val and ones_val:
+            seat_no = f"{tens_val}{ones_val}"
+        else:
+            def candidate(value: str, status: str) -> Optional[str]:
+                if status == "OK" and value:
+                    return value
+                if status == "MULTI" and len(value) == 2:
+                    return value
+                return None
 
-    seat_no: Optional[str] = None
-    if t_status == "OK" and o_status == "OK" and tens and ones:
-        seat_no = f"{tens}{ones}"
-    else:
-        def candidate(value: str, status: str) -> Optional[str]:
-            if status == "OK" and value:
-                return value
-            if status == "MULTI" and len(value) == 2:
-                return value
-            return None
+            t_cand = candidate(tens_val, tens_status)
+            o_cand = candidate(ones_val, ones_status)
+            if ones_status == "BLANK" and t_cand is not None:
+                seat_no = t_cand
+            elif tens_status == "BLANK" and o_cand is not None:
+                seat_no = o_cand
 
-        t_cand = candidate(tens, t_status)
-        o_cand = candidate(ones, o_status)
-        if o_status == "BLANK" and t_cand is not None:
-            seat_no = t_cand
-        elif t_status == "BLANK" and o_cand is not None:
-            seat_no = o_cand
+        seat_status = (
+            "OK"
+            if seat_no is not None
+            else ("AMBIGUOUS" if ("AMBIGUOUS" in [tens_status, ones_status]) else "BLANK")
+        )
+        return seat_no, seat_status
+
+    def score_seat_candidate(seat_no: Optional[str], seat_status: str, tens_best: float, ones_best: float) -> float:
+        if seat_status == "OK" and seat_no is not None:
+            return tens_best + ones_best
+        if seat_status == "AMBIGUOUS":
+            return 0.5 * (tens_best + ones_best)
+        return 0.0
+
+    # Try both digit label orders and also swapped rows (legacy templates sometimes swap tens/ones).
+    best_variant = None
+    best_variant_score = -1.0
+    variants = [
+        ("default", digit_labels_default),
+        ("legacy", digit_labels_legacy),
+    ]
+    for label_mode, labels in variants:
+        t_val, t_status, t_best, t_idx, t_second_label, _, t_bboxes, t_picked, _ = pick_digit_row(SEAT_TOP_ROW_Y, labels)
+        o_val, o_status, o_best, o_idx, o_second_label, _, o_bboxes, o_picked, _ = pick_digit_row(SEAT_BOTTOM_ROW_Y, labels)
+
+        seat_no_a, seat_status_a = seat_candidate_from_rows(t_val, t_status, t_best, o_val, o_status, o_best)
+        score_a = score_seat_candidate(seat_no_a, seat_status_a, t_best, o_best)
+        if score_a > best_variant_score:
+            best_variant_score = score_a
+            best_variant = ("normal", label_mode, labels, t_val, t_status, t_best, t_idx, t_second_label, t_bboxes, t_picked, o_val, o_status, o_best, o_idx, o_second_label, o_bboxes, o_picked, seat_no_a, seat_status_a)
+
+        seat_no_b, seat_status_b = seat_candidate_from_rows(o_val, o_status, o_best, t_val, t_status, t_best)
+        score_b = score_seat_candidate(seat_no_b, seat_status_b, o_best, t_best) - 0.001  # prefer non-swapped on ties
+        if score_b > best_variant_score:
+            best_variant_score = score_b
+            best_variant = ("swapped", label_mode, labels, t_val, t_status, t_best, t_idx, t_second_label, t_bboxes, t_picked, o_val, o_status, o_best, o_idx, o_second_label, o_bboxes, o_picked, seat_no_b, seat_status_b)
+
+    assert best_variant is not None
+    row_mode, label_mode, digit_labels, t_val, t_status, _, t_idx, t_second_label, t_bboxes, t_picked, o_val, o_status, _, o_idx, o_second_label, o_bboxes, o_picked, seat_no, seat_status = best_variant
 
     results["seat_no"] = seat_no
-    results["seat_status"] = "OK" if seat_no is not None else ("AMBIGUOUS" if ("AMBIGUOUS" in [t_status, o_status]) else "BLANK")
+    results["seat_status"] = seat_status
 
+    # Marks + flags always annotate the physical top row as "T:" and bottom as "O:" to aid debugging,
+    # even if we used swapped decoding for seat_no.
     if t_status == "MULTI":
         for j in t_picked:
-            text = f"T:{tens}" if j == t_idx else ""
+            text = f"T:{t_val}" if j == t_idx else ""
             marks.append((t_bboxes[j], text, t_status))
     else:
-        marks.append((t_bboxes[t_idx], f"T:{tens or ''}", t_status))
+        marks.append((t_bboxes[t_idx], f"T:{t_val or ''}", t_status))
 
     if o_status == "MULTI":
         for j in o_picked:
-            text = f"O:{ones}" if j == o_idx else ""
+            text = f"O:{o_val}" if j == o_idx else ""
             marks.append((o_bboxes[j], text, o_status))
     else:
-        marks.append((o_bboxes[o_idx], f"O:{ones or ''}", o_status))
+        marks.append((o_bboxes[o_idx], f"O:{o_val or ''}", o_status))
 
     if t_status != "OK":
         flags.append(

@@ -2,6 +2,14 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Arial}
 a{color:var(--text);text-decoration:none}
+.theme-light{--bg:#fff;--card:#fff;--text:#111827;--muted:#4b5563;--line:#e5e7eb}
+.theme-light a{color:#111827}
+.theme-light .card{background:var(--card);border-color:var(--line)}
+.theme-light code{background:#f3f4f6;border-color:var(--line)}
+.theme-light .download{background:#fff;border-color:var(--line)}
+.theme-light .download:hover{background:#f9fafb}
+.theme-light .plot-card{background:#fff;border-color:var(--line)}
+.theme-light .plot{background:#fff;border-color:var(--line)}
 .container{max-width:900px;margin:0 auto;padding:20px}
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
 .brand{font-weight:700;letter-spacing:0.4px}

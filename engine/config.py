@@ -38,7 +38,8 @@ SEAT_BOX_Y0 = PAGE_H_PT - 205
 SEAT_CIRCLE_RADIUS = 6.0
 SEAT_DIGITS = list(range(10))
 SEAT_STEP_X = 16
-SEAT_START_X = SEAT_BOX_X0 + 26
+# Keep in sync with engine/generator.py (seat bubbles shifted right).
+SEAT_START_X = SEAT_BOX_X0 + 38
 SEAT_TOP_ROW_Y = SEAT_BOX_Y0 + 40
 SEAT_BOTTOM_ROW_Y = SEAT_BOX_Y0 + 18
 

@@ -106,7 +106,8 @@ SEAT_BOX_Y0 = PAGE_H - 205
 SEAT_RADIUS = 6.0
 SEAT_DIGITS = list(range(10))
 SEAT_STEP = 16
-SEAT_X0 = SEAT_BOX_X0 + 26
+# Shift bubbles right so labels don't touch the first circle.
+SEAT_X0 = SEAT_BOX_X0 + 38
 SEAT_TOP_Y = SEAT_BOX_Y0 + 40
 SEAT_BOTTOM_Y = SEAT_BOX_Y0 + 18
 

@@ -163,9 +163,9 @@ difficulty <- row_mean_bool(is_correct)
 difficulty[!has_key] <- NA
 
 student_order <- order(scores, student_cols)
-half <- as.integer(floor(s_count / 2))
-low_idx <- if (half > 0) student_order[seq_len(half)] else integer(0)
-high_idx <- if (half > 0) student_order[(s_count - half + 1):s_count] else integer(0)
+group_n <- as.integer(floor(s_count * 0.27))
+low_idx <- if (group_n > 0) student_order[seq_len(group_n)] else integer(0)
+high_idx <- if (group_n > 0) student_order[(s_count - group_n + 1):s_count] else integer(0)
 
 disc <- rep(NA_real_, q_count)
 if (length(low_idx) > 0 && length(high_idx) > 0) {

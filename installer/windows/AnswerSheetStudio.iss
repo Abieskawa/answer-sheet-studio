@@ -18,11 +18,11 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Source: "..\..\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion; Excludes: ".git\*;outputs\*;.venv\*;.pycache_tmp\*;installer\*"
 
 [Icons]
-Name: "{group}\Answer Sheet Studio"; Filename: "{app}\start_windows_terminal.bat"; WorkingDir: "{app}"
-Name: "{commondesktop}\Answer Sheet Studio"; Filename: "{app}\start_windows_terminal.bat"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{group}\Answer Sheet Studio"; Filename: "{app}\start_windows.vbs"; WorkingDir: "{app}"
+Name: "{commondesktop}\Answer Sheet Studio"; Filename: "{app}\start_windows.vbs"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:"; Flags: unchecked
 
 [Run]
-Filename: "{app}\start_windows_terminal.bat"; Description: "Launch Answer Sheet Studio"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\start_windows.vbs"; Description: "Launch Answer Sheet Studio"; Flags: nowait postinstall skipifsilent

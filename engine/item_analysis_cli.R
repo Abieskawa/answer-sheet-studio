@@ -1,5 +1,30 @@
 #!/usr/bin/env Rscript
 
+ensure_packages <- function(pkgs) {
+  missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+  if (length(missing) == 0) {
+    return(invisible(TRUE))
+  }
+  message("Installing missing R packages: ", paste(missing, collapse = ", "))
+  tryCatch(
+    {
+      install.packages(missing, repos = "https://cloud.r-project.org")
+      invisible(TRUE)
+    },
+    error = function(e) {
+      stop(
+        "Missing R packages and auto-install failed: ",
+        paste(missing, collapse = ", "),
+        "\nError: ",
+        conditionMessage(e)
+      )
+    }
+  )
+}
+
+required_pkgs <- c("readr", "dplyr", "tidyr", "ggplot2")
+ensure_packages(required_pkgs)
+
 suppressPackageStartupMessages({
   library(readr)
   library(dplyr)

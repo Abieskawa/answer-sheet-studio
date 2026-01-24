@@ -117,7 +117,7 @@ I18N = {
         "analysis_error_r_failed": "R 分析失敗：",
         "analysis_error_builtin_failed": "內建分析失敗：",
         "analysis_message_done": "分析完成，可下載報表與圖表。",
-        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請確認已安裝 R，並安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
+        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請確認已安裝 R。程式會在需要時自動嘗試安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
     },
     "en": {
         "lang_zh": "繁體中文",
@@ -195,7 +195,7 @@ I18N = {
         "analysis_error_r_failed": "R analysis failed:",
         "analysis_error_builtin_failed": "Built-in analysis failed:",
         "analysis_message_done": "Analysis complete. Download reports and plots below.",
-        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; to enable ggplot2 plots, install R and packages: readr, dplyr, tidyr, ggplot2).",
+        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; to enable ggplot2 plots, ensure R is installed. The app will auto-attempt to install R packages when needed: readr, dplyr, tidyr, ggplot2).",
     },
 }
 

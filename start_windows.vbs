@@ -320,6 +320,12 @@ Sub RunAsync(cmd)
     WshShell.Run cmd, 0, False
 End Sub
 
+Function WrapLauncherCmd(cmd)
+    On Error Resume Next
+    ' Prevent launcher_headless.py from opening extra progress pages itself.
+    WrapLauncherCmd = "cmd.exe /c " & q & "set ANSWER_SHEET_OPEN_BROWSER=0&" & cmd & q
+End Function
+
 Function MajorMinorTag(version)
     Dim parts
     parts = Split(version, ".")
@@ -340,13 +346,13 @@ Sub TryRunFromKnownInstall(tag)
     python = localAppData & "\Programs\Python\Python" & tag & "\python.exe"
     If fso.FileExists(pythonw) Then
         EnsureRInstalledOrExit
-        RunAsync q & pythonw & q & " " & q & launcher & q
+        RunAsync WrapLauncherCmd(q & pythonw & q & " " & q & launcher & q)
         TryOpenProgressPage
         WScript.Quit
     End If
     If fso.FileExists(python) Then
         EnsureRInstalledOrExit
-        RunAsync q & python & q & " " & q & launcher & q
+        RunAsync WrapLauncherCmd(q & python & q & " " & q & launcher & q)
         TryOpenProgressPage
         WScript.Quit
     End If
@@ -355,13 +361,13 @@ Sub TryRunFromKnownInstall(tag)
     python = programFiles & "\Python" & tag & "\python.exe"
     If fso.FileExists(pythonw) Then
         EnsureRInstalledOrExit
-        RunAsync q & pythonw & q & " " & q & launcher & q
+        RunAsync WrapLauncherCmd(q & pythonw & q & " " & q & launcher & q)
         TryOpenProgressPage
         WScript.Quit
     End If
     If fso.FileExists(python) Then
         EnsureRInstalledOrExit
-        RunAsync q & python & q & " " & q & launcher & q
+        RunAsync WrapLauncherCmd(q & python & q & " " & q & launcher & q)
         TryOpenProgressPage
         WScript.Quit
     End If
@@ -408,25 +414,25 @@ probe = q & "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 
 ' Prefer supported Python versions (3.10+) via the Windows py launcher (pyw) if available.
 If CanRun("pyw -3.10 -c " & probe) Then
     EnsureRInstalledOrExit
-    RunAsync "pyw -3.10 " & q & launcher & q
+    RunAsync WrapLauncherCmd("pyw -3.10 " & q & launcher & q)
     TryOpenProgressPage
     WScript.Quit
 End If
 If CanRun("pyw -3.11 -c " & probe) Then
     EnsureRInstalledOrExit
-    RunAsync "pyw -3.11 " & q & launcher & q
+    RunAsync WrapLauncherCmd("pyw -3.11 " & q & launcher & q)
     TryOpenProgressPage
     WScript.Quit
 End If
 If CanRun("pyw -3.12 -c " & probe) Then
     EnsureRInstalledOrExit
-    RunAsync "pyw -3.12 " & q & launcher & q
+    RunAsync WrapLauncherCmd("pyw -3.12 " & q & launcher & q)
     TryOpenProgressPage
     WScript.Quit
 End If
 If CanRun("pyw -3.13 -c " & probe) Then
     EnsureRInstalledOrExit
-    RunAsync "pyw -3.13 " & q & launcher & q
+    RunAsync WrapLauncherCmd("pyw -3.13 " & q & launcher & q)
     TryOpenProgressPage
     WScript.Quit
 End If
@@ -434,7 +440,7 @@ End If
 ' Fallback: pythonw (no console window)
 If CanRun("pythonw -c " & probe) Then
     EnsureRInstalledOrExit
-    RunAsync "pythonw " & q & launcher & q
+    RunAsync WrapLauncherCmd("pythonw " & q & launcher & q)
     TryOpenProgressPage
     WScript.Quit
 End If

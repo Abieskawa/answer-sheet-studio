@@ -4,6 +4,27 @@ repo = fso.GetParentFolderName(WScript.ScriptFullName)
 
 q = Chr(34)
 launcher = repo & "\launcher_headless.py"
+Dim outputsDir, startLogPath
+outputsDir = repo & "\outputs"
+startLogPath = outputsDir & "\start_windows.log"
+
+Sub EnsureOutputsDir()
+    On Error Resume Next
+    If Not fso.FolderExists(outputsDir) Then
+        fso.CreateFolder outputsDir
+    End If
+End Sub
+
+Sub LogLine(msg)
+    On Error Resume Next
+    EnsureOutputsDir
+    Dim f
+    Set f = fso.OpenTextFile(startLogPath, 8, True)
+    f.WriteLine "[" & Now() & "] " & msg
+    f.Close
+End Sub
+
+LogLine "start_windows.vbs launched, repo=" & repo
 recommendedPython = WshShell.Environment("Process")("ANSWER_SHEET_PYTHON_VERSION")
 If recommendedPython = "" Then
     recommendedPython = "3.11.8"
@@ -27,14 +48,17 @@ Sub TryOpenProgressPage()
     Dim outDir, urlPath, i, u
     outDir = repo & "\outputs"
     urlPath = outDir & "\progress_url.txt"
+    LogLine "Waiting for progress_url.txt at " & urlPath
     For i = 1 To 50 ' ~5s
         u = ReadTextFile(urlPath)
         If u <> "" Then
+            LogLine "Opening progress URL: " & u
             WshShell.Run u, 1, False
             Exit Sub
         End If
         WScript.Sleep 100
     Next
+    LogLine "progress_url.txt not found; launcher may not have started."
 End Sub
 
 Function DetectLatestRWindowsExe()
@@ -281,15 +305,18 @@ Function CanRun(cmd)
     Dim rc
     rc = WshShell.Run(cmd, 0, True)
     If Err.Number <> 0 Then
+        LogLine "CanRun error (" & Err.Number & "): " & Err.Description & " cmd=" & cmd
         Err.Clear
         CanRun = False
         Exit Function
     End If
+    LogLine "CanRun rc=" & rc & " cmd=" & cmd
     CanRun = (rc = 0)
 End Function
 
 Sub RunAsync(cmd)
     On Error Resume Next
+    LogLine "RunAsync: " & cmd
     WshShell.Run cmd, 0, False
 End Sub
 

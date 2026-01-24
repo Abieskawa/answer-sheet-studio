@@ -20,6 +20,8 @@ except ValueError:
     APP_PORT = 8000
 APP_URL = f"http://{APP_HOST}:{APP_PORT}"
 OPEN_BROWSER = os.environ.get("ANSWER_SHEET_OPEN_BROWSER", "1").strip().lower() not in {"0", "false", "no"}
+CLI_PROGRESS = os.environ.get("ANSWER_SHEET_PROGRESS", "").strip().lower() in {"1", "true", "yes", "cli", "terminal"}
+WIZARD_MODE = os.environ.get("ANSWER_SHEET_WIZARD", "").strip().lower() in {"1", "true", "yes", "wizard"}
 
 REPO_DIR = Path(__file__).resolve().parent
 REQ_PATH = REPO_DIR / "requirements.txt"
@@ -39,6 +41,11 @@ _PROGRESS_STATE: dict = {
 
 def _log(line: str) -> None:
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
+    if CLI_PROGRESS:
+        try:
+            print(f"[{ts}] {line}", flush=True)
+        except Exception:
+            pass
     try:
         with open(LAUNCHER_LOG, "a", encoding="utf-8") as f:
             f.write(f"[{ts}] {line}\n")
@@ -50,6 +57,11 @@ def _set_progress(phase: str, message: str) -> None:
     _PROGRESS_STATE["phase"] = phase
     _PROGRESS_STATE["message"] = message
     _PROGRESS_STATE["ts"] = int(time.time())
+    if CLI_PROGRESS:
+        try:
+            print(f"[{phase}] {message}", flush=True)
+        except Exception:
+            pass
 
 
 def _tail_text(path: Path, max_lines: int = 80, max_bytes: int = 64 * 1024) -> str:
@@ -67,6 +79,15 @@ def _tail_text(path: Path, max_lines: int = 80, max_bytes: int = 64 * 1024) -> s
         return "\n".join(lines)
     except Exception:
         return ""
+
+
+def _wizard_pause(message: str) -> None:
+    if not WIZARD_MODE:
+        return
+    try:
+        input(f"\n{message}\nPress Enter to continue...")
+    except Exception:
+        return
 
 
 class _ProgressHandler(BaseHTTPRequestHandler):
@@ -287,6 +308,8 @@ def _run_logged(args: list[str]) -> int:
 def ensure_venv() -> Path:
     py = _venv_python()
     if py.exists():
+        _set_progress("venv", "Virtual environment already exists.")
+        _wizard_pause("Virtual environment is ready.")
         return py
     _set_progress("venv", "Creating virtual environment…")
     _log("Creating .venv ...")
@@ -299,6 +322,7 @@ def ensure_venv() -> Path:
     if rc != 0 or not py.exists():
         _set_progress("error", "Failed to create venv (see launcher.log).")
         raise SystemExit(f"Failed to create venv. See {LAUNCHER_LOG}")
+    _wizard_pause("Virtual environment created.")
     return py
 
 
@@ -308,6 +332,8 @@ def ensure_requirements(py: Path) -> None:
     req_sha = _sha256_file(REQ_PATH)
     marker = _read_marker() or {}
     if marker.get("requirements_sha256") == req_sha:
+        _set_progress("pip_install", "Python packages already installed.")
+        _wizard_pause("Python packages are already installed.")
         return
 
     _set_progress("pip_upgrade", "Upgrading pip…")
@@ -322,6 +348,7 @@ def ensure_requirements(py: Path) -> None:
         raise SystemExit(f"Failed to install requirements. See {LAUNCHER_LOG}")
 
     _write_marker({"requirements_sha256": req_sha, "installed_at": int(time.time())})
+    _wizard_pause("Python packages installed.")
 
 
 def start_server(py: Path) -> None:
@@ -329,6 +356,7 @@ def start_server(py: Path) -> None:
         _log(f"Server already running at {APP_URL}")
         _PROGRESS_STATE["app_up"] = True
         _set_progress("done", "Server already running.")
+        _wizard_pause(f"Server is already running at {APP_URL}")
         if OPEN_BROWSER:
             webbrowser.open(APP_URL)
         return
@@ -359,6 +387,7 @@ def start_server(py: Path) -> None:
                 _log(f"Server running at {APP_URL}")
                 _PROGRESS_STATE["app_up"] = True
                 _set_progress("done", "Server is ready.")
+                _wizard_pause(f"Server is ready at {APP_URL}")
                 if OPEN_BROWSER:
                     webbrowser.open(APP_URL)
                 return
@@ -374,9 +403,10 @@ def start_server(py: Path) -> None:
 def main() -> None:
     progress = _ProgressServer()
     try:
-        progress.start()
+        if not CLI_PROGRESS:
+            progress.start()
         _set_progress("starting", "Preparing installation…")
-        if OPEN_BROWSER and progress.url:
+        if (not CLI_PROGRESS) and OPEN_BROWSER and progress.url:
             webbrowser.open(progress.url)
     except Exception:
         pass
@@ -385,7 +415,8 @@ def main() -> None:
         if sys.version_info < (3, 10):
             _log("ERROR: Python 3.10+ is required to run the app.")
             _set_progress("error", "Python 3.10+ is required. Please install Python 3.11 (recommended).")
-            time.sleep(8)
+            if not CLI_PROGRESS:
+                time.sleep(8)
             raise SystemExit("Answer Sheet Studio requires Python 3.10+.")
         py = ensure_venv()
         ensure_requirements(py)
@@ -398,7 +429,8 @@ def main() -> None:
         raise
     finally:
         try:
-            progress.stop()
+            if not CLI_PROGRESS:
+                progress.stop()
         except Exception:
             pass
 

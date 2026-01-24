@@ -40,9 +40,6 @@
   <div class="downloads">
     <a class="download" href="{{ csv_url }}">{{ t.result_download_results }}</a>
     <a class="download" href="{{ pdf_url }}">{{ t.result_download_annotated }}</a>
-    {% if answer_key_url %}
-      <a class="download" href="{{ answer_key_url }}">{{ t.result_download_answer_key }}</a>
-    {% endif %}
   </div>
 
   {% if analysis_error %}

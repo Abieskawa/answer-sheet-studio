@@ -371,7 +371,6 @@ def result_page(request: Request, job_id: str):
             "display_filename": display_filename,
             "csv_url": f"/outputs/{job_id}/results.csv",
             "pdf_url": f"/outputs/{job_id}/annotated.pdf",
-            "answer_key_url": (f"/outputs/{job_id}/answer_key.xlsx" if (job_dir / "answer_key.xlsx").exists() else None),
             "showwrong_url": (f"/outputs/{job_id}/showwrong.xlsx" if (job_dir / "showwrong.xlsx").exists() else None),
             "analysis_error": (str(meta.get("analysis_error") or "") or None),
             "analysis_message": (str(meta.get("analysis_message") or "") or None),

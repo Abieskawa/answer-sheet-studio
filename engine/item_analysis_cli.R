@@ -163,7 +163,7 @@ difficulty <- row_mean_bool(is_correct)
 difficulty[!has_key] <- NA
 
 student_order <- order(scores, student_cols)
-group_n <- as.integer(floor(s_count * 0.27))
+group_n <- if (s_count > 30) as.integer(floor(s_count * 0.27)) else as.integer(floor(s_count / 2))
 low_idx <- if (group_n > 0) student_order[seq_len(group_n)] else integer(0)
 high_idx <- if (group_n > 0) student_order[(s_count - group_n + 1):s_count] else integer(0)
 
@@ -292,7 +292,7 @@ p_hist <- ggplot(scores_df, aes(x = score)) +
   labs(
     title = tr("成績分佈", "Score distribution"),
     subtitle = if (is_zh) {
-      sprintf("學生數：%d｜滿分：%s｜binwidth：%s", s_count, format(total_possible, trim = TRUE), format(binwidth, trim = TRUE))
+      sprintf("學生數：%d｜滿分：%s｜分數級距：%s", s_count, format(total_possible, trim = TRUE), format(binwidth, trim = TRUE))
     } else {
       sprintf("Students: %d | Full score: %s | Binwidth: %s", s_count, format(total_possible, trim = TRUE), format(binwidth, trim = TRUE))
     },

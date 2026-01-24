@@ -35,6 +35,9 @@
       {% if showwrong_url %}
         <a class="btn" href="{{ showwrong_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_showwrong }}</a>
       {% endif %}
+      {% if analysis_scores_by_class_url %}
+        <a class="btn" href="{{ analysis_scores_by_class_url }}" target="_blank" rel="noopener noreferrer">analysis_scores_by_class.xlsx</a>
+      {% endif %}
     </div>
 
     {% if analysis_error %}

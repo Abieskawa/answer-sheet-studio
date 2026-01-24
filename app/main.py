@@ -95,6 +95,7 @@ I18N = {
         "result_download_annotated": "下載 annotated.pdf",
         "result_download_showwrong": "下載 showwrong.xlsx（只顯示錯題）",
         "result_back_to_downloads": "回到結果頁（下載）",
+        "result_view_item_analysis_data": "查看試題分析原始數據",
         "result_plots_title": "圖表",
         "result_plot_score_hist": "成績分佈",
         "result_plot_item_metrics": "題目分析",
@@ -117,7 +118,7 @@ I18N = {
         "analysis_error_r_failed": "R 分析失敗：",
         "analysis_error_builtin_failed": "內建分析失敗：",
         "analysis_message_done": "分析完成，可下載報表與圖表。",
-        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請確認已安裝 R，並安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
+        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請確認已安裝 R。程式會在需要時自動嘗試安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
     },
     "en": {
         "lang_zh": "繁體中文",
@@ -173,6 +174,7 @@ I18N = {
         "result_download_annotated": "Download annotated.pdf",
         "result_download_showwrong": "Download showwrong.xlsx (wrong answers only)",
         "result_back_to_downloads": "Back to result page (downloads)",
+        "result_view_item_analysis_data": "View item analysis raw data",
         "result_plots_title": "Plots",
         "result_plot_score_hist": "Score distribution",
         "result_plot_item_metrics": "Item analysis",
@@ -195,7 +197,7 @@ I18N = {
         "analysis_error_r_failed": "R analysis failed:",
         "analysis_error_builtin_failed": "Built-in analysis failed:",
         "analysis_message_done": "Analysis complete. Download reports and plots below.",
-        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; to enable ggplot2 plots, install R and packages: readr, dplyr, tidyr, ggplot2).",
+        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; to enable ggplot2 plots, ensure R is installed. The app will auto-attempt to install R packages when needed: readr, dplyr, tidyr, ggplot2).",
     },
 }
 

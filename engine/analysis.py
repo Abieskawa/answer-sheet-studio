@@ -312,9 +312,10 @@ def run_analysis_template(template_csv_path: Path, outdir: Path, lang: str = "zh
 
     all_scores = np.array([student_scores[s] for s in student_cols], dtype=float)
     student_order = np.argsort(all_scores, kind="mergesort")
-    half = int(math.floor(s_count / 2))
-    low_idx = student_order[:half] if half > 0 else np.array([], dtype=int)
-    high_idx = student_order[-half:] if half > 0 else np.array([], dtype=int)
+    # Discrimination index: top vs bottom 27% (common rule of thumb).
+    group_n = int(math.floor(s_count * 0.27))
+    low_idx = student_order[:group_n] if group_n > 0 else np.array([], dtype=int)
+    high_idx = student_order[-group_n:] if group_n > 0 else np.array([], dtype=int)
 
     # Build answer matrix [q, s]
     ans_mat = np.empty((q_count, s_count), dtype=object)

@@ -142,6 +142,10 @@ class _ProgressHandler(BaseHTTPRequestHandler):
       <div style="margin-top:12px">
         <progress id="bar" max="100" value="10"></progress>
       </div>
+      <div id="done" style="display:none; margin-top:12px">
+        <a id="open" href="{APP_URL}" target="_blank" rel="noopener">Open Answer Sheet Studio</a>
+        <span style="opacity:.7">You can close this tab.</span>
+      </div>
       <pre id="log" aria-label="launcher log"></pre>
     </div>
     <script>
@@ -150,6 +154,8 @@ class _ProgressHandler(BaseHTTPRequestHandler):
         const msgEl = document.getElementById("msg");
         const logEl = document.getElementById("log");
         const bar = document.getElementById("bar");
+        const doneEl = document.getElementById("done");
+        const openEl = document.getElementById("open");
         const weights = {{
           starting: 5,
           venv: 15,
@@ -159,6 +165,7 @@ class _ProgressHandler(BaseHTTPRequestHandler):
           done: 100,
           error: 100
         }};
+        let timer = null;
         const poll = async () => {{
           try {{
             const res = await fetch("/status", {{ cache: "no-store" }});
@@ -171,14 +178,26 @@ class _ProgressHandler(BaseHTTPRequestHandler):
               logEl.scrollTop = logEl.scrollHeight;
             }}
             if (j.app_up && j.app_url) {{
-              window.location.href = j.app_url;
+              // Navigate away so this page stops polling before the launcher exits.
+              window.location.replace(j.app_url);
+              return;
+            }}
+            if (j.app_url) {{
+              openEl.href = j.app_url;
+            }}
+            if (j.phase === "done" || j.phase === "error") {{
+              doneEl.style.display = "block";
+              if (timer) {{
+                clearInterval(timer);
+                timer = null;
+              }}
             }}
           }} catch (e) {{
             // ignore transient errors
           }}
         }};
         poll();
-        setInterval(poll, 1000);
+        timer = setInterval(poll, 1000);
       }})();
     </script>
   </body>
@@ -357,8 +376,6 @@ def start_server(py: Path) -> None:
         _PROGRESS_STATE["app_up"] = True
         _set_progress("done", "Server already running.")
         _wizard_pause(f"Server is already running at {APP_URL}")
-        if OPEN_BROWSER:
-            webbrowser.open(APP_URL)
         return
 
     _set_progress("server", "Starting server…")
@@ -388,8 +405,6 @@ def start_server(py: Path) -> None:
                 _PROGRESS_STATE["app_up"] = True
                 _set_progress("done", "Server is ready.")
                 _wizard_pause(f"Server is ready at {APP_URL}")
-                if OPEN_BROWSER:
-                    webbrowser.open(APP_URL)
                 return
             if proc.poll() is not None:
                 _set_progress("error", f"Server exited (code {proc.returncode}). See server.log.")
@@ -402,9 +417,11 @@ def start_server(py: Path) -> None:
 
 def main() -> None:
     progress = _ProgressServer()
+    progress_started = False
     try:
         if not CLI_PROGRESS:
             progress.start()
+            progress_started = True
         _set_progress("starting", "Preparing installation…")
         if (not CLI_PROGRESS) and OPEN_BROWSER and progress.url:
             webbrowser.open(progress.url)
@@ -430,6 +447,12 @@ def main() -> None:
     finally:
         try:
             if not CLI_PROGRESS:
+                if progress_started:
+                    # Give the progress page time to fetch "done" and navigate away.
+                    try:
+                        time.sleep(3)
+                    except Exception:
+                        pass
                 progress.stop()
         except Exception:
             pass

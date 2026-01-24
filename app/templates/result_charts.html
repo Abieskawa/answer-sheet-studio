@@ -26,7 +26,7 @@
     <p class="meta">{{ t.result_file }}<code>{{ display_filename }}</code> · {{ t.result_job_id }}<code>{{ job_id }}</code></p>
 
     <div class="toolbar">
-      <a class="btn" href="/result/{{ job_id }}" target="_blank" rel="noopener noreferrer">{{ t.result_back_to_downloads }}</a>
+      <a class="btn" href="/result/{{ job_id }}" target="_blank" rel="noopener noreferrer">{{ t.result_view_item_analysis_data }}</a>
       <a class="btn" href="{{ csv_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_results }}</a>
       <a class="btn" href="{{ pdf_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_annotated }}</a>
       {% if showwrong_url %}
@@ -58,4 +58,3 @@
   </div>
 </body>
 </html>
-

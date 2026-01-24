@@ -34,12 +34,10 @@ macOS
 Windows 11
 1. 雙擊 `start_windows.vbs`。若尚未安裝 Python，會提示自動下載/安裝 Python 3.11（建議）。
    - 若公司/系統政策停用 Windows Script Host 導致 `.vbs` 無法執行，可改用 `start_windows.bat`。
-   - 若你希望安裝/啟動進度直接顯示在終端機視窗（不使用進度網頁），請用 `start_windows_terminal.bat`。
    - 若要做「一直按下一步」的安裝精靈（Setup.exe），見 `installer/windows/README.md`。
 2. 若你選擇手動安裝 Python，請勾選「Add python.exe to PATH」（並保留 `py` launcher）。
 3. 若未安裝 R（可選，用於 ggplot2 圖表），啟動器會詢問是否要自動下載/安裝（來源 CRAN）。
-4. 啟動器會自動偵測 venv / 套件是否已安裝，並在終端機逐步顯示狀態；每一步都需要按 Enter 才會進行下一步。
-5. 第一次會安裝依賴套件；之後會重用既有 `.venv`（除非 `requirements.txt` 有變更）。若 Windows Defender 詢問是否允許網路連線，請允許（只會綁定 localhost）。
+4. 第一次會安裝依賴套件；之後會重用既有環境（除非 `requirements.txt` 有變更）。若 Windows Defender 詢問是否允許網路連線，請允許（只會綁定 localhost）。
 
 ### 使用注意事項
 

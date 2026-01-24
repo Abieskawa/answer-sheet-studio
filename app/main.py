@@ -94,7 +94,7 @@ I18N = {
         "result_download_results": "下載 results.csv",
         "result_download_annotated": "下載 annotated.pdf",
         "result_download_showwrong": "下載 showwrong.xlsx（只顯示錯題）",
-        "result_back_to_downloads": "回到結果頁（下載）",
+        "result_back_to_downloads": "查看試題分析原始數據",
         "result_view_item_analysis_data": "查看試題分析原始數據",
         "result_plots_title": "圖表",
         "result_plot_score_hist": "成績分佈",
@@ -173,7 +173,7 @@ I18N = {
         "result_download_results": "Download results.csv",
         "result_download_annotated": "Download annotated.pdf",
         "result_download_showwrong": "Download showwrong.xlsx (wrong answers only)",
-        "result_back_to_downloads": "Back to result page (downloads)",
+        "result_back_to_downloads": "View item analysis raw data",
         "result_view_item_analysis_data": "View item analysis raw data",
         "result_plots_title": "Plots",
         "result_plot_score_hist": "Score distribution",
@@ -462,6 +462,7 @@ def _analysis_file_links(job_id: str) -> list[dict]:
         "analysis_summary.csv": "analysis_summary.csv",
         "analysis_score_hist.png": "analysis_score_hist.png",
         "analysis_item_plot.png": "analysis_item_plot.png",
+        "analysis_r.log": "analysis_r.log (R log)",
     }
     for name, label in label_by_name.items():
         path = job_dir / name
@@ -512,11 +513,31 @@ def _summarize_r_error(text: Optional[str], limit: int = 220) -> Optional[str]:
     if not lines:
         return None
 
-    m = re.search(r"there is no package called ['\"]([^'\"]+)['\"]", msg, flags=re.IGNORECASE)
+    m = re.search(r"Missing R packages and auto-install failed:\s*([^\n]+)", msg, flags=re.IGNORECASE)
     if m:
-        reason = f"missing R package: {m.group(1)}"
+        reason = f"missing R packages: {m.group(1).strip()}"
     else:
-        reason = lines[-1]
+        m = re.search(r"Missing required packages:\s*([^\n]+)", msg, flags=re.IGNORECASE)
+        if m:
+            reason = f"missing R packages: {m.group(1).strip()}"
+        else:
+            m = re.search(r"there is no package called ['\"]([^'\"]+)['\"]", msg, flags=re.IGNORECASE)
+            if m:
+                reason = f"missing R package: {m.group(1)}"
+            else:
+                m = re.search(r"Missing R packages and auto-install failed:.*?Error:\\s*([^\n]+)", msg, flags=re.IGNORECASE | re.DOTALL)
+                if m:
+                    reason = m.group(1).strip()
+                else:
+                    m = re.search(r"Error:\\s*([^\n]+)", msg, flags=re.IGNORECASE)
+                    if m:
+                        reason = m.group(1).strip()
+                    else:
+                        m = re.search(r"Error in [^:]+:\\s*([^\n]+)", msg, flags=re.IGNORECASE)
+                        if m:
+                            reason = m.group(1).strip()
+                        else:
+                            reason = lines[-1]
 
     reason = re.sub(r"\s+", " ", reason).strip()
     if len(reason) > limit:
@@ -973,6 +994,14 @@ async def api_process(
                     if len(out_text) > 2000:
                         out_text = out_text[-2000:]
                     r_failed_text = out_text or f"code {proc.returncode}"
+                    try:
+                        (job_dir / "analysis_r.log").write_text(
+                            ((proc.stdout or "") + "\n" + (proc.stderr or "")).strip() + "\n",
+                            encoding="utf-8",
+                            errors="replace",
+                        )
+                    except Exception:
+                        pass
 
             if r_ok:
                 analysis_message = t["analysis_message_done"]

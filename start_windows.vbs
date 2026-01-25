@@ -281,23 +281,17 @@ Sub EnsureRInstalledOrExit()
             Exit Sub
         End If
     End If
-    ' R is optional; skip installing unless explicitly enabled.
-    Dim installR
-    installR = LCase(Trim(WshShell.Environment("Process")("ANSWER_SHEET_INSTALL_R")))
-    If installR <> "1" And installR <> "true" And installR <> "yes" Then
-        Exit Sub
-    End If
-
-    ' Optional: download and start installing R from CRAN, but do not block startup.
+    ' R is required for item analysis and plots.
     If DownloadAndInstallR() Then
-        WshShell.Popup "R installer started (optional)." & vbCrLf & vbCrLf & _
-            "Answer Sheet Studio will continue without R. Restart after installing R to enable ggplot2 plots.", 0, "Answer Sheet Studio", 64
+        WshShell.Popup "R installer started." & vbCrLf & vbCrLf & _
+            "After installation finishes, run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
     Else
         WshShell.Popup "R was not found." & vbCrLf & vbCrLf & _
-            "Answer Sheet Studio will continue without R. Install R from CRAN to enable ggplot2 plots.", 0, "Answer Sheet Studio", 48
+            "We opened CRAN in your browser. Please install R, then run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 48
         On Error Resume Next
         WshShell.Run "https://cran.r-project.org/bin/windows/base/", 1, False
     End If
+    WScript.Quit 1
 End Sub
 
 Function CanRun(cmd)

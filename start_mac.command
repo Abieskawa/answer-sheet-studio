@@ -42,8 +42,8 @@ ensure_r() {
   pkg_name="$(printf "%s" "$html" | grep -Eo 'R-[0-9.]+(-arm64)?\\.pkg' | sort -V | tail -n 1)"
   if [ -z "$pkg_name" ]; then
     open "https://cran.r-project.org/bin/macosx/" >/dev/null 2>&1 || true
-    osascript -e 'display dialog "R was not found, and the installer could not be detected automatically.\n\nWe opened CRAN in your browser. Answer Sheet Studio will continue without R.\n\n(Install R + required packages for ggplot2 plots.)" buttons {"OK"} with icon caution' >/dev/null 2>&1 || true
-    return 0
+    osascript -e 'display dialog "R was not found.\n\nWe opened CRAN in your browser.\n\nPlease install R, then run Answer Sheet Studio again." buttons {"OK"} with icon caution' >/dev/null 2>&1 || true
+    return 1
   fi
 
   url="${base}${pkg_name}"
@@ -51,16 +51,19 @@ ensure_r() {
   if curl -L --fail --progress-bar --output "$PKG_PATH" "$url" >/dev/null 2>&1; then
     if pkgutil --check-signature "$PKG_PATH" 2>/dev/null | grep -qi "Status: signed"; then
       open "$PKG_PATH" >/dev/null 2>&1 || open "$url" >/dev/null 2>&1 || true
-      osascript -e 'display dialog "R installer opened (optional).\n\nAnswer Sheet Studio will continue without R.\n\nRestart after installing R to enable ggplot2 plots." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
+      osascript -e 'display dialog "R installer opened.\n\nAfter installation finishes, run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
+      return 1
     else
-      osascript -e 'display dialog "Downloaded R installer signature could not be verified.\n\nWe will open CRAN instead. Answer Sheet Studio will continue without R." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
+      osascript -e 'display dialog "Downloaded R installer signature could not be verified.\n\nWe will open CRAN instead.\n\nPlease install R, then run Answer Sheet Studio again." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
       open "https://cran.r-project.org/bin/macosx/" >/dev/null 2>&1 || true
+      return 1
     fi
   else
-    osascript -e 'display dialog "Failed to download the R installer.\n\nWe will open CRAN instead. Answer Sheet Studio will continue without R." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
+    osascript -e 'display dialog "Failed to download the R installer.\n\nWe will open CRAN instead.\n\nPlease install R, then run Answer Sheet Studio again." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
     open "https://cran.r-project.org/bin/macosx/" >/dev/null 2>&1 || true
+    return 1
   fi
-  return 0
+  return 1
 }
 
 PYTHON_BIN="$(pick_python || true)"
@@ -89,9 +92,7 @@ if [ -z "$PYTHON_BIN" ]; then
   exit 1
 fi
 
-if [ "${ANSWER_SHEET_INSTALL_R:-0}" = "1" ]; then
-  ensure_r
-fi
+ensure_r || exit 1
 
 ANSWER_SHEET_OPEN_BROWSER=0 nohup "$PYTHON_BIN" launcher_headless.py >/dev/null 2>&1 &
 

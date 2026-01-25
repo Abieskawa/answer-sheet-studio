@@ -240,9 +240,10 @@ metric_lines <- tibble(
 
 max_count <- max(as.integer(table(floor(score_vec / binwidth) * binwidth)), 1, na.rm = TRUE)
 line_label_df <- metric_lines %>%
+  arrange(x) %>%
   mutate(
-    y = max_count + 0.35,
-    x = pmax(0, x)
+    x = pmax(0, x),
+    y = max_count + 0.35 + (row_number() - 1) * 0.38
   )
 
 mean_label <- tr("平均", "Mean")

@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ title or t.result_plots_title }}</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <style>
     :root { color-scheme: light; }
     body { margin: 0; background: #fff; color: #111827; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "PingFang TC", "Microsoft JhengHei", sans-serif; }
@@ -22,6 +23,24 @@
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; white-space: nowrap; }
     thead th { position: sticky; top: 0; background: #f9fafb; z-index: 1; border-bottom: 1px solid #d1d5db; }
+    .grid-wrap { overflow: auto; max-height: 440px; border: 1px solid #e5e7eb; border-radius: 10px; }
+    .grid { font-size: 12px; }
+    .grid th, .grid td { padding: 6px 8px; border-bottom: 1px solid #eef2f7; border-right: 1px solid #eef2f7; }
+    .grid thead th { background: #f9fafb; }
+    .grid th.sticky-left, .grid td.sticky-left { position: sticky; left: 0; z-index: 2; background: #fff; }
+    .grid thead th.sticky-left { z-index: 3; background: #f9fafb; }
+    .grid td.wrong { color: #b91c1c; font-weight: 600; }
+    .grid tr.highlight td, .grid tr.highlight th { background: #fef3c7; }
+    .class-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+    .tab { padding: 8px 10px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 13px; }
+    .tab[aria-selected="true"] { border-color: #0ea5e9; background: #eff6ff; }
+    .plot { width: 100%; height: 420px; }
+    .plot-small { width: 100%; height: 360px; }
+    .metric-table-wrap { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 10px; }
+    table.metric { border-collapse: collapse; font-size: 12px; width: max-content; min-width: 100%; }
+    table.metric th, table.metric td { padding: 6px 8px; border-bottom: 1px solid #eef2f7; border-right: 1px solid #eef2f7; text-align: center; }
+    table.metric th.sticky-left, table.metric td.sticky-left { position: sticky; left: 0; background: #fff; z-index: 2; text-align: left; white-space: nowrap; }
+    table.metric thead th.sticky-left { background: #f9fafb; z-index: 3; }
   </style>
 </head>
 <body>
@@ -32,6 +51,9 @@
     <div class="toolbar">
       <a class="btn" href="{{ csv_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_results }}</a>
       <a class="btn" href="{{ pdf_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_annotated }}</a>
+      {% if analysis_report_url %}
+        <a class="btn" href="{{ analysis_report_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_analysis_pdf }}</a>
+      {% endif %}
       {% if showwrong_url %}
         <a class="btn" href="{{ showwrong_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_showwrong }}</a>
       {% endif %}
@@ -50,20 +72,39 @@
       <p class="hint">{{ t[analysis_discrimination_note_key] }}</p>
     {% endif %}
 
-    <div class="plots">
-      {% if analysis_score_hist_inline_url %}
-        <div class="card">
-          <p class="hint">{{ t.result_plot_score_hist }}</p>
-          <img src="{{ analysis_score_hist_inline_url }}" alt="{{ t.result_plot_score_hist }}" loading="lazy" />
+    {% if analysis_showwrong_json_url and analysis_item_csv_url %}
+      <div class="card">
+        <p class="hint">{{ t.result_integrated_title }}</p>
+        <div id="classTabs" class="class-tabs" aria-label="Classes"></div>
+        <div id="showwrongGrid" class="grid-wrap" aria-label="Showwrong grid"></div>
+        <div style="height:12px"></div>
+        <div id="difficultyPlot" class="plot" aria-label="Difficulty plot"></div>
+        <div style="height:10px"></div>
+        <div id="discriminationPlot" class="plot" aria-label="Discrimination plot"></div>
+        <div style="height:10px"></div>
+        <div class="metric-table-wrap" aria-label="Per-question metrics">
+          <div id="metricTable"></div>
         </div>
-      {% endif %}
-      {% if analysis_item_plot_inline_url %}
-        <div class="card">
-          <p class="hint">{{ t.result_plot_item_metrics }}</p>
-          <img src="{{ analysis_item_plot_inline_url }}" alt="{{ t.result_plot_item_metrics }}" loading="lazy" />
-        </div>
-      {% endif %}
-    </div>
+        <div style="height:12px"></div>
+        <div id="scoreHist" class="plot-small" aria-label="Score histogram"></div>
+        <p class="hint" id="plotlyHint" style="display:none;color:#b91c1c"></p>
+      </div>
+    {% else %}
+      <div class="plots">
+        {% if analysis_score_hist_inline_url %}
+          <div class="card">
+            <p class="hint">{{ t.result_plot_score_hist }}</p>
+            <img src="{{ analysis_score_hist_inline_url }}" alt="{{ t.result_plot_score_hist }}" loading="lazy" />
+          </div>
+        {% endif %}
+        {% if analysis_item_plot_inline_url %}
+          <div class="card">
+            <p class="hint">{{ t.result_plot_item_metrics }}</p>
+            <img src="{{ analysis_item_plot_inline_url }}" alt="{{ t.result_plot_item_metrics }}" loading="lazy" />
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
 
     {% if analysis_files %}
       <div class="card" style="margin-top:14px">
@@ -109,5 +150,262 @@
       </div>
     {% endif %}
   </div>
+  {% if analysis_showwrong_json_url and analysis_item_csv_url %}
+  <script>
+    const t = {
+      missingPlotly: {{ (t.result_plotly_missing_js if t.result_plotly_missing_js is defined else "Plotly failed to load. Please ensure you have internet access.") | tojson }},
+      number: {{ (t.col_number if t.col_number is defined else "number") | tojson }},
+      correct: {{ (t.col_correct if t.col_correct is defined else "correct") | tojson }},
+      question: {{ (t.col_question if t.col_question is defined else "Question") | tojson }},
+      difficulty: {{ (t.col_difficulty if t.col_difficulty is defined else "Difficulty (accuracy)") | tojson }},
+      discrimination: {{ (t.col_discrimination if t.col_discrimination is defined else "Discrimination") | tojson }},
+      classLabel: {{ (t.col_class if t.col_class is defined else "Class") | tojson }},
+    };
+
+    function csvToRows(text) {
+      const lines = (text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter(Boolean);
+      if (!lines.length) return [];
+      const header = lines[0].split(",").map(s => s.replace(/^\\uFEFF/, "").trim());
+      const rows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = [];
+        let cur = "", inQ = false;
+        for (let j = 0; j < lines[i].length; j++) {
+          const ch = lines[i][j];
+          if (ch === '"' ) { inQ = !inQ; continue; }
+          if (ch === "," && !inQ) { cols.push(cur); cur = ""; continue; }
+          cur += ch;
+        }
+        cols.push(cur);
+        const obj = {};
+        for (let k = 0; k < header.length; k++) obj[header[k]] = (cols[k] ?? "").trim();
+        rows.push(obj);
+      }
+      return rows;
+    }
+
+    function safeFloat(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function buildTabs(classes, activeKey, onSelect) {
+      const el = document.getElementById("classTabs");
+      el.innerHTML = "";
+      classes.forEach(cls => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "tab";
+        btn.textContent = cls.label;
+        btn.setAttribute("aria-selected", cls.key === activeKey ? "true" : "false");
+        btn.addEventListener("click", () => onSelect(cls.key));
+        el.appendChild(btn);
+      });
+    }
+
+    function buildGrid(container, cls) {
+      const rows = cls.rows || [];
+      const students = cls.students || [];
+
+      const table = document.createElement("table");
+      table.className = "grid";
+      const thead = document.createElement("thead");
+      const trh = document.createElement("tr");
+      const thNo = document.createElement("th");
+      thNo.className = "sticky-left";
+      thNo.textContent = t.question;
+      trh.appendChild(thNo);
+
+      for (const s of students) {
+        const th = document.createElement("th");
+        th.textContent = s;
+        trh.appendChild(th);
+      }
+      thead.appendChild(trh);
+      table.appendChild(thead);
+
+      const tbody = document.createElement("tbody");
+      for (const r of rows) {
+        const tr = document.createElement("tr");
+        tr.dataset.qno = String(r.number ?? "");
+        const tdNo = document.createElement("td");
+        tdNo.className = "sticky-left";
+        tdNo.textContent = String(r.number ?? "");
+        tr.appendChild(tdNo);
+
+        const cells = r.cells || [];
+        for (let i = 0; i < students.length; i++) {
+          const td = document.createElement("td");
+          const v = (cells[i] ?? "");
+          td.textContent = v;
+          if (v) td.className = "wrong";
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      container.innerHTML = "";
+      container.appendChild(table);
+    }
+
+    function highlightRow(qno) {
+      const container = document.getElementById("showwrongGrid");
+      const table = container.querySelector("table");
+      if (!table) return;
+      table.querySelectorAll("tr.highlight").forEach(tr => tr.classList.remove("highlight"));
+      const tr = table.querySelector(`tr[data-qno="${CSS.escape(String(qno))}"]`);
+      if (!tr) return;
+      tr.classList.add("highlight");
+      tr.scrollIntoView({block: "nearest", inline: "nearest"});
+    }
+
+    async function main() {
+      if (!window.Plotly) {
+        const hint = document.getElementById("plotlyHint");
+        hint.style.display = "block";
+        hint.textContent = t.missingPlotly;
+        return;
+      }
+
+      const [showwrongRes, itemRes, scoresRes] = await Promise.all([
+        fetch({{ analysis_showwrong_json_url|tojson }}),
+        fetch({{ analysis_item_csv_url|tojson }}),
+        fetch({{ analysis_scores_csv_url|tojson }}),
+      ]);
+      const showwrong = await showwrongRes.json();
+      const itemRows = csvToRows(await itemRes.text());
+      const scoreRows = csvToRows(await scoresRes.text());
+
+      const classes = (showwrong.classes || []).map(c => ({
+        key: c.key,
+        label: c.label,
+        students: c.students,
+        rows: c.rows
+      }));
+      const defaultKey = classes[0]?.key ?? "";
+      let activeKey = defaultKey;
+
+      function renderActive() {
+        const cls = classes.find(c => c.key === activeKey);
+        if (!cls) return;
+        buildTabs(classes, activeKey, (k) => { activeKey = k; renderActive(); });
+        buildGrid(document.getElementById("showwrongGrid"), cls);
+      }
+      renderActive();
+
+      const xs = itemRows.map(r => safeFloat(r.number)).filter(v => v !== null);
+      const diffs = itemRows.map(r => safeFloat(r.difficulty));
+      const discs = itemRows.map(r => safeFloat(r.discrimination));
+
+      function baseXAxis() {
+        return {
+          title: t.question,
+          tickmode: "linear",
+          dtick: 1,
+          showgrid: true,
+          gridcolor: "#e5e7eb",
+          griddash: "dot",
+          zeroline: false,
+        };
+      }
+      function baseLayout(yTitle) {
+        return {
+          margin: {l: 56, r: 18, t: 10, b: 42},
+          xaxis: baseXAxis(),
+          yaxis: {title: yTitle, showgrid: true, gridcolor: "#e5e7eb"},
+          hovermode: "x",
+        };
+      }
+
+      const diffDiv = document.getElementById("difficultyPlot");
+      await Plotly.newPlot(
+        diffDiv,
+        [{
+          x: xs,
+          y: diffs,
+          name: t.difficulty,
+          mode: "lines+markers",
+          line: {color: "#16a34a", width: 2},
+          marker: {size: 6},
+          hovertemplate: `${t.question}: %{x}<br>${t.difficulty}: %{y:.2f}<extra></extra>`,
+        }],
+        {...baseLayout(t.difficulty), yaxis: {...baseLayout(t.difficulty).yaxis, range: [0, 1]}},
+        {displayModeBar: true, responsive: true}
+      );
+      diffDiv.on("plotly_hover", (ev) => { const qno = ev?.points?.[0]?.x; if (qno != null) highlightRow(qno); });
+      diffDiv.on("plotly_click", (ev) => { const qno = ev?.points?.[0]?.x; if (qno != null) highlightRow(qno); });
+
+      const discDiv = document.getElementById("discriminationPlot");
+      await Plotly.newPlot(
+        discDiv,
+        [{
+          x: xs,
+          y: discs,
+          name: t.discrimination,
+          mode: "lines+markers",
+          line: {color: "#2563eb", width: 2},
+          marker: {size: 6},
+          hovertemplate: `${t.question}: %{x}<br>${t.discrimination}: %{y:.2f}<extra></extra>`,
+        }],
+        baseLayout(t.discrimination),
+        {displayModeBar: true, responsive: true}
+      );
+      discDiv.on("plotly_hover", (ev) => { const qno = ev?.points?.[0]?.x; if (qno != null) highlightRow(qno); });
+      discDiv.on("plotly_click", (ev) => { const qno = ev?.points?.[0]?.x; if (qno != null) highlightRow(qno); });
+
+      // Per-question metric table (numbers under the plots).
+      const metricWrap = document.getElementById("metricTable");
+      const table = document.createElement("table");
+      table.className = "metric";
+      const thead = document.createElement("thead");
+      const thr = document.createElement("tr");
+      const th0 = document.createElement("th");
+      th0.className = "sticky-left";
+      th0.textContent = "";
+      thr.appendChild(th0);
+      for (const q of xs) {
+        const th = document.createElement("th");
+        th.textContent = String(q);
+        thr.appendChild(th);
+      }
+      thead.appendChild(thr);
+      table.appendChild(thead);
+      const tbody = document.createElement("tbody");
+      function addRow(label, values) {
+        const tr = document.createElement("tr");
+        const td0 = document.createElement("td");
+        td0.className = "sticky-left";
+        td0.textContent = label;
+        tr.appendChild(td0);
+        for (const v of values) {
+          const td = document.createElement("td");
+          td.textContent = (v == null ? "" : v.toFixed(2));
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+      addRow(t.difficulty, diffs);
+      addRow(t.discrimination, discs);
+      table.appendChild(tbody);
+      metricWrap.innerHTML = "";
+      metricWrap.appendChild(table);
+
+      const scores = scoreRows.map(r => safeFloat(r.score)).filter(v => v !== null);
+      const histData = [{x: scores, type: "histogram", marker: {color: "#0ea5e9"}}];
+      const histLayout = {
+        margin: {l: 48, r: 18, t: 10, b: 42},
+        xaxis: {title: "Score", showgrid: true, gridcolor: "#e5e7eb"},
+        yaxis: {title: "Count", showgrid: true, gridcolor: "#e5e7eb"},
+      };
+      await Plotly.newPlot(document.getElementById("scoreHist"), histData, histLayout, {displayModeBar: false, responsive: true});
+    }
+
+    main().catch((err) => {
+      const hint = document.getElementById("plotlyHint");
+      hint.style.display = "block";
+      hint.textContent = String(err || "Failed to render charts");
+    });
+  </script>
+  {% endif %}
 </body>
 </html>

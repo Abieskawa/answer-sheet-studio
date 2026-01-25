@@ -23,7 +23,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 - Python 3.10+（建議 3.11；支援 3.10–3.13）。若尚未安裝 Python，啟動器可協助下載官方安裝程式。
 - Windows 安裝 Python 時請勾選「Add python.exe to PATH」（並保留 `py` launcher）
 - 第一次安裝需要網路下載 Python 套件（FastAPI、PyMuPDF、OpenCV、NumPy 等）
-- （可選）安裝 **R**（可執行 `Rscript`）以使用 `ggplot2` 產生更好看的圖表（未安裝也可正常使用內建分析/圖表）。
+- 需要安裝 **R**（可執行 `Rscript`）以產生試題分析報表與圖表（`ggplot2`）。
 - R 套件需求：`readr`、`dplyr`、`tidyr`、`ggplot2`。
 
 ### 快速開始
@@ -37,7 +37,7 @@ Windows 11
 1. 雙擊 `start_windows.vbs`。若尚未安裝 Python，會提示自動下載/安裝 Python 3.11（建議）。
    - 若要做「一直按下一步」的安裝精靈（Setup.exe），見 `installer/windows/README.md`。
 2. 若你選擇手動安裝 Python，請勾選「Add python.exe to PATH」（並保留 `py` launcher）。
-3. 若未安裝 R（可選，用於 ggplot2 圖表），啟動器會詢問是否要自動下載/安裝（來源 CRAN）。
+3. 若未安裝 R（必需，用於試題分析/圖表），啟動器會協助下載/安裝（來源 CRAN）；安裝完成後請重新啟動。
 4. 第一次會安裝依賴套件；之後會重用既有環境（除非 `requirements.txt` 有變更）。若 Windows Defender 詢問是否允許網路連線，請允許（只會綁定 localhost）。
 
 ### 使用注意事項
@@ -55,12 +55,16 @@ Windows 11
 - `input.pdf`（原始上傳檔）
 - `answer_key.xlsx`（老師答案檔）
 - `showwrong.xlsx`（只顯示錯題：題號為列、學生為欄；最後一列為每位學生總分）
-- `analysis_template.csv`、`analysis_scores.csv`、`analysis_item.csv`、`analysis_summary.csv`、`analysis_score_hist.png`、`analysis_item_plot.png`
+- `analysis_template.csv`、`analysis_scores.csv`、`analysis_item.csv`、`analysis_summary.csv`
+- `analysis_score_hist.png`、`analysis_item_plot.png`
+- `analysis_showwrong.json`（結果頁互動圖表用）
+- `analysis_report.pdf`（分析結果 PDF；每班一頁）
 - 若未來新增更多 `analysis_*` 輸出（CSV/XLSX/圖片/日誌），結果頁的「試題分析檔案」會自動列出下載連結。
 
 ### 圖表頁（/charts）
 
 - `/result/<job_id>/charts` 會把分析圖表與「試題分析檔案」集中在同一頁。
+- 圖表頁提供互動式圖表（Plotly）：滑鼠 hover 可顯示題號，並與 showwrong（錯題表）同步對照；下方另提供每題難度/鑑別度數字表。
 - 「試題分析數據（預覽）」改為可展開的表格（預設收合），避免把不完整的截斷資料直接鋪在圖下方；需要完整資料請下載 `analysis_item.csv`。
 
 ### 更新
@@ -107,6 +111,7 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 - On Windows, ensure “Add python.exe to PATH” during installation (and keep the `py` launcher enabled if offered).
 - Internet access the first time to download Python packages (FastAPI, PyMuPDF, OpenCV, NumPy, etc.).
 - (Optional) Install **R** (`Rscript`) for ggplot2 plots (the app still works with built-in analysis/plots without R).
+- Install **R** (`Rscript`) to generate item analysis reports and plots (via `ggplot2`).
 - R packages: `readr`, `dplyr`, `tidyr`, `ggplot2`.
 
 ### Quick Start
@@ -119,6 +124,7 @@ macOS
 Windows 11
 1. Double-click `start_windows.vbs`. If Python isn’t installed, it will offer to download/install Python 3.11 automatically (recommended).
 2. If you install Python manually, ensure “Add python.exe to PATH” during installation (and keep the `py` launcher enabled if offered).
+3. If R isn’t installed (required for item analysis/plots), the launcher will help download/start the installer (from CRAN). After installation finishes, run the launcher again.
 3. First run installs requirements; later runs reuse the existing `.venv` (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
 
 ### Important Notes
@@ -136,12 +142,16 @@ After recognition, files are written under `outputs/<job_id>/`:
 - `input.pdf` (original upload)
 - `answer_key.xlsx` (teacher answer key)
 - `showwrong.xlsx` (wrong answers only; questions as rows, students as columns; last row is total score per student)
-- `analysis_template.csv`, `analysis_scores.csv`, `analysis_item.csv`, `analysis_summary.csv`, `analysis_score_hist.png`, `analysis_item_plot.png`
+- `analysis_template.csv`, `analysis_scores.csv`, `analysis_item.csv`, `analysis_summary.csv`
+- `analysis_score_hist.png`, `analysis_item_plot.png`
+- `analysis_showwrong.json` (interactive report data)
+- `analysis_report.pdf` (analysis report PDF; one page per class)
 - If more `analysis_*` outputs are added later (CSV/XLSX/images/logs), the result page’s “Item analysis files” section will auto-list them.
 
 ### Charts Page (/charts)
 
 - `/result/<job_id>/charts` puts plots and “Item analysis files” on one page.
+- The charts page includes interactive Plotly charts: hover a point to see the question number and highlight the corresponding row in the showwrong grid; a per-question metrics table is shown under the plots.
 - “Item analysis data (preview)” is now a collapsible table (collapsed by default) so truncated preview rows don’t clutter the plots; download `analysis_item.csv` for full data.
 
 ### Updating

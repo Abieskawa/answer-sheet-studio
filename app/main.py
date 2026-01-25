@@ -13,7 +13,6 @@ from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from engine.analysis import run_analysis_template
 from engine.generator import generate_answer_sheet_pdf, DEFAULT_TITLE as DEFAULT_SHEET_TITLE
 from engine.recognizer import process_pdf_to_csv_and_annotated_pdf
 from engine.xlsx import read_simple_xlsx_table, write_simple_xlsx, write_simple_xlsx_multi
@@ -73,7 +72,7 @@ I18N = {
         "upload_open_result": "開啟結果頁（含圖表）",
         "upload_open_result_hint": "處理完成後請點上方按鈕開啟結果頁。",
         "upload_error_generic": "處理失敗，請查看 outputs/launcher.log 或 outputs/server.log。",
-        "upload_hint_output": "完成後會輸出 results.csv、annotated.pdf，以及答案分析報表/圖表（若已安裝 R 會使用 ggplot2 出圖）。",
+        "upload_hint_output": "完成後會輸出 results.csv、annotated.pdf，以及答案分析報表/圖表（需要先安裝 R；程式會在需要時自動嘗試安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
         "update_title": "更新",
         "update_hint": "下載最新 ZIP 後在此上傳套用更新。更新過程會短暫重新啟動。",
         "update_open_releases": "開啟下載頁（GitHub Releases）",
@@ -93,12 +92,21 @@ I18N = {
         "result_job_id": "Job ID：",
         "result_download_results": "下載 results.csv",
         "result_download_annotated": "下載 annotated.pdf",
+        "result_download_analysis_pdf": "下載分析結果 PDF",
         "result_download_showwrong": "下載 showwrong.xlsx（只顯示錯題）",
         "result_back_to_downloads": "查看試題分析原始數據",
         "result_view_item_analysis_data": "試題分析數據",
         "result_plots_title": "圖表",
         "result_plot_score_hist": "成績分佈",
         "result_plot_item_metrics": "題目分析",
+        "result_integrated_title": "整合圖表（可用滑鼠懸停查看題號，並與錯題表對照）",
+        "result_plotly_missing_js": "Plotly 載入失敗，請確認網路連線（或稍後重整）。",
+        "col_question": "題號",
+        "col_difficulty": "難度（正答率）",
+        "col_discrimination": "鑑別度",
+        "col_class": "班級",
+        "col_wrong": "錯誤人數",
+        "col_blank": "空白人數",
         "result_analysis_files_title": "試題分析檔案",
         "result_analysis_files_hint": "下載完整分析報表（CSV/XLSX/圖片/日誌）。",
         "result_item_table_title": "試題分析數據（預覽）",
@@ -120,11 +128,12 @@ I18N = {
         "debug_dl_annotated": "下載 annotated.pdf",
         "debug_dl_input": "下載 input.pdf（原始上傳檔）",
         "debug_report_hint": "回報時請提供：Job ID、results.csv、ambiguity.csv、annotated.pdf（必要時 input.pdf）。",
-        "analysis_error_missing_rscript": "找不到 Rscript（若要用 ggplot2 出圖，請先安裝 R）。",
+        "analysis_error_missing_rscript": "找不到 Rscript（請先安裝 R）。",
+        "analysis_error_missing_rscript_required": "找不到 Rscript（請先安裝 R，否則無法產生分析結果）。",
         "analysis_error_r_failed": "R 分析失敗：",
         "analysis_error_builtin_failed": "內建分析失敗：",
         "analysis_message_done": "分析完成，可下載報表與圖表。",
-        "analysis_message_done_fallback": "分析完成（已使用內建分析；若想用 ggplot2 出圖，請確認已安裝 R。程式會在需要時自動嘗試安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
+        "analysis_message_done_fallback": "分析完成。",
         "analysis_note_discrimination_rule_27": "鑑別度：學生數 > 30 時採前後 27%（高分組答對率 − 低分組答對率）。",
         "analysis_note_discrimination_rule_50": "鑑別度：學生數 ≤ 30 時採前後 50%（高分組答對率 − 低分組答對率）。",
     },
@@ -160,7 +169,7 @@ I18N = {
         "upload_open_result": "Open result page (with plots)",
         "upload_open_result_hint": "When processing finishes, click the button above to open the result page.",
         "upload_error_generic": "Processing failed. See outputs/launcher.log or outputs/server.log.",
-        "upload_hint_output": "Outputs results.csv, annotated.pdf, and analysis reports/plots (uses ggplot2 plots if R is installed).",
+        "upload_hint_output": "Outputs results.csv, annotated.pdf, and analysis reports/plots (R is required; the app auto-attempts to install R packages when needed: readr, dplyr, tidyr, ggplot2).",
         "update_title": "Update",
         "update_hint": "Download the latest ZIP and upload it here. The app will restart briefly.",
         "update_open_releases": "Open download page (GitHub Releases)",
@@ -180,12 +189,21 @@ I18N = {
         "result_job_id": "Job ID:",
         "result_download_results": "Download results.csv",
         "result_download_annotated": "Download annotated.pdf",
+        "result_download_analysis_pdf": "Download analysis report PDF",
         "result_download_showwrong": "Download showwrong.xlsx (wrong answers only)",
         "result_back_to_downloads": "View item analysis raw data",
         "result_view_item_analysis_data": "Item analysis data",
         "result_plots_title": "Plots",
         "result_plot_score_hist": "Score distribution",
         "result_plot_item_metrics": "Item analysis",
+        "result_integrated_title": "Integrated report (hover a point to highlight the corresponding row)",
+        "result_plotly_missing_js": "Plotly failed to load. Please ensure you have internet access, then refresh.",
+        "col_question": "Question",
+        "col_difficulty": "Difficulty (accuracy)",
+        "col_discrimination": "Discrimination",
+        "col_class": "Class",
+        "col_wrong": "Wrong",
+        "col_blank": "Blank",
         "result_analysis_files_title": "Item analysis files",
         "result_analysis_files_hint": "Download the full analysis reports (CSV/XLSX/images/logs).",
         "result_item_table_title": "Item analysis data (preview)",
@@ -207,11 +225,12 @@ I18N = {
         "debug_dl_annotated": "Download annotated.pdf",
         "debug_dl_input": "Download input.pdf (original upload)",
         "debug_report_hint": "When reporting, include: Job ID, results.csv, ambiguity.csv, annotated.pdf (and input.pdf if needed).",
-        "analysis_error_missing_rscript": "Rscript not found (install R to enable ggplot2 plots).",
+        "analysis_error_missing_rscript": "Rscript not found (please install R).",
+        "analysis_error_missing_rscript_required": "Rscript not found (please install R; analysis outputs cannot be generated without it).",
         "analysis_error_r_failed": "R analysis failed:",
         "analysis_error_builtin_failed": "Built-in analysis failed:",
         "analysis_message_done": "Analysis complete. Download reports and plots below.",
-        "analysis_message_done_fallback": "Analysis complete (built-in analysis used; to enable ggplot2 plots, ensure R is installed. The app will auto-attempt to install R packages when needed: readr, dplyr, tidyr, ggplot2).",
+        "analysis_message_done_fallback": "Analysis complete.",
         "analysis_note_discrimination_rule_27": "Discrimination: if students > 30, uses top/bottom 27% (correct_high − correct_low).",
         "analysis_note_discrimination_rule_50": "Discrimination: if students ≤ 30, uses top/bottom 50% (correct_high − correct_low).",
     },
@@ -471,6 +490,10 @@ def result_charts_page(request: Request, job_id: str):
     score_hist = job_dir / "analysis_score_hist.png"
     item_plot = job_dir / "analysis_item_plot.png"
     scores_by_class = job_dir / "analysis_scores_by_class.xlsx"
+    showwrong_json = job_dir / "analysis_showwrong.json"
+    item_csv = job_dir / "analysis_item.csv"
+    scores_csv = job_dir / "analysis_scores.csv"
+    analysis_report_pdf = job_dir / "analysis_report.pdf"
     item_table = _read_analysis_item_table(job_dir)
     discr_note_key = _discrimination_note_key(job_dir)
 
@@ -489,6 +512,10 @@ def result_charts_page(request: Request, job_id: str):
             "analysis_score_hist_inline_url": (f"/outputs_inline/{job_id}/analysis_score_hist.png" if score_hist.exists() else None),
             "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
             "analysis_scores_by_class_url": (f"/outputs/{job_id}/analysis_scores_by_class.xlsx" if scores_by_class.exists() else None),
+            "analysis_showwrong_json_url": (f"/outputs/{job_id}/analysis_showwrong.json" if showwrong_json.exists() else None),
+            "analysis_item_csv_url": (f"/outputs/{job_id}/analysis_item.csv" if item_csv.exists() else None),
+            "analysis_scores_csv_url": (f"/outputs/{job_id}/analysis_scores.csv" if scores_csv.exists() else None),
+            "analysis_report_url": (f"/outputs/{job_id}/analysis_report.pdf" if analysis_report_pdf.exists() else None),
             "analysis_item_table": item_table,
             "analysis_files": _analysis_file_links(job_id),
         },
@@ -987,6 +1014,145 @@ def _write_showwrong_xlsx(
     else:
         write_simple_xlsx(Path(out_xlsx_path), rows=out_rows, sheet_name="showwrong")
 
+    # Also emit a lightweight JSON for the interactive HTML report.
+    try:
+        classes: list[dict] = []
+        if grouped_students:
+            for key in sorted(grouped_students.keys()):
+                students = grouped_students[key][:]
+                students.sort(key=student_sort_key)
+                rows_payload: list[dict] = []
+                for i, qno in enumerate(q_numbers):
+                    correct = corrects[i] if i < len(corrects) else ""
+                    if not correct:
+                        cells = ["" for _ in students]
+                    else:
+                        cells = []
+                        for student in students:
+                            answers = answers_by_student.get(student, [])
+                            ans = answers[i] if i < len(answers) else ""
+                            cells.append("" if ans == correct else (blank_label if ans == "" else ans))
+                    rows_payload.append({"number": qno, "correct": correct, "cells": cells})
+                classes.append({"key": key, "label": key, "students": students, "rows": rows_payload})
+        else:
+            rows_payload: list[dict] = []
+            for i, qno in enumerate(q_numbers):
+                correct = corrects[i] if i < len(corrects) else ""
+                if not correct:
+                    cells = ["" for _ in student_cols]
+                else:
+                    cells = []
+                    for student in student_cols:
+                        answers = answers_by_student.get(student, [])
+                        ans = answers[i] if i < len(answers) else ""
+                        cells.append("" if ans == correct else (blank_label if ans == "" else ans))
+                rows_payload.append({"number": qno, "correct": correct, "cells": cells})
+            classes.append({"key": "all", "label": "all", "students": student_cols, "rows": rows_payload})
+
+        out_json = Path(out_xlsx_path).with_name("analysis_showwrong.json")
+        out_json.write_text(json.dumps({"classes": classes}, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _write_analysis_report_pdf(job_dir: Path, lang: str) -> None:
+    item_csv = Path(job_dir) / "analysis_item.csv"
+    showwrong_json = Path(job_dir) / "analysis_showwrong.json"
+    if not item_csv.exists() or not showwrong_json.exists():
+        return
+
+    t = I18N.get(lang, I18N[DEFAULT_LANG])
+
+    items: dict[int, dict] = {}
+    try:
+        with open(item_csv, "r", newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            for r in reader:
+                try:
+                    qno = int(float(str(r.get("number") or "").strip()))
+                except Exception:
+                    continue
+                items[qno] = r
+    except Exception:
+        return
+
+    try:
+        payload = json.loads(showwrong_json.read_text(encoding="utf-8"))
+    except Exception:
+        return
+
+    try:
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    except Exception:
+        return
+
+    styles = getSampleStyleSheet()
+    doc = SimpleDocTemplate(str(Path(job_dir) / "analysis_report.pdf"), pagesize=landscape(A4), leftMargin=24, rightMargin=24, topMargin=22, bottomMargin=22)
+    story: list = []
+
+    title = t.get("result_download_analysis_pdf") or "Analysis report"
+    story.append(Paragraph(str(title), styles["Title"]))
+    story.append(Spacer(1, 10))
+
+    classes = payload.get("classes") or []
+    for idx, cls in enumerate(classes):
+        label = str(cls.get("label") or cls.get("key") or "")
+        if idx > 0:
+            story.append(PageBreak())
+        story.append(Paragraph(f"{t.get('col_class', 'Class')}: {label}", styles["Heading2"]))
+        story.append(Spacer(1, 8))
+
+        header = [
+            t.get("col_question", "Question"),
+            t.get("col_difficulty", "Difficulty"),
+            t.get("col_discrimination", "Discrimination"),
+            t.get("col_wrong", "Wrong"),
+            t.get("col_blank", "Blank"),
+        ]
+        rows = [header]
+
+        for r in (cls.get("rows") or []):
+            try:
+                qno = int(float(str(r.get("number") or "").strip()))
+            except Exception:
+                continue
+            cells = r.get("cells") or []
+            wrong_count = sum(1 for v in cells if str(v or "").strip())
+            blank_count = sum(1 for v in cells if str(v or "").strip() == "空白")
+
+            item = items.get(qno) or {}
+            rows.append(
+                [
+                    str(qno),
+                    str(item.get("difficulty") or ""),
+                    str(item.get("discrimination") or ""),
+                    str(wrong_count),
+                    str(blank_count),
+                ]
+            )
+
+        tbl = Table(rows, repeatRows=1)
+        tbl.setStyle(
+            TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, 0), 10),
+                    ("FONTSIZE", (0, 1), (-1, -1), 9),
+                    ("GRID", (0, 0), (-1, -1), 0.25, colors.lightgrey),
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ]
+            )
+        )
+        story.append(tbl)
+
+    doc.build(story)
+
 
 @app.get("/update", response_class=HTMLResponse)
 def update_page(request: Request):
@@ -1205,23 +1371,16 @@ async def api_process(
 
             if r_ok:
                 analysis_message = t["analysis_message_done"]
-            else:
                 try:
-                    run_analysis_template(template_path, job_dir, lang=lang)
-                except Exception as exc:
-                    analysis_error = f"{t['analysis_error_builtin_failed']} {exc}"
-                    if rscript is not None:
-                        analysis_error = f"{analysis_error} ({t['analysis_error_r_failed']} {r_failed_text or ''})"
-                    else:
-                        analysis_error = f"{analysis_error} ({t['analysis_error_missing_rscript']})"
+                    _write_analysis_report_pdf(job_dir, lang=lang)
+                except Exception:
+                    pass
+            else:
+                if rscript is None:
+                    analysis_error = t["analysis_error_missing_rscript_required"]
                 else:
-                    analysis_message = t["analysis_message_done_fallback"]
-                    if rscript is None:
-                        analysis_message = f"{analysis_message} ({t['analysis_error_missing_rscript']})"
-                    else:
-                        reason = _summarize_r_error(r_failed_text)
-                        if reason:
-                            analysis_message = f"{analysis_message} ({t['analysis_error_r_failed']} {reason})"
+                    reason = _summarize_r_error(r_failed_text) or (r_failed_text or "").strip()
+                    analysis_error = f"{t['analysis_error_r_failed']} {reason}".strip()
 
     meta = _read_job_meta(job_dir)
     if analysis_error:
@@ -1435,6 +1594,10 @@ def download_output(job_id: str, filename: str):
         download_name = f"{upload_base_ascii}_{job_tag}_analysis_score_hist.png"
     elif filename == "analysis_item_plot.png":
         download_name = f"{upload_base_ascii}_{job_tag}_analysis_item_plot.png"
+    elif filename == "analysis_showwrong.json":
+        download_name = f"{upload_base_ascii}_{job_tag}_analysis_showwrong.json"
+    elif filename == "analysis_report.pdf":
+        download_name = f"{upload_base_ascii}_{job_tag}_analysis_report.pdf"
 
     media = "application/octet-stream"
     if filename.lower().endswith(".pdf"):

@@ -1,9 +1,9 @@
 Answer Sheet Studio
 ===================
 
-更新日期：|today|
+更新日期：|today_zh|
 
-Last updated: |today|
+Last updated: |today_en|
 
 語言 / Language：:ref:`繁體中文 <zh-hant>` | :ref:`English <english>`
 

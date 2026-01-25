@@ -15,6 +15,7 @@ release = '0.0'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 import os
+from datetime import datetime, timezone
 
 extensions = []
 
@@ -29,6 +30,16 @@ elif _rtd_language:
 else:
     # Default to zh_TW so local builds match the RTD default language.
     language = 'zh_TW'
+
+# Date helpers (show both zh/en at the top of index.rst).
+_now = datetime.now(timezone.utc).astimezone()
+today_zh = _now.strftime("%Y 年 %m 月 %d 日")
+today_en = _now.strftime("%Y-%m-%d")
+
+rst_epilog = f"""
+.. |today_zh| replace:: {today_zh}
+.. |today_en| replace:: {today_en}
+"""
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

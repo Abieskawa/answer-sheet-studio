@@ -1,6 +1,10 @@
 Answer Sheet Studio
 ===================
 
+更新日期：|today|
+
+Last updated: |today|
+
 語言 / Language：:ref:`繁體中文 <zh-hant>` | :ref:`English <english>`
 
 .. _zh-hant:

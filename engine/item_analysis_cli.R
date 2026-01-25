@@ -329,19 +329,39 @@ p_item <- ggplot(item_plot_df, aes(x = number, y = value)) +
     linetype = "dashed",
     inherit.aes = FALSE
   ) +
+  geom_label(
+    data = ref_lines,
+    aes(x = Inf, y = y, label = label),
+    inherit.aes = FALSE,
+    hjust = 1.08,
+    vjust = -0.45,
+    size = 3.0,
+    linewidth = 0,
+    label.size = 0,
+    fill = "white",
+    alpha = 0.72,
+    color = "#6b7280"
+  ) +
   geom_line(color = "#94a3b8", linewidth = 0.6, na.rm = TRUE) +
   geom_point(size = 1.9, color = "#0ea5e9", alpha = 0.95, na.rm = TRUE) +
   facet_wrap(~metric, ncol = 1, scales = "free_y") +
   scale_y_continuous(labels = function(x) sprintf("%.2f", x)) +
   scale_x_continuous(breaks = function(l) pretty(l, n = 12)) +
+  coord_cartesian(clip = "off") +
   theme_answer_sheet(base_size = 13) +
   labs(
     title = tr("題目分析", "Item analysis"),
-    subtitle = tr("難度與鑑別度（虛線為常用參考線）", "Difficulty and discrimination (dashed lines are common references)"),
+    subtitle = tr(
+      "難度與鑑別度（虛線：難度 0.25/0.50/0.75；鑑別度 0.00/0.20/0.40）",
+      "Difficulty and discrimination (dashed lines: difficulty 0.25/0.50/0.75; discrimination 0.00/0.20/0.40)"
+    ),
     x = tr("題號", "Question"),
     y = NULL
   ) +
-  theme(legend.position = "none")
+  theme(
+    legend.position = "none",
+    plot.margin = margin(5.5, 24, 5.5, 5.5)
+  )
 
 ggsave(
   filename = file.path(outdir, "analysis_item_plot.png"),

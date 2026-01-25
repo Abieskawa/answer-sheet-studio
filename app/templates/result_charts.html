@@ -36,7 +36,7 @@
         <a class="btn" href="{{ showwrong_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_showwrong }}</a>
       {% endif %}
       {% if analysis_scores_by_class_url %}
-        <a class="btn" href="{{ analysis_scores_by_class_url }}" target="_blank" rel="noopener noreferrer">analysis_scores_by_class.xlsx</a>
+        <a class="btn" href="{{ analysis_scores_by_class_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_scores_by_class }}</a>
       {% endif %}
     </div>
 
@@ -65,32 +65,47 @@
       {% endif %}
     </div>
 
+    {% if analysis_files %}
+      <div class="card" style="margin-top:14px">
+        <p class="hint">{{ t.result_analysis_files_title }}</p>
+        <p class="hint">{{ t.result_analysis_files_hint }}</p>
+        <div class="toolbar" style="margin:0">
+          {% for f in analysis_files %}
+            <a class="btn" href="{{ f.url }}" target="_blank" rel="noopener noreferrer">{{ f.label }}</a>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
     {% if analysis_item_table %}
       <div class="card" style="margin-top:14px">
-        <p class="hint">{{ t.result_view_item_analysis_data }}</p>
-        {% if analysis_item_table.truncated %}
-          <p class="hint">({{ analysis_item_table.total_rows }} rows, showing first 200)</p>
-        {% endif %}
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                {% for h in analysis_item_table.header %}
-                  <th>{{ h }}</th>
-                {% endfor %}
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in analysis_item_table.rows %}
+        <details>
+          <summary class="hint" style="cursor:pointer">{{ t.result_item_table_title }}</summary>
+          <p class="hint">{{ t.result_item_table_hint }}</p>
+          {% if analysis_item_table.truncated %}
+            <p class="hint">{{ t.result_item_table_truncated.format(total_rows=analysis_item_table.total_rows, shown_rows=analysis_item_table.shown_rows) }}</p>
+          {% endif %}
+          <div class="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  {% for cell in r %}
-                    <td>{{ cell }}</td>
+                  {% for h in analysis_item_table.header %}
+                    <th>{{ h }}</th>
                   {% endfor %}
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {% for r in analysis_item_table.rows %}
+                  <tr>
+                    {% for cell in r %}
+                      <td>{{ cell }}</td>
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </details>
       </div>
     {% endif %}
   </div>

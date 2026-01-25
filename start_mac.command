@@ -93,9 +93,29 @@ if [ "${ANSWER_SHEET_INSTALL_R:-0}" = "1" ]; then
   ensure_r
 fi
 
-nohup "$PYTHON_BIN" launcher_headless.py >/dev/null 2>&1 &
+ANSWER_SHEET_OPEN_BROWSER=0 nohup "$PYTHON_BIN" launcher_headless.py >/dev/null 2>&1 &
 
 disown
+
+# Open the local progress page written by launcher_headless.py (like Windows does).
+if [ "${ANSWER_SHEET_OPEN_BROWSER:-1}" != "0" ]; then
+  ( # subshell so we don't block Finder
+    out_dir="$(pwd)/outputs"
+    url_path="${out_dir}/progress_url.txt"
+    i=0
+    while [ $i -lt 50 ]; do # ~5s
+      if [ -f "$url_path" ]; then
+        u="$(cat "$url_path" 2>/dev/null || true)"
+        if [ -n "$u" ]; then
+          open "$u" >/dev/null 2>&1 || true
+          break
+        fi
+      fi
+      sleep 0.1
+      i=$((i+1))
+    done
+  ) >/dev/null 2>&1 &
+fi
 
 if [ "${ANSWER_SHEET_CLOSE_TERMINAL:-1}" != "0" ]; then
   osascript -e 'tell application "Terminal" to close (first window whose frontmost is true) saving no' >/dev/null 2>&1 || true

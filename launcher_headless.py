@@ -257,6 +257,10 @@ def _venv_root_dir() -> Path:
         base = os.environ.get("LOCALAPPDATA") or str(Path.home())
         return Path(base) / "AnswerSheetStudio" / "venvs"
 
+    # macOS: reuse a stable venv across re-downloads/unzips of the repo.
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / "AnswerSheetStudio" / "venvs"
+
     return REPO_DIR / ".venv"
 
 

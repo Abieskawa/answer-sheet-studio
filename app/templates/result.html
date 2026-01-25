@@ -40,5 +40,15 @@
   </div>
 {% endif %}
 
+{% if analysis_files %}
+  <h2>{{ t.result_analysis_files_title }}</h2>
+  <p class="hint">{{ t.result_analysis_files_hint }}</p>
+  <div class="downloads">
+    {% for f in analysis_files %}
+      <a class="download" href="{{ f.url }}" target="_blank" rel="noopener noreferrer">{{ f.label }}</a>
+    {% endfor %}
+  </div>
+{% endif %}
+
 <p class="hint">{{ t.result_hint_unstable }}</p>
 {% endblock %}

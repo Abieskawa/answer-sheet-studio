@@ -36,6 +36,9 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 - **下載老師答案檔**：下載 ``answer_key.xlsx``（Excel），填入 ``correct/points`` 後到「上傳處理」上傳。
 - **上傳處理（辨識＋分析）**：上傳多頁 PDF（每頁一位學生）＋老師答案檔 ``answer_key.xlsx``。完成後會提供「開啟結果頁」按鈕（可用新分頁開啟），並輸出 ``results.csv``、``ambiguity.csv``、``annotated.pdf``，以及分析報表/圖表（圖表會依介面語言顯示；建議安裝 R 用 ``ggplot2`` 出圖）。
 - **啟動器**：雙擊啟動器（``start_mac.command`` 或 ``start_windows.vbs``）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 ``http://127.0.0.1:8000``。
+  - Windows 會把虛擬環境放在 ``%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>``，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
+  - macOS 會把虛擬環境放在 ``~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>``，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
+  - 如需自訂位置，可設定環境變數 ``ANSWER_SHEET_VENV_DIR``（指向 venv 根目錄）。
 
 使用注意事項
 ~~~~~~~~~~~~
@@ -87,6 +90,15 @@ English
 
 Answer Sheet Studio lets teachers generate printable answer sheets and run local OMR recognition (no cloud upload).
 
+Getting Started (recommended)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+#. Download and unzip the ZIP.
+#. macOS: double-click ``start_mac.command``; Windows: double-click ``start_windows.vbs``.
+#. If Python isn't installed yet, the launcher will guide you to download/install the official Python installer.
+#. After installation finishes, run the launcher again; your browser opens ``http://127.0.0.1:8000``.
+#. In the web UI: download/print the answer sheet PDF first; when grading, download ``answer_key.xlsx`` (teacher answer key), fill ``correct/points``, then upload the scanned PDF + ``answer_key.xlsx`` on the Upload page.
+
 Requirements
 ~~~~~~~~~~~~
 
@@ -120,6 +132,9 @@ Features
 - **Teacher answer key** – download ``answer_key.xlsx`` (Excel), fill ``correct/points``, then upload it on the Upload page.
 - **Upload page (recognize + analyze)** – upload a multi-page PDF scan (one student per page) plus ``answer_key.xlsx``. After processing, you’ll get an **Open result page** button (open in a new tab if desired). Exports ``results.csv``, ``ambiguity.csv``, ``annotated.pdf``, and analysis reports/plots (plots follow the selected UI language; install R for ggplot2 plots).
 - **Launcher** – sets up ``.venv``, installs requirements, starts the local server, and opens the browser.
+  - Windows reuses a stable venv at ``%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>``.
+  - macOS reuses a stable venv at ``~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>``.
+  - To override, set ``ANSWER_SHEET_VENV_DIR`` (points to the venv root dir).
 - The web UI supports **English** and **Traditional Chinese**.
 
 Important Notes

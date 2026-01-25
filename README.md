@@ -13,6 +13,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 - **上傳處理（辨識＋分析）**：上傳多頁 PDF（每頁一位學生）＋老師答案檔 `answer_key.xlsx`。完成後會提供「開啟結果頁」按鈕（可用新分頁開啟），並輸出 `results.csv`（題號為列、學生為欄）、`ambiguity.csv`（空白/模稜兩可/多選）、`annotated.pdf`（標註辨識結果）與分析報表/圖表（圖表會依介面語言顯示；建議安裝 R 用 `ggplot2` 出圖）。
 - **啟動器**：雙擊啟動器（`start_mac.command` 或 `start_windows.vbs`）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 `http://127.0.0.1:8000`。
   - Windows 會把虛擬環境放在 `%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>`，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
+  - macOS 會把虛擬環境放在 `~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>`，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
   - 如需自訂位置，可設定環境變數 `ANSWER_SHEET_VENV_DIR`（指向 venv 根目錄）。
 - 網頁介面支援 **English / 繁體中文**，可用頁首的語言切換。
 
@@ -29,7 +30,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 macOS
 1. 雙擊 `start_mac.command`（若提示權限，先執行一次 `chmod +x start_mac.command`）。若尚未安裝 Python，會提示下載並開啟安裝程式。
-2. 第一次會建立 `.venv` 並安裝依賴套件；之後會重用既有 `.venv`（除非 `requirements.txt` 有變更）。
+2. 第一次會建立虛擬環境並安裝依賴套件；之後會重用既有環境（除非 `requirements.txt` 有變更）。
 3. 瀏覽器會自動開啟 `http://127.0.0.1:8000`。用完關閉瀏覽器即可；伺服器會在一段時間無操作後自動結束。
 
 Windows 11
@@ -87,6 +88,10 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 - **Teacher answer key** – download `answer_key.xlsx` (Excel), fill `correct/points`, then upload it on the Upload page.
 - **Upload page (recognize + analyze)** – upload a multi-page PDF scan (one student per page) plus `answer_key.xlsx`. After processing, you’ll get an **Open result page** button (open in a new tab if desired). Exports `results.csv` (questions as rows, students as columns), `ambiguity.csv` (blank/ambiguous/multi picks), `annotated.pdf`, and analysis reports/plots (plots follow the selected UI language; install R for ggplot2 plots).
 - **Launcher** – double-click (`start_mac.command` or `start_windows.vbs`) to create a virtual env, install dependencies, start the local server, and open `http://127.0.0.1:8000`.
+- The launcher reuses a stable venv across re-downloads/unzips:
+  - Windows: `%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>`
+  - macOS: `~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>`
+  - To override, set `ANSWER_SHEET_VENV_DIR` (points to the venv root dir).
 - The web UI supports **English** and **Traditional Chinese**. Use the language tabs in the header.
 
 ### Requirements
@@ -102,7 +107,7 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 
 macOS
 1. Double-click `start_mac.command` (or run `chmod +x start_mac.command` once if prompted). If Python isn’t installed, it will offer to download and open the installer.
-2. First run creates `.venv` and installs requirements; later runs reuse the existing `.venv` (unless requirements changed).
+2. First run creates a virtual env and installs requirements; later runs reuse the existing env (unless requirements changed).
 3. Your browser opens `http://127.0.0.1:8000`. Close the browser when you’re done; the server auto-exits after a period of inactivity.
 
 Windows 11

@@ -99,6 +99,12 @@ I18N = {
         "result_plots_title": "圖表",
         "result_plot_score_hist": "成績分佈",
         "result_plot_item_metrics": "題目分析",
+        "result_analysis_files_title": "試題分析檔案",
+        "result_analysis_files_hint": "下載完整分析報表（CSV/XLSX/圖片/日誌）。",
+        "result_item_table_title": "試題分析數據（預覽）",
+        "result_item_table_hint": "此處僅顯示前 200 列；完整資料請下載 analysis_item.csv。",
+        "result_item_table_truncated": "（共 {total_rows} 列，顯示前 {shown_rows} 列）",
+        "result_download_scores_by_class": "analysis_scores_by_class.xlsx（按班級）",
         "result_hint_unstable": "如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。",
         "result_debug_hint": "需要回報問題時，可到 Debug Mode 下載診斷檔案（輸入 Job ID）。",
         "result_debug_open": "開啟 Debug Mode",
@@ -180,6 +186,12 @@ I18N = {
         "result_plots_title": "Plots",
         "result_plot_score_hist": "Score distribution",
         "result_plot_item_metrics": "Item analysis",
+        "result_analysis_files_title": "Item analysis files",
+        "result_analysis_files_hint": "Download the full analysis reports (CSV/XLSX/images/logs).",
+        "result_item_table_title": "Item analysis data (preview)",
+        "result_item_table_hint": "Only the first 200 rows are shown here; download analysis_item.csv for the full data.",
+        "result_item_table_truncated": "({total_rows} rows, showing first {shown_rows})",
+        "result_download_scores_by_class": "analysis_scores_by_class.xlsx (by class)",
         "result_hint_unstable": "If results are unstable, scans may be skewed or too light. Try 300dpi or a darker pen.",
         "result_debug_hint": "For reporting/debugging, open Debug Mode and enter the Job ID to download diagnostic files.",
         "result_debug_open": "Open Debug Mode",
@@ -204,6 +216,22 @@ I18N = {
         "analysis_note_discrimination_rule_50": "Discrimination: if students ≤ 30, uses top/bottom 50% (correct_high − correct_low).",
     },
 }
+
+
+def _normalize_i18n() -> None:
+    base = I18N.get(DEFAULT_LANG) or {}
+    all_keys: set[str] = set(base.keys())
+    for lang, table in I18N.items():
+        all_keys |= set((table or {}).keys())
+        if not isinstance(table, dict):
+            I18N[lang] = {}
+    for lang, table in I18N.items():
+        for k in all_keys:
+            if k not in table:
+                table[k] = base.get(k, k)
+
+
+_normalize_i18n()
 
 _META_FILENAME = "meta.json"
 
@@ -422,6 +450,7 @@ def result_page(request: Request, job_id: str):
             "analysis_discrimination_note_key": discr_note_key,
             "analysis_score_hist_inline_url": (f"/outputs_inline/{job_id}/analysis_score_hist.png" if score_hist.exists() else None),
             "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
+            "analysis_files": _analysis_file_links(job_id),
         },
     )
 
@@ -461,6 +490,7 @@ def result_charts_page(request: Request, job_id: str):
             "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
             "analysis_scores_by_class_url": (f"/outputs/{job_id}/analysis_scores_by_class.xlsx" if scores_by_class.exists() else None),
             "analysis_item_table": item_table,
+            "analysis_files": _analysis_file_links(job_id),
         },
     )
 
@@ -526,6 +556,7 @@ def _analysis_file_links(job_id: str) -> list[dict]:
     files: list[dict] = []
     label_by_name = {
         "roster.csv": "roster.csv",
+        "analysis_template.csv": "analysis_template.csv",
         "analysis_scores.csv": "analysis_scores.csv",
         "analysis_scores_by_class.xlsx": "analysis_scores_by_class.xlsx",
         "analysis_item.csv": "analysis_item.csv",

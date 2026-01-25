@@ -337,7 +337,10 @@ p_item <- ggplot(item_plot_df, aes(x = number, y = value)) +
   theme_answer_sheet(base_size = 13) +
   labs(
     title = tr("題目分析", "Item analysis"),
-    subtitle = tr("難度與鑑別度（虛線為常用參考線）", "Difficulty and discrimination (dashed lines are common references)"),
+    subtitle = tr(
+      "難度與鑑別度（虛線：難度 0.25/0.50/0.75；鑑別度 0.00/0.20/0.40）",
+      "Difficulty and discrimination (dashed lines: difficulty 0.25/0.50/0.75; discrimination 0.00/0.20/0.40)"
+    ),
     x = tr("題號", "Question"),
     y = NULL
   ) +

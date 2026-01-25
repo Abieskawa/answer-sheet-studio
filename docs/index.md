@@ -10,6 +10,10 @@ Answer Sheet Studio helps teachers generate printable answer sheets and run loca
 ## Quick Start
 
 1. Double-click `start_mac.command` (macOS) or `start_windows.vbs` (Windows).
+   - The launcher reuses a stable venv across re-downloads/unzips:
+     - Windows: `%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>`
+     - macOS: `~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>`
+     - To override, set `ANSWER_SHEET_VENV_DIR` (points to the venv root dir).
 2. Your browser opens `http://127.0.0.1:8000`.
 3. Close the browser when finished; the server auto-exits after a period of inactivity.
 

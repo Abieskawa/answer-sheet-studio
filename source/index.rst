@@ -61,6 +61,13 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 - ``showwrong.xlsx``（只顯示錯題：題號為列、學生為欄；最後一列為每位學生總分）
 - ``analysis_template.csv``、``analysis_scores.csv``、``analysis_item.csv``、``analysis_summary.csv``、``analysis_score_hist.png``、``analysis_item_plot.png``
 
+圖表頁（/charts）
+~~~~~~~~~~~~~~~~~
+
+- 開啟 ``/result/<job_id>/charts`` 可在同一頁查看分析圖表與「試題分析檔案」下載連結。
+- 「試題分析數據（預覽）」為可展開表格（預設收合）；需要完整資料請下載 ``analysis_item.csv``。
+- 若未來新增更多 ``analysis_*`` 輸出（CSV/XLSX/圖片/日誌），結果頁的「試題分析檔案」會自動列出下載連結。
+
 更新
 ~~~~
 
@@ -157,6 +164,13 @@ After recognition, files are written under ``outputs/<job_id>/``:
 - ``answer_key.xlsx`` (teacher answer key)
 - ``showwrong.xlsx`` (wrong answers only; questions as rows, students as columns; last row is total score per student)
 - ``analysis_template.csv``, ``analysis_scores.csv``, ``analysis_item.csv``, ``analysis_summary.csv``, ``analysis_score_hist.png``, ``analysis_item_plot.png``
+
+Charts Page (/charts)
+~~~~~~~~~~~~~~~~~~~~~
+
+- Open ``/result/<job_id>/charts`` to view plots and item-analysis downloads on one page.
+- “Item analysis data (preview)” is a collapsible table (collapsed by default); download ``analysis_item.csv`` for full data.
+- If more ``analysis_*`` outputs are added later (CSV/XLSX/images/logs), the “Item analysis files” section auto-lists them.
 
 Updating
 ~~~~~~~~

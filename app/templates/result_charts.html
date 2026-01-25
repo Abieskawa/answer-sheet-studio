@@ -79,31 +79,33 @@
 
     {% if analysis_item_table %}
       <div class="card" style="margin-top:14px">
-        <p class="hint">{{ t.result_item_table_title }}</p>
-        <p class="hint">{{ t.result_item_table_hint }}</p>
-        {% if analysis_item_table.truncated %}
-          <p class="hint">{{ t.result_item_table_truncated.format(total_rows=analysis_item_table.total_rows, shown_rows=analysis_item_table.shown_rows) }}</p>
-        {% endif %}
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                {% for h in analysis_item_table.header %}
-                  <th>{{ h }}</th>
-                {% endfor %}
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in analysis_item_table.rows %}
+        <details>
+          <summary class="hint" style="cursor:pointer">{{ t.result_item_table_title }}</summary>
+          <p class="hint">{{ t.result_item_table_hint }}</p>
+          {% if analysis_item_table.truncated %}
+            <p class="hint">{{ t.result_item_table_truncated.format(total_rows=analysis_item_table.total_rows, shown_rows=analysis_item_table.shown_rows) }}</p>
+          {% endif %}
+          <div class="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  {% for cell in r %}
-                    <td>{{ cell }}</td>
+                  {% for h in analysis_item_table.header %}
+                    <th>{{ h }}</th>
                   {% endfor %}
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {% for r in analysis_item_table.rows %}
+                  <tr>
+                    {% for cell in r %}
+                      <td>{{ cell }}</td>
+                    {% endfor %}
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </details>
       </div>
     {% endif %}
   </div>

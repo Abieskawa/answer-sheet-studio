@@ -565,10 +565,36 @@ def _analysis_file_links(job_id: str) -> list[dict]:
         "analysis_item_plot.png": "analysis_item_plot.png",
         "analysis_r.log": "analysis_r.log (R log)",
     }
-    for name, label in label_by_name.items():
+
+    def add_if_exists(name: str) -> None:
         path = job_dir / name
-        if path.exists():
-            files.append({"url": f"/outputs/{job_id}/{name}", "label": label})
+        try:
+            if not path.exists():
+                return
+        except Exception:
+            return
+        files.append({"url": f"/outputs/{job_id}/{name}", "label": label_by_name.get(name, name)})
+
+    # Keep a stable, friendly order for known files first.
+    for name in label_by_name.keys():
+        add_if_exists(name)
+
+    # Then include any extra analysis outputs (future-proofing).
+    try:
+        for path in sorted(job_dir.iterdir()):
+            name = path.name
+            if name in label_by_name:
+                continue
+            if not name.startswith("analysis_"):
+                continue
+            if path.is_dir():
+                continue
+            if not any(name.lower().endswith(ext) for ext in (".csv", ".xlsx", ".png", ".log", ".txt")):
+                continue
+            add_if_exists(name)
+    except Exception:
+        pass
+
     return files
 
 

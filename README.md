@@ -56,6 +56,12 @@ Windows 11
 - `answer_key.xlsx`（老師答案檔）
 - `showwrong.xlsx`（只顯示錯題：題號為列、學生為欄；最後一列為每位學生總分）
 - `analysis_template.csv`、`analysis_scores.csv`、`analysis_item.csv`、`analysis_summary.csv`、`analysis_score_hist.png`、`analysis_item_plot.png`
+- 若未來新增更多 `analysis_*` 輸出（CSV/XLSX/圖片/日誌），結果頁的「試題分析檔案」會自動列出下載連結。
+
+### 圖表頁（/charts）
+
+- `/result/<job_id>/charts` 會把分析圖表與「試題分析檔案」集中在同一頁。
+- 「試題分析數據（預覽）」改為可展開的表格（預設收合），避免把不完整的截斷資料直接鋪在圖下方；需要完整資料請下載 `analysis_item.csv`。
 
 ### 更新
 
@@ -131,6 +137,12 @@ After recognition, files are written under `outputs/<job_id>/`:
 - `answer_key.xlsx` (teacher answer key)
 - `showwrong.xlsx` (wrong answers only; questions as rows, students as columns; last row is total score per student)
 - `analysis_template.csv`, `analysis_scores.csv`, `analysis_item.csv`, `analysis_summary.csv`, `analysis_score_hist.png`, `analysis_item_plot.png`
+- If more `analysis_*` outputs are added later (CSV/XLSX/images/logs), the result page’s “Item analysis files” section will auto-list them.
+
+### Charts Page (/charts)
+
+- `/result/<job_id>/charts` puts plots and “Item analysis files” on one page.
+- “Item analysis data (preview)” is now a collapsible table (collapsed by default) so truncated preview rows don’t clutter the plots; download `analysis_item.csv` for full data.
 
 ### Updating
 

@@ -10,7 +10,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 - **下載答案卡**：輸入標題、科目、題數（最多 100 題）、每題選項（`ABC` / `ABCD` / `ABCDE`），下載答案卡 PDF（給學生填答）。
 - **下載老師答案檔**：下載 `answer_key.xlsx`（Excel），填入 `correct/points` 之後到「上傳處理」上傳。
-- **上傳處理（辨識＋分析）**：上傳多頁 PDF（每頁一位學生）＋老師答案檔 `answer_key.xlsx`。完成後會提供「開啟結果頁」按鈕（可用新分頁開啟），並輸出 `results.csv`（題號為列、學生為欄）、`ambiguity.csv`（空白/模稜兩可/多選）、`annotated.pdf`（標註辨識結果）與分析報表/圖表（圖表會依介面語言顯示；建議安裝 R 用 `ggplot2` 出圖）。
+- **上傳處理（辨識＋分析）**：上傳多頁 PDF（每頁一位學生）＋老師答案檔 `answer_key.xlsx`。完成後會提供「開啟結果頁」按鈕（可用新分頁開啟），並輸出 `results.csv`（題號為列、學生為欄）、`ambiguity.csv`（空白/模稜兩可/多選）、`annotated.pdf`（標註辨識結果）與分析報表/圖表（圖表會依介面語言顯示；需要安裝 R 用 `ggplot2` 出圖）。
 - **啟動器**：雙擊啟動器（`start_mac.command` 或 `start_windows.vbs`）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 `http://127.0.0.1:8000`。
   - Windows 會把虛擬環境放在 `%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>`，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
   - macOS 會把虛擬環境放在 `~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>`，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
@@ -63,9 +63,9 @@ Windows 11
 
 ### 圖表頁（/charts）
 
-- `/result/<job_id>/charts` 會把分析圖表與「試題分析檔案」集中在同一頁。
-- 圖表頁提供互動式圖表（Plotly）：滑鼠 hover 可顯示題號，並與 showwrong（錯題表）同步對照；下方另提供每題難度/鑑別度數字表。
-- 「試題分析數據（預覽）」改為可展開的表格（預設收合），避免把不完整的截斷資料直接鋪在圖下方；需要完整資料請下載 `analysis_item.csv`。
+- `/result/<job_id>/charts` 會把互動式表格/圖表與「試題分析檔案」集中在同一頁。
+- 互動功能：滑鼠移到表格/圖表可醒目提示題號，點一下可鎖定；支援學生篩選/排序、隱藏正確，以及鍵盤快捷鍵（←/→ 題號、↑/↓ 學生、Esc 清除、PgUp/PgDn 切換圖）。
+- 「試題分析數據（預覽）」為可展開的表格（預設收合）；需要完整資料請下載 `analysis_item.csv`。
 
 ### 更新
 
@@ -82,7 +82,17 @@ Windows 11
 
 - **pip install 失敗** – 檢查 launcher log；確認有網路、Python 版本為 3.10+。若你是 Python 3.14，建議改用 Python 3.10–3.13。
 - **Port 已被佔用 / permission denied** – 啟動器會檢查 port；若 macOS 防火牆阻擋 Python，請到 System Settings > Network > Firewall 放行。
-- **伺服器沒有自動開啟** – 先看 launcher log 找出錯誤；也可以在 `.venv` 裡直接跑 `python run_app.py` 方便除錯。
+- **伺服器沒有自動開啟** – 先看 launcher log 找出錯誤；也可以在終端機執行 `python run_app.py`（需先在同一環境安裝 requirements）方便除錯。
+
+### 文件（Sphinx / Read the Docs）
+
+本機建置文件：
+
+1. `python -m venv .venv && source .venv/bin/activate`
+2. `pip install -r docs/requirements.txt`
+3. `make html`
+
+Sphinx 原始檔在 `source/`；Read the Docs 使用相同設定（`source/conf.py`），並依 RTD 語系建置 `en` / `zh-tw`。
 
 ---
 
@@ -96,7 +106,7 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 
 - **Download page** – choose title, subject, number of questions (up to 100), and choices per question (`ABC` / `ABCD` / `ABCDE`). Download the answer sheet PDF (for students).
 - **Teacher answer key** – download `answer_key.xlsx` (Excel), fill `correct/points`, then upload it on the Upload page.
-- **Upload page (recognize + analyze)** – upload a multi-page PDF scan (one student per page) plus `answer_key.xlsx`. After processing, you’ll get an **Open result page** button (open in a new tab if desired). Exports `results.csv` (questions as rows, students as columns), `ambiguity.csv` (blank/ambiguous/multi picks), `annotated.pdf`, and analysis reports/plots (plots follow the selected UI language; install R for ggplot2 plots).
+- **Upload page (recognize + analyze)** – upload a multi-page PDF scan (one student per page) plus `answer_key.xlsx`. After processing, you’ll get an **Open result page** button (open in a new tab if desired). Exports `results.csv` (questions as rows, students as columns), `ambiguity.csv` (blank/ambiguous/multi picks), `annotated.pdf`, and analysis reports/plots (plots follow the selected UI language; R is required for ggplot2 plots).
 - **Launcher** – double-click (`start_mac.command` or `start_windows.vbs`) to create a virtual env, install dependencies, start the local server, and open `http://127.0.0.1:8000`.
 - The launcher reuses a stable venv across re-downloads/unzips:
   - Windows: `%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>`
@@ -110,7 +120,6 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 - Python **3.10+** (3.11 recommended; 3.10–3.13 supported). If Python isn’t installed yet, the launcher can help download the official installer.
 - On Windows, ensure “Add python.exe to PATH” during installation (and keep the `py` launcher enabled if offered).
 - Internet access the first time to download Python packages (FastAPI, PyMuPDF, OpenCV, NumPy, etc.).
-- (Optional) Install **R** (`Rscript`) for ggplot2 plots (the app still works with built-in analysis/plots without R).
 - Install **R** (`Rscript`) to generate item analysis reports and plots (via `ggplot2`).
 - R packages: `readr`, `dplyr`, `tidyr`, `ggplot2`.
 
@@ -123,9 +132,10 @@ macOS
 
 Windows 11
 1. Double-click `start_windows.vbs`. If Python isn’t installed, it will offer to download/install Python 3.11 automatically (recommended).
+   - For a traditional “Next/Next/Finish” installer wizard (Setup.exe), see `installer/windows/README.md`.
 2. If you install Python manually, ensure “Add python.exe to PATH” during installation (and keep the `py` launcher enabled if offered).
 3. If R isn’t installed (required for item analysis/plots), the launcher will help download/start the installer (from CRAN). After installation finishes, run the launcher again.
-3. First run installs requirements; later runs reuse the existing `.venv` (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
+4. First run installs requirements; later runs reuse the existing environment (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
 
 ### Important Notes
 
@@ -151,8 +161,8 @@ After recognition, files are written under `outputs/<job_id>/`:
 ### Charts Page (/charts)
 
 - `/result/<job_id>/charts` puts plots and “Item analysis files” on one page.
-- The charts page includes interactive Plotly charts: hover a point to see the question number and highlight the corresponding row in the showwrong grid; a per-question metrics table is shown under the plots.
-- “Item analysis data (preview)” is now a collapsible table (collapsed by default) so truncated preview rows don’t clutter the plots; download `analysis_item.csv` for full data.
+- Interactions: hover the table/charts to highlight a question, click to lock; filter/sort students, hide correct, and use keyboard shortcuts (←/→ question, ↑/↓ student, Esc clear, PgUp/PgDn switch chart).
+- “Item analysis data (preview)” is a collapsible table (collapsed by default); download `analysis_item.csv` for full data.
 
 ### Updating
 
@@ -166,7 +176,7 @@ After recognition, files are written under `outputs/<job_id>/`:
 
 - **pip install failed** – Check the launcher log; ensure network access and Python 3.10+. If you’re on Python 3.14, try Python 3.10–3.13.
 - **Port already in use / permission denied** – The launcher checks port availability. If macOS firewall blocks Python, allow incoming connections in System Settings > Network > Firewall.
-- **Server not opening** – Use the launcher log to identify crashes; you can also run `python run_app.py` inside `.venv` manually for debugging.
+- **Server not opening** – Use the launcher log to identify crashes; you can also run `python run_app.py` after installing requirements in the same environment for debugging.
 
 ### Documentation (Sphinx / Read the Docs)
 

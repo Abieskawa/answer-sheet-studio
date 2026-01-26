@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{{ title or t.result_plots_title }}</title>
-  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <style>
     :root { color-scheme: light; }
     body { margin: 0; background: #fff; color: #111827; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "PingFang TC", "Microsoft JhengHei", sans-serif; }
@@ -23,24 +22,56 @@
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th, td { padding: 8px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; white-space: nowrap; }
     thead th { position: sticky; top: 0; background: #f9fafb; z-index: 1; border-bottom: 1px solid #d1d5db; }
-    .grid-wrap { overflow: auto; max-height: 440px; border: 1px solid #e5e7eb; border-radius: 10px; }
-    .grid { font-size: 12px; }
-    .grid th, .grid td { padding: 6px 8px; border-bottom: 1px solid #eef2f7; border-right: 1px solid #eef2f7; }
-    .grid thead th { background: #f9fafb; }
-    .grid th.sticky-left, .grid td.sticky-left { position: sticky; left: 0; z-index: 2; background: #fff; }
-    .grid thead th.sticky-left { z-index: 3; background: #f9fafb; }
-    .grid td.wrong { color: #b91c1c; font-weight: 600; }
-    .grid tr.highlight td, .grid tr.highlight th { background: #fef3c7; }
-    .class-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
-    .tab { padding: 8px 10px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 13px; }
+    .grid-wrap { overflow: auto; max-height: 520px; border: 1px solid #e5e7eb; border-radius: 10px; }
+    table.matrix { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 12px; }
+    table.matrix th, table.matrix td { padding: 6px 8px; border-bottom: 1px solid #eef2f7; border-right: 1px solid #eef2f7; text-align: center; }
+    table.matrix th.sticky-left, table.matrix td.sticky-left { position: sticky; left: 0; z-index: 3; background: #fff; text-align: left; }
+    table.matrix thead th { background: #f9fafb; position: sticky; top: 0; z-index: 2; }
+    table.matrix thead tr:nth-child(1) th { top: 0; }
+    table.matrix thead tr:nth-child(2) th { top: var(--sticky-row-h, 30px); }
+    table.matrix thead th.sticky-left { z-index: 5; }
+    table.matrix td.wrong { background: #fee2e2; color: #991b1b; font-weight: 600; }
+    table.matrix td.correct { background: #dcfce7; color: #166534; font-weight: 600; }
+    table.matrix td.correct.hidden-correct { background: #f9fafb; color: #9ca3af; font-weight: 600; }
+    table.matrix td.blank { background: #f3f4f6; color: #6b7280; font-weight: 600; }
+    table.matrix .col-highlight { outline: 2px solid #f59e0b; outline-offset: -2px; }
+    table.matrix tr.row-highlight td, table.matrix tr.row-highlight th { background: #eff6ff; }
+    .class-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 10px; }
+    .tab { padding: 7px 10px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 13px; }
     .tab[aria-selected="true"] { border-color: #0ea5e9; background: #eff6ff; }
-    .plot { width: 100%; height: 420px; }
-    .plot-small { width: 100%; height: 360px; }
-    .metric-table-wrap { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 10px; }
-    table.metric { border-collapse: collapse; font-size: 12px; width: max-content; min-width: 100%; }
-    table.metric th, table.metric td { padding: 6px 8px; border-bottom: 1px solid #eef2f7; border-right: 1px solid #eef2f7; text-align: center; }
-    table.metric th.sticky-left, table.metric td.sticky-left { position: sticky; left: 0; background: #fff; z-index: 2; text-align: left; white-space: nowrap; }
-    table.metric thead th.sticky-left { background: #f9fafb; z-index: 3; }
+
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
+    .ctrl { padding: 7px 10px; border-radius: 10px; border: 1px solid #e5e7eb; background: #fff; font-size: 13px; color: #111827; }
+    .ctrl::placeholder { color: #9ca3af; }
+    .ctrl:focus { outline: 2px solid #93c5fd; outline-offset: 1px; }
+    .toggle { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; font-size: 13px; color: #374151; user-select: none; cursor: pointer; }
+    .toggle input { accent-color: #0ea5e9; }
+    .controls .spacer { flex: 1; }
+
+    .focus-panel { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px; background: #f9fafb; display: grid; gap: 6px; }
+    .focus-line { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; color: #374151; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; font-weight: 600; }
+    .kv { display: inline-flex; gap: 6px; align-items: baseline; }
+    .k { color: #6b7280; }
+    .v { color: #111827; font-weight: 600; }
+    .status { padding: 2px 8px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; font-weight: 700; }
+    .status.correct { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+    .status.wrong { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+    .status.blank { background: #f3f4f6; border-color: #e5e7eb; color: #6b7280; }
+    .focus-link { color: #2563eb; text-decoration: none; }
+    .focus-link:hover { text-decoration: underline; }
+    .focus-help { font-size: 12px; color: #6b7280; }
+
+    .chart-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 8px; }
+    .chart-btn { padding: 7px 10px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 13px; }
+    .chart-btn[aria-selected="true"] { border-color: #0ea5e9; background: #eff6ff; }
+    .chart-tabs .spacer { flex: 1; }
+    .chart-nav { padding: 7px 10px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; font-size: 13px; color: #111827; }
+    .chart-nav:hover { background: #f9fafb; }
+    .chart-wrap { border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; background: #fff; position: relative; }
+    canvas.chart { width: 100%; height: 360px; display: block; }
+    canvas.chart[hidden] { display: none; }
+    .chart-tooltip { position: absolute; left: 12px; top: 12px; background: rgba(17, 24, 39, 0.92); color: #fff; font-size: 12px; padding: 6px 8px; border-radius: 10px; pointer-events: none; max-width: 80%; }
   </style>
 </head>
 <body>
@@ -72,39 +103,72 @@
       <p class="hint">{{ t[analysis_discrimination_note_key] }}</p>
     {% endif %}
 
-    {% if analysis_showwrong_json_url and analysis_item_csv_url %}
+    {% if analysis_template_csv_url %}
       <div class="card">
         <p class="hint">{{ t.result_integrated_title }}</p>
+        <p class="hint">{{ t.result_integrated_hint }}</p>
         <div id="classTabs" class="class-tabs" aria-label="Classes"></div>
-        <div id="showwrongGrid" class="grid-wrap" aria-label="Showwrong grid"></div>
-        <div style="height:12px"></div>
-        <div id="difficultyPlot" class="plot" aria-label="Difficulty plot"></div>
-        <div style="height:10px"></div>
-        <div id="discriminationPlot" class="plot" aria-label="Discrimination plot"></div>
-        <div style="height:10px"></div>
-        <div class="metric-table-wrap" aria-label="Per-question metrics">
-          <div id="metricTable"></div>
+        <div class="controls" aria-label="Controls">
+          <input id="studentFilter" class="ctrl" type="search" inputmode="search" placeholder="{{ t.result_controls_filter_student_ph }}" aria-label="{{ t.result_controls_filter_student }}" />
+          <select id="studentSort" class="ctrl" aria-label="{{ t.result_controls_sort }}">
+            <option value="seat">{{ t.result_controls_sort_seat }}</option>
+            <option value="score_desc">{{ t.result_controls_sort_score_desc }}</option>
+            <option value="blank_asc">{{ t.result_controls_sort_blank_asc }}</option>
+            <option value="id">{{ t.result_controls_sort_id }}</option>
+          </select>
+          <label class="toggle" title="{{ t.result_controls_hide_correct }}">
+            <input id="hideCorrect" type="checkbox" />
+            <span>{{ t.result_controls_hide_correct }}</span>
+          </label>
+          <label class="toggle" title="{{ t.result_controls_charts_follow_filter }}">
+            <input id="chartsFollowFilter" type="checkbox" />
+            <span>{{ t.result_controls_charts_follow_filter }}</span>
+          </label>
+          <span class="spacer" aria-hidden="true"></span>
+          <input id="jumpQuestion" class="ctrl" type="number" min="1" step="1" placeholder="{{ t.result_controls_jump_question_ph }}" aria-label="{{ t.result_controls_jump_question }}" style="width:110px" />
+          <button id="jumpGo" type="button" class="chart-nav">{{ t.result_controls_go }}</button>
+          <button id="clearHighlight" type="button" class="chart-nav">{{ t.result_controls_clear }}</button>
         </div>
-        <div style="height:12px"></div>
-        <div id="scoreHist" class="plot-small" aria-label="Score histogram"></div>
-        <p class="hint" id="plotlyHint" style="display:none;color:#b91c1c"></p>
-      </div>
-    {% else %}
-      <div class="plots">
-        {% if analysis_score_hist_inline_url %}
-          <div class="card">
-            <p class="hint">{{ t.result_plot_score_hist }}</p>
-            <img src="{{ analysis_score_hist_inline_url }}" alt="{{ t.result_plot_score_hist }}" loading="lazy" />
-          </div>
-        {% endif %}
-        {% if analysis_item_plot_inline_url %}
-          <div class="card">
-            <p class="hint">{{ t.result_plot_item_metrics }}</p>
-            <img src="{{ analysis_item_plot_inline_url }}" alt="{{ t.result_plot_item_metrics }}" loading="lazy" />
-          </div>
-        {% endif %}
-      </div>
+        <div id="focusPanel" class="focus-panel" aria-live="polite"></div>
+		        <div id="integratedTable" class="grid-wrap" aria-label="Integrated table"></div>
+		        <div class="chart-tabs" aria-label="Charts">
+		          <button type="button" class="chart-btn" data-chart="difficulty" aria-selected="true">{{ t.result_chart_tab_difficulty }}</button>
+		          <button type="button" class="chart-btn" data-chart="discrimination" aria-selected="false">{{ t.result_chart_tab_discrimination }}</button>
+		          <button type="button" class="chart-btn" data-chart="blank" aria-selected="false">{{ t.result_chart_tab_blank_rate }}</button>
+	          <span class="spacer" aria-hidden="true"></span>
+	          <button type="button" class="chart-nav" data-nav="prev">{{ t.result_chart_prev }}</button>
+	          <button type="button" class="chart-nav" data-nav="next">{{ t.result_chart_next }}</button>
+		        </div>
+		        <div class="chart-wrap">
+              <div id="chartTooltip" class="chart-tooltip" hidden></div>
+		          <canvas id="chartDifficulty" class="chart" aria-label="Difficulty chart"></canvas>
+		          <canvas id="chartDiscrimination" class="chart" aria-label="Discrimination chart" hidden></canvas>
+		          <canvas id="chartBlankRate" class="chart" aria-label="Blank rate chart" hidden></canvas>
+	        </div>
+	        <p class="hint" id="integratedHint" style="display:none;color:#b91c1c"></p>
+	      </div>
     {% endif %}
+
+    <div class="plots">
+      {% if analysis_score_hist_inline_url %}
+        <div class="card">
+          <p class="hint">{{ t.result_plot_score_hist }}</p>
+          {% if t.result_plot_score_hist_guides is defined %}
+            <p class="hint">{{ t.result_plot_score_hist_guides }}</p>
+          {% endif %}
+          <img src="{{ analysis_score_hist_inline_url }}" alt="{{ t.result_plot_score_hist }}" loading="lazy" />
+        </div>
+      {% endif %}
+      {% if analysis_item_plot_inline_url %}
+        <div class="card">
+          <p class="hint">{{ t.result_plot_item_metrics }}</p>
+          {% if t.result_plot_item_metrics_guides is defined %}
+            <p class="hint">{{ t.result_plot_item_metrics_guides }}</p>
+          {% endif %}
+          <img src="{{ analysis_item_plot_inline_url }}" alt="{{ t.result_plot_item_metrics }}" loading="lazy" />
+        </div>
+      {% endif %}
+    </div>
 
     {% if analysis_files %}
       <div class="card" style="margin-top:14px">
@@ -150,262 +214,1040 @@
       </div>
     {% endif %}
   </div>
-  {% if analysis_showwrong_json_url and analysis_item_csv_url %}
-  <script>
-    const t = {
-      missingPlotly: {{ (t.result_plotly_missing_js if t.result_plotly_missing_js is defined else "Plotly failed to load. Please ensure you have internet access.") | tojson }},
-      number: {{ (t.col_number if t.col_number is defined else "number") | tojson }},
-      correct: {{ (t.col_correct if t.col_correct is defined else "correct") | tojson }},
-      question: {{ (t.col_question if t.col_question is defined else "Question") | tojson }},
-      difficulty: {{ (t.col_difficulty if t.col_difficulty is defined else "Difficulty (accuracy)") | tojson }},
-      discrimination: {{ (t.col_discrimination if t.col_discrimination is defined else "Discrimination") | tojson }},
-      classLabel: {{ (t.col_class if t.col_class is defined else "Class") | tojson }},
-    };
 
-    function csvToRows(text) {
-      const lines = (text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter(Boolean);
-      if (!lines.length) return [];
-      const header = lines[0].split(",").map(s => s.replace(/^\\uFEFF/, "").trim());
-      const rows = [];
-      for (let i = 1; i < lines.length; i++) {
-        const cols = [];
-        let cur = "", inQ = false;
-        for (let j = 0; j < lines[i].length; j++) {
-          const ch = lines[i][j];
-          if (ch === '"' ) { inQ = !inQ; continue; }
-          if (ch === "," && !inQ) { cols.push(cur); cur = ""; continue; }
-          cur += ch;
+  {% if analysis_template_csv_url %}
+	    <script>
+	      (function () {
+	        const templateUrl = {{ analysis_template_csv_url|tojson }};
+	        const rosterUrl = {{ (roster_csv_url or "")|tojson }};
+          const annotatedPdfUrl = {{ pdf_url|tojson }};
+
+	        const tabsEl = document.getElementById("classTabs");
+	        const tableHost = document.getElementById("integratedTable");
+	        const hintEl = document.getElementById("integratedHint");
+          const filterEl = document.getElementById("studentFilter");
+          const sortEl = document.getElementById("studentSort");
+          const hideCorrectEl = document.getElementById("hideCorrect");
+          const chartsFollowFilterEl = document.getElementById("chartsFollowFilter");
+          const jumpEl = document.getElementById("jumpQuestion");
+          const jumpBtn = document.getElementById("jumpGo");
+          const clearBtn = document.getElementById("clearHighlight");
+          const focusPanelEl = document.getElementById("focusPanel");
+          const chartTooltipEl = document.getElementById("chartTooltip");
+
+	        const canvasDiff = document.getElementById("chartDifficulty");
+	        const canvasDisc = document.getElementById("chartDiscrimination");
+	        const canvasBlank = document.getElementById("chartBlankRate");
+
+	        const t = {
+	          loading: {{ (t.result_loading if t.result_loading is defined else "Loading…") | tojson }},
+	          error: {{ (t.result_integrated_error if t.result_integrated_error is defined else "Failed to load integrated data") | tojson }},
+            noSelection: {{ (t.result_focus_no_selection if t.result_focus_no_selection is defined else "Hover the table/charts to inspect. Click to lock/unlock.") | tojson }},
+            notFound: {{ (t.result_controls_not_found if t.result_controls_not_found is defined else "Not found") | tojson }},
+            go: {{ (t.result_controls_go if t.result_controls_go is defined else "Go") | tojson }},
+	          student: {{ (t.col_student if t.col_student is defined else (t.result_table_student if t.result_table_student is defined else "Student")) | tojson }},
+	          correct: {{ (t.col_correct if t.col_correct is defined else "Correct") | tojson }},
+            question: {{ (t.col_question if t.col_question is defined else "Q") | tojson }},
+	          difficulty: {{ (t.col_difficulty if t.col_difficulty is defined else "Difficulty") | tojson }},
+	          discrimination: {{ (t.col_discrimination if t.col_discrimination is defined else "Discrimination") | tojson }},
+	          blankRate: {{ (t.result_chart_tab_blank_rate if t.result_chart_tab_blank_rate is defined else "Blank rate") | tojson }},
+            wrongShort: {{ (t.col_wrong_short if t.col_wrong_short is defined else "Wrong") | tojson }},
+            blankShort: {{ (t.col_blank_short if t.col_blank_short is defined else "Blank") | tojson }},
+            answer: {{ (t.result_focus_answer if t.result_focus_answer is defined else "Answer") | tojson }},
+            score: {{ (t.result_focus_score if t.result_focus_score is defined else "Score") | tojson }},
+            openPage: {{ (t.result_focus_open_page if t.result_focus_open_page is defined else "Open annotated page") | tojson }},
+            locked: {{ (t.result_focus_locked if t.result_focus_locked is defined else "locked") | tojson }},
+            keyboardHint: {{ (t.result_focus_keyboard_hint if t.result_focus_keyboard_hint is defined else "") | tojson }},
+            statusCorrect: {{ (t.result_focus_status_correct if t.result_focus_status_correct is defined else "Correct") | tojson }},
+            statusWrong: {{ (t.result_focus_status_wrong if t.result_focus_status_wrong is defined else "Wrong") | tojson }},
+            statusBlank: {{ (t.result_focus_status_blank if t.result_focus_status_blank is defined else "Blank") | tojson }},
+	          clickToLock: {{ (t.result_interaction_click_to_lock if t.result_interaction_click_to_lock is defined else "Click to lock/unlock highlight") | tojson }},
+	        };
+
+        function csvToRows(text) {
+          const lines = (text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter(Boolean);
+          if (!lines.length) return [];
+
+          function parseLine(line) {
+            const cols = [];
+            let cur = "", inQ = false;
+            for (let i = 0; i < line.length; i++) {
+              const ch = line[i];
+              if (ch === '"') { inQ = !inQ; continue; }
+              if (ch === "," && !inQ) { cols.push(cur); cur = ""; continue; }
+              cur += ch;
+            }
+            cols.push(cur);
+            return cols.map(c => String(c ?? "").replace(/^\uFEFF/, "").trim());
+          }
+
+          const header = parseLine(lines[0]);
+          const rows = [];
+          for (let i = 1; i < lines.length; i++) {
+            const cols = parseLine(lines[i]);
+            const obj = {};
+            for (let k = 0; k < header.length; k++) obj[header[k]] = (cols[k] ?? "").trim();
+            rows.push(obj);
+          }
+          return {header, rows};
         }
-        cols.push(cur);
-        const obj = {};
-        for (let k = 0; k < header.length; k++) obj[header[k]] = (cols[k] ?? "").trim();
-        rows.push(obj);
-      }
-      return rows;
-    }
 
-    function safeFloat(v) {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    }
-
-    function buildTabs(classes, activeKey, onSelect) {
-      const el = document.getElementById("classTabs");
-      el.innerHTML = "";
-      classes.forEach(cls => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "tab";
-        btn.textContent = cls.label;
-        btn.setAttribute("aria-selected", cls.key === activeKey ? "true" : "false");
-        btn.addEventListener("click", () => onSelect(cls.key));
-        el.appendChild(btn);
-      });
-    }
-
-    function buildGrid(container, cls) {
-      const rows = cls.rows || [];
-      const students = cls.students || [];
-
-      const table = document.createElement("table");
-      table.className = "grid";
-      const thead = document.createElement("thead");
-      const trh = document.createElement("tr");
-      const thNo = document.createElement("th");
-      thNo.className = "sticky-left";
-      thNo.textContent = t.question;
-      trh.appendChild(thNo);
-
-      for (const s of students) {
-        const th = document.createElement("th");
-        th.textContent = s;
-        trh.appendChild(th);
-      }
-      thead.appendChild(trh);
-      table.appendChild(thead);
-
-      const tbody = document.createElement("tbody");
-      for (const r of rows) {
-        const tr = document.createElement("tr");
-        tr.dataset.qno = String(r.number ?? "");
-        const tdNo = document.createElement("td");
-        tdNo.className = "sticky-left";
-        tdNo.textContent = String(r.number ?? "");
-        tr.appendChild(tdNo);
-
-        const cells = r.cells || [];
-        for (let i = 0; i < students.length; i++) {
-          const td = document.createElement("td");
-          const v = (cells[i] ?? "");
-          td.textContent = v;
-          if (v) td.className = "wrong";
-          tr.appendChild(td);
+        function normalizeAnswer(v) {
+          const s = String(v ?? "").trim().toUpperCase();
+          return s;
         }
-        tbody.appendChild(tr);
-      }
-      table.appendChild(tbody);
-      container.innerHTML = "";
-      container.appendChild(table);
-    }
 
-    function highlightRow(qno) {
-      const container = document.getElementById("showwrongGrid");
-      const table = container.querySelector("table");
-      if (!table) return;
-      table.querySelectorAll("tr.highlight").forEach(tr => tr.classList.remove("highlight"));
-      const tr = table.querySelector(`tr[data-qno="${CSS.escape(String(qno))}"]`);
-      if (!tr) return;
-      tr.classList.add("highlight");
-      tr.scrollIntoView({block: "nearest", inline: "nearest"});
-    }
-
-    async function main() {
-      if (!window.Plotly) {
-        const hint = document.getElementById("plotlyHint");
-        hint.style.display = "block";
-        hint.textContent = t.missingPlotly;
-        return;
-      }
-
-      const [showwrongRes, itemRes, scoresRes] = await Promise.all([
-        fetch({{ analysis_showwrong_json_url|tojson }}),
-        fetch({{ analysis_item_csv_url|tojson }}),
-        fetch({{ analysis_scores_csv_url|tojson }}),
-      ]);
-      const showwrong = await showwrongRes.json();
-      const itemRows = csvToRows(await itemRes.text());
-      const scoreRows = csvToRows(await scoresRes.text());
-
-      const classes = (showwrong.classes || []).map(c => ({
-        key: c.key,
-        label: c.label,
-        students: c.students,
-        rows: c.rows
-      }));
-      const defaultKey = classes[0]?.key ?? "";
-      let activeKey = defaultKey;
-
-      function renderActive() {
-        const cls = classes.find(c => c.key === activeKey);
-        if (!cls) return;
-        buildTabs(classes, activeKey, (k) => { activeKey = k; renderActive(); });
-        buildGrid(document.getElementById("showwrongGrid"), cls);
-      }
-      renderActive();
-
-      const xs = itemRows.map(r => safeFloat(r.number)).filter(v => v !== null);
-      const diffs = itemRows.map(r => safeFloat(r.difficulty));
-      const discs = itemRows.map(r => safeFloat(r.discrimination));
-
-      function baseXAxis() {
-        return {
-          title: t.question,
-          tickmode: "linear",
-          dtick: 1,
-          showgrid: true,
-          gridcolor: "#e5e7eb",
-          griddash: "dot",
-          zeroline: false,
-        };
-      }
-      function baseLayout(yTitle) {
-        return {
-          margin: {l: 56, r: 18, t: 10, b: 42},
-          xaxis: baseXAxis(),
-          yaxis: {title: yTitle, showgrid: true, gridcolor: "#e5e7eb"},
-          hovermode: "x",
-        };
-      }
-
-      const diffDiv = document.getElementById("difficultyPlot");
-      await Plotly.newPlot(
-        diffDiv,
-        [{
-          x: xs,
-          y: diffs,
-          name: t.difficulty,
-          mode: "lines+markers",
-          line: {color: "#16a34a", width: 2},
-          marker: {size: 6},
-          hovertemplate: `${t.question}: %{x}<br>${t.difficulty}: %{y:.2f}<extra></extra>`,
-        }],
-        {...baseLayout(t.difficulty), yaxis: {...baseLayout(t.difficulty).yaxis, range: [0, 1]}},
-        {displayModeBar: true, responsive: true}
-      );
-      diffDiv.on("plotly_hover", (ev) => { const qno = ev?.points?.[0]?.x; if (qno != null) highlightRow(qno); });
-      diffDiv.on("plotly_click", (ev) => { const qno = ev?.points?.[0]?.x; if (qno != null) highlightRow(qno); });
-
-      const discDiv = document.getElementById("discriminationPlot");
-      await Plotly.newPlot(
-        discDiv,
-        [{
-          x: xs,
-          y: discs,
-          name: t.discrimination,
-          mode: "lines+markers",
-          line: {color: "#2563eb", width: 2},
-          marker: {size: 6},
-          hovertemplate: `${t.question}: %{x}<br>${t.discrimination}: %{y:.2f}<extra></extra>`,
-        }],
-        baseLayout(t.discrimination),
-        {displayModeBar: true, responsive: true}
-      );
-      discDiv.on("plotly_hover", (ev) => { const qno = ev?.points?.[0]?.x; if (qno != null) highlightRow(qno); });
-      discDiv.on("plotly_click", (ev) => { const qno = ev?.points?.[0]?.x; if (qno != null) highlightRow(qno); });
-
-      // Per-question metric table (numbers under the plots).
-      const metricWrap = document.getElementById("metricTable");
-      const table = document.createElement("table");
-      table.className = "metric";
-      const thead = document.createElement("thead");
-      const thr = document.createElement("tr");
-      const th0 = document.createElement("th");
-      th0.className = "sticky-left";
-      th0.textContent = "";
-      thr.appendChild(th0);
-      for (const q of xs) {
-        const th = document.createElement("th");
-        th.textContent = String(q);
-        thr.appendChild(th);
-      }
-      thead.appendChild(thr);
-      table.appendChild(thead);
-      const tbody = document.createElement("tbody");
-      function addRow(label, values) {
-        const tr = document.createElement("tr");
-        const td0 = document.createElement("td");
-        td0.className = "sticky-left";
-        td0.textContent = label;
-        tr.appendChild(td0);
-        for (const v of values) {
-          const td = document.createElement("td");
-          td.textContent = (v == null ? "" : v.toFixed(2));
-          tr.appendChild(td);
+        function safeFloat(v) {
+          const n = Number(v);
+          return Number.isFinite(n) ? n : null;
         }
-        tbody.appendChild(tr);
-      }
-      addRow(t.difficulty, diffs);
-      addRow(t.discrimination, discs);
-      table.appendChild(tbody);
-      metricWrap.innerHTML = "";
-      metricWrap.appendChild(table);
 
-      const scores = scoreRows.map(r => safeFloat(r.score)).filter(v => v !== null);
-      const histData = [{x: scores, type: "histogram", marker: {color: "#0ea5e9"}}];
-      const histLayout = {
-        margin: {l: 48, r: 18, t: 10, b: 42},
-        xaxis: {title: "Score", showgrid: true, gridcolor: "#e5e7eb"},
-        yaxis: {title: "Count", showgrid: true, gridcolor: "#e5e7eb"},
-      };
-      await Plotly.newPlot(document.getElementById("scoreHist"), histData, histLayout, {displayModeBar: false, responsive: true});
-    }
+        function fmt2(v) {
+          return (v == null) ? "" : v.toFixed(2);
+        }
 
-    main().catch((err) => {
-      const hint = document.getElementById("plotlyHint");
-      hint.style.display = "block";
-      hint.textContent = String(err || "Failed to render charts");
-    });
-  </script>
+        function classKey(meta) {
+          const g = String(meta.grade ?? "").trim();
+          const c = String(meta.class_no ?? "").trim();
+          if (g && c) return `${g}-${c}`;
+          if (g) return `${g}-?`;
+          if (c) return `?-${c}`;
+          return "Unknown";
+        }
+
+        function seatNumber(meta) {
+          const seat = String(meta.seat_no ?? "").trim();
+          if (!seat) return null;
+          const n = Number(seat);
+          return Number.isFinite(n) ? n : null;
+        }
+
+        function computeScores(qnos, corrects, points, answersByStudent, students) {
+          const scoresByStudent = new Map();
+          const blanksByStudent = new Map();
+          for (const s of students) {
+            const ans = answersByStudent.get(s) || [];
+            let score = 0;
+            let blanks = 0;
+            for (let i = 0; i < qnos.length; i++) {
+              const correct = normalizeAnswer(corrects[i] ?? "");
+              if (!correct) continue;
+              const a = normalizeAnswer(ans[i] ?? "");
+              if (!a) blanks += 1;
+              if (a && a === correct) score += (points[i] ?? 0);
+            }
+            scoresByStudent.set(s, score);
+            blanksByStudent.set(s, blanks);
+          }
+          return {scoresByStudent, blanksByStudent};
+        }
+
+	        function computeItemMetrics(qnos, corrects, answersByStudent, students, scoresByStudent) {
+	          const n = students.length;
+	          const diffs = new Array(qnos.length).fill(null);
+	          const discs = new Array(qnos.length).fill(null);
+	          const blanks = new Array(qnos.length).fill(null);
+            const wrongCounts = new Array(qnos.length).fill(0);
+            const blankCounts = new Array(qnos.length).fill(0);
+	          if (!n) return {diffs, discs, blanks, wrongCounts, blankCounts};
+
+	          // Difficulty
+	          for (let i = 0; i < qnos.length; i++) {
+	            const correct = normalizeAnswer(corrects[i] ?? "");
+	            if (!correct) continue;
+	            let ok = 0;
+	            let blank = 0;
+	            for (const s of students) {
+	              const ans = normalizeAnswer((answersByStudent.get(s) || [])[i] ?? "");
+	              if (!ans) blank += 1;
+	              if (ans === correct) ok += 1;
+	            }
+	            diffs[i] = ok / n;
+	            blanks[i] = blank / n;
+              blankCounts[i] = blank;
+              wrongCounts[i] = Math.max(0, n - ok - blank);
+	          }
+
+          // Discrimination (R rule: >30 => floor(n*0.27), else floor(n/2); low is bottom group)
+          const groupN = n > 30 ? Math.floor(n * 0.27) : Math.floor(n / 2);
+          if (groupN > 0) {
+            const ordered = students.slice().sort((a, b) => {
+              const sa = scoresByStudent.get(a) ?? 0;
+              const sb = scoresByStudent.get(b) ?? 0;
+              if (sa !== sb) return sa - sb;
+              return String(a).localeCompare(String(b));
+            });
+            const low = new Set(ordered.slice(0, groupN));
+            const high = new Set(ordered.slice(n - groupN));
+
+            for (let i = 0; i < qnos.length; i++) {
+              const correct = normalizeAnswer(corrects[i] ?? "");
+              if (!correct) continue;
+              let lowOk = 0;
+              let highOk = 0;
+              for (const s of students) {
+                const ans = normalizeAnswer((answersByStudent.get(s) || [])[i] ?? "");
+                if (!ans) continue;
+                if (ans !== correct) continue;
+                if (low.has(s)) lowOk += 1;
+                if (high.has(s)) highOk += 1;
+              }
+              discs[i] = (highOk / groupN) - (lowOk / groupN);
+            }
+          }
+
+	          return {diffs, discs, blanks, wrongCounts, blankCounts};
+	        }
+
+        function buildTabs(classes, activeKey, onSelect) {
+          if (!tabsEl) return;
+          tabsEl.innerHTML = "";
+          if (!classes || classes.length <= 1) return;
+          classes.forEach(cls => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "tab";
+            btn.textContent = cls.label;
+            btn.setAttribute("aria-selected", cls.key === activeKey ? "true" : "false");
+            btn.addEventListener("click", () => onSelect(cls.key));
+            tabsEl.appendChild(btn);
+          });
+        }
+
+        function drawLineChart(canvas, xs, ys, opts) {
+          const rect = canvas.getBoundingClientRect();
+          const ratio = window.devicePixelRatio || 1;
+          canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+          canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+          const ctx = canvas.getContext("2d");
+          ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+          const w = rect.width;
+          const h = rect.height;
+          ctx.clearRect(0, 0, w, h);
+
+          const padL = 52, padR = 16, padT = 14, padB = 34;
+          const pw = Math.max(1, w - padL - padR);
+          const ph = Math.max(1, h - padT - padB);
+
+          const xMin = xs[0] ?? 0;
+          const xMax = xs[xs.length - 1] ?? 1;
+          const yMin = opts.yMin;
+          const yMax = opts.yMax;
+
+          function xToPx(x) {
+            if (xMax === xMin) return padL;
+            return padL + ((x - xMin) / (xMax - xMin)) * pw;
+          }
+          function yToPx(y) {
+            if (yMax === yMin) return padT + ph;
+            return padT + (1 - ((y - yMin) / (yMax - yMin))) * ph;
+          }
+
+          // Axes
+          ctx.strokeStyle = "#d1d5db";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(padL, padT);
+          ctx.lineTo(padL, padT + ph);
+          ctx.lineTo(padL + pw, padT + ph);
+          ctx.stroke();
+
+          // Reference lines
+          for (const y of (opts.refLines || [])) {
+            if (y == null || y < yMin || y > yMax) continue;
+            const py = yToPx(y);
+            ctx.strokeStyle = "#e5e7eb";
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(padL, py);
+            ctx.lineTo(padL + pw, py);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
+
+          // Line
+          ctx.strokeStyle = opts.color || "#0ea5e9";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          let started = false;
+          for (let i = 0; i < xs.length; i++) {
+            const y = ys[i];
+            if (y == null || !Number.isFinite(y)) continue;
+            const px = xToPx(xs[i]);
+            const py = yToPx(y);
+            if (!started) {
+              ctx.moveTo(px, py);
+              started = true;
+            } else {
+              ctx.lineTo(px, py);
+            }
+          }
+          ctx.stroke();
+
+          // Points
+          ctx.fillStyle = opts.color || "#0ea5e9";
+          for (let i = 0; i < xs.length; i++) {
+            const y = ys[i];
+            if (y == null || !Number.isFinite(y)) continue;
+            const px = xToPx(xs[i]);
+            const py = yToPx(y);
+            ctx.beginPath();
+            ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Highlight
+          const hq = opts.highlightX;
+          if (hq != null) {
+            const idx = xs.indexOf(hq);
+            if (idx >= 0) {
+              const y = ys[idx];
+              const px = xToPx(xs[idx]);
+              ctx.strokeStyle = "#f59e0b";
+              ctx.lineWidth = 2;
+              ctx.beginPath();
+              ctx.moveTo(px, padT);
+              ctx.lineTo(px, padT + ph);
+              ctx.stroke();
+              if (y != null && Number.isFinite(y)) {
+                const py = yToPx(y);
+                ctx.fillStyle = "#f59e0b";
+                ctx.beginPath();
+                ctx.arc(px, py, 5.0, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          }
+
+          // Labels
+          ctx.fillStyle = "#374151";
+          ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+          ctx.textAlign = "left";
+          ctx.fillText(opts.title || "", 10, 14);
+          ctx.textAlign = "center";
+          ctx.fillText(String(opts.xLabel || ""), padL + pw / 2, h - 10);
+        }
+
+        function main() {
+          if (!tableHost || !canvasDiff || !canvasDisc || !canvasBlank) return;
+          tableHost.textContent = t.loading;
+
+		          const chartBtns = Array.from(document.querySelectorAll(".chart-btn"));
+		          const chartNavBtns = Array.from(document.querySelectorAll(".chart-nav"));
+		          let activeChart = "difficulty";
+		          const chartOrder = ["difficulty", "discrimination", "blank"];
+              let requestChartsRender = () => {};
+
+		          function setActiveChart(key) {
+		            activeChart = key;
+		            for (const btn of chartBtns) btn.setAttribute("aria-selected", (btn.dataset.chart === key) ? "true" : "false");
+		            canvasDiff.hidden = key !== "difficulty";
+		            canvasDisc.hidden = key !== "discrimination";
+		            canvasBlank.hidden = key !== "blank";
+                requestAnimationFrame(() => requestChartsRender());
+		          }
+
+	          function cycleChart(delta) {
+	            const idx = Math.max(0, chartOrder.indexOf(activeChart));
+	            const next = (idx + delta + chartOrder.length) % chartOrder.length;
+	            setActiveChart(chartOrder[next]);
+	          }
+
+	          for (const btn of chartBtns) {
+	            btn.addEventListener("click", () => setActiveChart(btn.dataset.chart || "difficulty"));
+	          }
+	          for (const btn of chartNavBtns) {
+	            btn.addEventListener("click", () => {
+	              const dir = String(btn.dataset.nav || "").toLowerCase();
+	              if (dir === "prev") cycleChart(-1);
+	              else cycleChart(1);
+	            });
+	          }
+
+	          Promise.all([
+	            fetch(templateUrl).then(r => r.text()),
+	            rosterUrl ? fetch(rosterUrl).then(r => r.text()).catch(() => "") : Promise.resolve(""),
+	          ]).then(([templateText, rosterText]) => {
+            const parsed = csvToRows(templateText);
+            const header = parsed.header || [];
+            const rows = parsed.rows || [];
+
+            if (header.length < 4 || !rows.length) throw new Error("analysis_template.csv is empty");
+
+            const studentCols = header.slice(3).filter(Boolean);
+            if (!studentCols.length) throw new Error("No students in analysis_template.csv");
+
+            const qnos = [];
+            const corrects = [];
+            const points = [];
+            const answersByStudent = new Map(studentCols.map(s => [s, []]));
+
+	            for (const r of rows) {
+	              const qno = String(r.number ?? "").trim();
+	              if (!qno) continue;
+	              qnos.push(qno);
+	              corrects.push(normalizeAnswer(r.correct ?? ""));
+	              points.push(safeFloat(r.points ?? "") ?? 0);
+	              for (const s of studentCols) {
+	                const a = normalizeAnswer(r[s] ?? "");
+	                answersByStudent.get(s).push(a);
+	              }
+	            }
+
+              const qnoToIdx = new Map(qnos.map((q, idx) => [String(q), idx]));
+              let totalPossible = 0;
+              for (let i = 0; i < qnos.length; i++) {
+                const correct = normalizeAnswer(corrects[i] ?? "");
+                if (!correct) continue;
+                totalPossible += (points[i] ?? 0);
+              }
+
+            // Roster (optional)
+            const rosterByPerson = new Map();
+            if (rosterText) {
+              const rosterParsed = csvToRows(rosterText);
+              for (const r of (rosterParsed.rows || [])) {
+                const pid = String(r.person_id ?? "").trim();
+                if (!pid) continue;
+	                rosterByPerson.set(pid, {
+	                  grade: String(r.grade ?? "").trim(),
+	                  class_no: String(r.class_no ?? "").trim(),
+	                  seat_no: String(r.seat_no ?? "").trim(),
+                    page: String(r.page ?? "").trim(),
+	                });
+	              }
+	            }
+
+            const groupMap = new Map();
+            for (const s of studentCols) {
+              const meta = rosterByPerson.get(s) || {};
+              const key = rosterByPerson.size ? classKey(meta) : "all";
+              if (!groupMap.has(key)) groupMap.set(key, []);
+              groupMap.get(key).push(s);
+            }
+
+            function studentSort(a, b) {
+              const ma = rosterByPerson.get(a) || {};
+              const mb = rosterByPerson.get(b) || {};
+              const sa = seatNumber(ma);
+              const sb = seatNumber(mb);
+              const hasA = sa != null;
+              const hasB = sb != null;
+              if (hasA !== hasB) return hasA ? -1 : 1;
+              if (hasA && hasB && sa !== sb) return sa - sb;
+              return String(a).localeCompare(String(b));
+            }
+
+	            const classes = Array.from(groupMap.entries()).sort((a, b) => String(a[0]).localeCompare(String(b[0]))).map(([key, students]) => {
+	              const ss = students.slice().sort(studentSort);
+	              return {key, label: key, students: ss};
+	            });
+	            let activeKey = classes[0]?.key || "all";
+
+              let studentQuery = String(filterEl?.value || "");
+              let sortMode = String(sortEl?.value || "seat");
+              let hideCorrect = !!hideCorrectEl?.checked;
+              let chartsFollowFilter = !!chartsFollowFilterEl?.checked;
+
+              let highlightQno = null;
+              let lockedQno = null;
+              let highlightStudent = null;
+              let lockedStudent = null;
+
+              let qnoEls = new Map();
+              let studentRowEls = new Map();
+
+              let currentStudentsAll = [];
+              let currentStudentsView = [];
+              let currentStudentsForCharts = [];
+              let currentScoresByStudent = new Map();
+              let currentBlanksByStudent = new Map();
+              let currentItemMetrics = {
+                diffs: new Array(qnos.length).fill(null),
+                discs: new Array(qnos.length).fill(null),
+                blanks: new Array(qnos.length).fill(null),
+                wrongCounts: new Array(qnos.length).fill(0),
+                blankCounts: new Array(qnos.length).fill(0),
+              };
+
+              function studentLabel(sid) {
+                const meta = rosterByPerson.get(sid) || {};
+                const seat = String(meta.seat_no ?? "").trim();
+                return seat ? `${seat} ${sid}` : String(sid);
+              }
+
+              function applyStudentsView(students) {
+                const q = String(studentQuery || "").trim().toLowerCase();
+                let out = (students || []).slice();
+
+                if (q) {
+                  out = out.filter((sid) => {
+                    const label = studentLabel(sid).toLowerCase();
+                    return label.includes(q) || String(sid).toLowerCase().includes(q);
+                  });
+                }
+
+                if (sortMode === "score_desc") {
+                  out.sort((a, b) => {
+                    const sa = currentScoresByStudent.get(a) ?? 0;
+                    const sb = currentScoresByStudent.get(b) ?? 0;
+                    if (sa !== sb) return sb - sa;
+                    return studentSort(a, b);
+                  });
+                } else if (sortMode === "blank_asc") {
+                  out.sort((a, b) => {
+                    const ba = currentBlanksByStudent.get(a) ?? 0;
+                    const bb = currentBlanksByStudent.get(b) ?? 0;
+                    if (ba !== bb) return ba - bb;
+                    return studentSort(a, b);
+                  });
+                } else if (sortMode === "id") {
+                  out.sort((a, b) => String(a).localeCompare(String(b)));
+                } else {
+                  out.sort(studentSort);
+                }
+
+                return out;
+              }
+
+              function applyHighlights() {
+                for (const [_qno, els] of qnoEls.entries()) {
+                  for (const el of els) el.classList.remove("col-highlight");
+                }
+                if (highlightQno && qnoEls.has(highlightQno)) {
+                  for (const el of (qnoEls.get(highlightQno) || [])) el.classList.add("col-highlight");
+                }
+                for (const [_sid, tr] of studentRowEls.entries()) tr.classList.remove("row-highlight");
+                if (highlightStudent && studentRowEls.has(highlightStudent)) studentRowEls.get(highlightStudent).classList.add("row-highlight");
+              }
+
+              function clearChartTooltip() {
+                if (!chartTooltipEl) return;
+                chartTooltipEl.hidden = true;
+                chartTooltipEl.textContent = "";
+              }
+
+              function showChartTooltip(canvas, kind, qno, value, ev) {
+                if (!chartTooltipEl) return;
+                const label = (kind === "difficulty") ? t.difficulty : (kind === "discrimination" ? t.discrimination : t.blankRate);
+                const qLabel = `${t.question} ${qno}`;
+                const vLabel = (value == null || !Number.isFinite(value)) ? "" : fmt2(value);
+                chartTooltipEl.textContent = vLabel ? `${qLabel} · ${label}: ${vLabel}` : `${qLabel}`;
+                chartTooltipEl.hidden = false;
+
+                const wrap = canvas.parentElement;
+                if (!wrap) return;
+                const rect = wrap.getBoundingClientRect();
+                const x = ev.clientX - rect.left;
+                const y = ev.clientY - rect.top;
+                chartTooltipEl.style.left = `${Math.round(x + 12)}px`;
+                chartTooltipEl.style.top = `${Math.round(y + 12)}px`;
+                requestAnimationFrame(() => {
+                  const w = chartTooltipEl.offsetWidth || 0;
+                  const h = chartTooltipEl.offsetHeight || 0;
+                  const maxL = Math.max(10, (wrap.clientWidth || rect.width) - w - 10);
+                  const maxT = Math.max(10, (wrap.clientHeight || rect.height) - h - 10);
+                  chartTooltipEl.style.left = `${Math.min(maxL, Math.max(10, x + 12))}px`;
+                  chartTooltipEl.style.top = `${Math.min(maxT, Math.max(10, y + 12))}px`;
+                });
+              }
+
+              function updateFocusPanel() {
+                if (!focusPanelEl) return;
+                focusPanelEl.innerHTML = "";
+
+                const qLine = document.createElement("div");
+                qLine.className = "focus-line";
+                const sLine = document.createElement("div");
+                sLine.className = "focus-line";
+                const help = document.createElement("div");
+                help.className = "focus-help";
+                help.textContent = t.keyboardHint ? `${t.clickToLock} · ${t.keyboardHint}` : t.clickToLock;
+
+                function kv(label, value) {
+                  const el = document.createElement("span");
+                  el.className = "kv";
+                  const k = document.createElement("span");
+                  k.className = "k";
+                  k.textContent = `${label}:`;
+                  const v = document.createElement("span");
+                  v.className = "v";
+                  v.textContent = value;
+                  el.appendChild(k);
+                  el.appendChild(v);
+                  return el;
+                }
+
+                const qBadge = document.createElement("span");
+                qBadge.className = "badge";
+                const qno = highlightQno;
+                qBadge.textContent = qno ? `${t.question} ${qno}${lockedQno ? ` (${t.locked})` : ""}` : t.noSelection;
+                qLine.appendChild(qBadge);
+
+                if (qno && qnoToIdx.has(String(qno))) {
+                  const idx = qnoToIdx.get(String(qno));
+                  const c = normalizeAnswer(corrects[idx] ?? "");
+                  qLine.appendChild(kv(t.correct, c || ""));
+                  qLine.appendChild(kv(t.difficulty, fmt2(currentItemMetrics.diffs[idx])));
+                  qLine.appendChild(kv(t.discrimination, fmt2(currentItemMetrics.discs[idx])));
+                  qLine.appendChild(kv(t.blankRate, fmt2(currentItemMetrics.blanks[idx])));
+                  qLine.appendChild(kv(t.wrongShort, String(currentItemMetrics.wrongCounts[idx] ?? 0)));
+                  qLine.appendChild(kv(t.blankShort, String(currentItemMetrics.blankCounts[idx] ?? 0)));
+                }
+
+                const sBadge = document.createElement("span");
+                sBadge.className = "badge";
+                const sid = highlightStudent;
+                sBadge.textContent = sid ? `${t.student}: ${studentLabel(sid)}${lockedStudent ? ` (${t.locked})` : ""}` : `${t.student}:`;
+                sLine.appendChild(sBadge);
+
+                if (sid) {
+                  const score = currentScoresByStudent.get(sid);
+                  const blanks = currentBlanksByStudent.get(sid);
+                  const pct = (totalPossible > 0 && score != null) ? (score / totalPossible) : null;
+                  const scoreText = (score == null) ? "" : `${(Math.round(score * 100) / 100)}${pct == null ? "" : ` (${Math.round(pct * 100)}%)`}`;
+                  sLine.appendChild(kv(t.score, scoreText));
+                  sLine.appendChild(kv(t.blankShort, (blanks == null) ? "" : String(blanks)));
+
+                  if (qno && qnoToIdx.has(String(qno))) {
+                    const idx = qnoToIdx.get(String(qno));
+                    const a = normalizeAnswer((answersByStudent.get(sid) || [])[idx] ?? "");
+                    const c = normalizeAnswer(corrects[idx] ?? "");
+                    const status = (!a) ? "blank" : (c && a === c ? "correct" : "wrong");
+                    const statusLabel = (!a) ? t.statusBlank : (c && a === c ? t.statusCorrect : t.statusWrong);
+                    const ansWrap = document.createElement("span");
+                    ansWrap.className = "kv";
+                    const ak = document.createElement("span");
+                    ak.className = "k";
+                    ak.textContent = `${t.answer}:`;
+                    const av = document.createElement("span");
+                    av.className = `status ${status}`;
+                    av.textContent = a ? `${a} · ${statusLabel}` : statusLabel;
+                    ansWrap.appendChild(ak);
+                    ansWrap.appendChild(av);
+                    sLine.appendChild(ansWrap);
+                  }
+
+                  const meta = rosterByPerson.get(sid) || {};
+                  const pageRaw = String(meta.page ?? "").trim();
+                  const pageN = Number(pageRaw);
+                  if (pageRaw && Number.isFinite(pageN) && pageN > 0) {
+                    const link = document.createElement("a");
+                    link.className = "focus-link";
+                    link.target = "_blank";
+                    link.rel = "noopener noreferrer";
+                    link.href = `${annotatedPdfUrl}#page=${Math.round(pageN)}`;
+                    link.textContent = t.openPage;
+                    sLine.appendChild(link);
+                  }
+                }
+
+                focusPanelEl.appendChild(qLine);
+                focusPanelEl.appendChild(sLine);
+                focusPanelEl.appendChild(help);
+              }
+
+              function drawActiveChart() {
+                const xs = qnos.map(q => safeFloat(q)).map(v => (v == null ? null : v)).filter(v => v != null);
+                const qHighlight = highlightQno ? (safeFloat(highlightQno) ?? null) : null;
+
+                if (activeChart === "difficulty") {
+                  drawLineChart(canvasDiff, xs, currentItemMetrics.diffs.map(v => (v == null ? null : v)), {
+                    title: t.difficulty,
+                    xLabel: "",
+                    yMin: 0,
+                    yMax: 1,
+                    refLines: [0.25, 0.5, 0.75],
+                    color: "#16a34a",
+                    highlightX: qHighlight,
+                  });
+                } else if (activeChart === "discrimination") {
+                  const discYs = currentItemMetrics.discs.map(v => (v == null ? null : v));
+                  const discVals = discYs.filter(v => v != null && Number.isFinite(v));
+                  let dMin = -0.2, dMax = 0.8;
+                  if (discVals.length) {
+                    dMin = Math.min(...discVals);
+                    dMax = Math.max(...discVals);
+                    const pad = Math.max(0.1, (dMax - dMin) * 0.1);
+                    dMin -= pad;
+                    dMax += pad;
+                  }
+                  drawLineChart(canvasDisc, xs, discYs, {
+                    title: t.discrimination,
+                    xLabel: "",
+                    yMin: dMin,
+                    yMax: dMax,
+                    refLines: [0.0, 0.2, 0.4],
+                    color: "#2563eb",
+                    highlightX: qHighlight,
+                  });
+                } else {
+                  drawLineChart(canvasBlank, xs, currentItemMetrics.blanks.map(v => (v == null ? null : v)), {
+                    title: t.blankRate,
+                    xLabel: "",
+                    yMin: 0,
+                    yMax: 1,
+                    refLines: [0.1, 0.2, 0.3],
+                    color: "#6b7280",
+                    highlightX: qHighlight,
+                  });
+                }
+              }
+
+              function setHighlightQuestion(qno) {
+                const q = (qno == null) ? null : String(qno);
+                const next = (lockedQno != null) ? lockedQno : q;
+                if (next === highlightQno) return;
+                highlightQno = next;
+                applyHighlights();
+                updateFocusPanel();
+                drawActiveChart();
+              }
+
+              function toggleLockQuestion(qno) {
+                const q = String(qno ?? "");
+                lockedQno = (lockedQno === q) ? null : q;
+                highlightQno = lockedQno;
+                applyHighlights();
+                updateFocusPanel();
+                drawActiveChart();
+              }
+
+              function setHighlightStudentId(sid) {
+                const next = (lockedStudent != null) ? lockedStudent : (sid == null ? null : String(sid));
+                if (next === highlightStudent) return;
+                highlightStudent = next;
+                applyHighlights();
+                updateFocusPanel();
+              }
+
+              function toggleLockStudent(sid) {
+                const s = String(sid ?? "");
+                lockedStudent = (lockedStudent === s) ? null : s;
+                highlightStudent = lockedStudent;
+                applyHighlights();
+                updateFocusPanel();
+              }
+
+              function clearAllHighlights() {
+                highlightQno = null;
+                lockedQno = null;
+                highlightStudent = null;
+                lockedStudent = null;
+                applyHighlights();
+                updateFocusPanel();
+                clearChartTooltip();
+                drawActiveChart();
+              }
+
+              function scrollToQuestion(qno) {
+                if (!tableHost) return;
+                const q = String(qno ?? "");
+                const els = qnoEls.get(q);
+                const el = els && els[0];
+                if (!el) return;
+                const hostRect = tableHost.getBoundingClientRect();
+                const elRect = el.getBoundingClientRect();
+                const delta = (elRect.left - hostRect.left) - (hostRect.width / 2) + (elRect.width / 2);
+                tableHost.scrollLeft += delta;
+              }
+
+              function scrollToStudent(sid) {
+                if (!tableHost) return;
+                const s = String(sid ?? "");
+                const tr = studentRowEls.get(s);
+                if (!tr) return;
+                const hostRect = tableHost.getBoundingClientRect();
+                const trRect = tr.getBoundingClientRect();
+                const delta = (trRect.top - hostRect.top) - (hostRect.height / 2) + (trRect.height / 2);
+                tableHost.scrollTop += delta;
+              }
+
+              function renderTable(studentsView) {
+                qnoEls = new Map();
+                studentRowEls = new Map();
+
+                const table = document.createElement("table");
+                table.className = "matrix";
+                const thead = document.createElement("thead");
+
+                function addHeaderRow(label, values, fmt) {
+                  const tr = document.createElement("tr");
+                  const th0 = document.createElement("th");
+                  th0.className = "sticky-left";
+                  th0.textContent = label;
+                  tr.appendChild(th0);
+                  for (let i = 0; i < qnos.length; i++) {
+                    const th = document.createElement("th");
+                    th.dataset.qno = qnos[i];
+                    th.textContent = fmt ? fmt(values[i], i) : String(values[i] ?? "");
+                    tr.appendChild(th);
+                    const list = qnoEls.get(qnos[i]) || [];
+                    list.push(th);
+                    qnoEls.set(qnos[i], list);
+                  }
+                  thead.appendChild(tr);
+                }
+
+                addHeaderRow(t.question, qnos, (v) => String(v ?? ""));
+                addHeaderRow(t.correct, corrects, (v) => String(v ?? ""));
+                table.appendChild(thead);
+
+                const tbody = document.createElement("tbody");
+                for (const s of studentsView) {
+                  const tr = document.createElement("tr");
+                  tr.dataset.student = s;
+                  studentRowEls.set(s, tr);
+
+                  const td0 = document.createElement("td");
+                  td0.className = "sticky-left";
+                  td0.textContent = studentLabel(s);
+                  tr.appendChild(td0);
+
+                  const ans = answersByStudent.get(s) || [];
+                  for (let i = 0; i < qnos.length; i++) {
+                    const td = document.createElement("td");
+                    const qno = qnos[i];
+                    td.dataset.qno = qno;
+                    td.dataset.student = s;
+
+                    const a = normalizeAnswer(ans[i] ?? "");
+                    const c = normalizeAnswer(corrects[i] ?? "");
+                    const isBlank = !a;
+                    const isCorrect = !!c && a === c;
+                    if (isBlank) td.className = "blank";
+                    else if (isCorrect) td.className = hideCorrect ? "correct hidden-correct" : "correct";
+                    else td.className = "wrong";
+
+                    td.textContent = (hideCorrect && isCorrect) ? "" : a;
+                    tr.appendChild(td);
+
+                    const list = qnoEls.get(qno) || [];
+                    list.push(td);
+                    qnoEls.set(qno, list);
+                  }
+
+                  tbody.appendChild(tr);
+                }
+                table.appendChild(tbody);
+
+                tableHost.innerHTML = "";
+                tableHost.appendChild(table);
+
+                table.addEventListener("mousemove", (ev) => {
+                  const cell = ev.target.closest("[data-qno]");
+                  if (cell && cell.dataset.qno) setHighlightQuestion(cell.dataset.qno);
+                  const row = ev.target.closest("tr[data-student]");
+                  if (row && row.dataset.student) setHighlightStudentId(row.dataset.student);
+                });
+                table.addEventListener("mouseleave", () => {
+                  clearChartTooltip();
+                  if (!lockedQno) highlightQno = null;
+                  if (!lockedStudent) highlightStudent = null;
+                  applyHighlights();
+                  updateFocusPanel();
+                  drawActiveChart();
+                });
+                table.addEventListener("click", (ev) => {
+                  const cell = ev.target.closest("[data-qno]");
+                  if (cell && cell.dataset.qno) toggleLockQuestion(cell.dataset.qno);
+                  const row = ev.target.closest("tr[data-student]");
+                  if (row && row.dataset.student) toggleLockStudent(row.dataset.student);
+                });
+
+                applyHighlights();
+              }
+
+			            function attachChartHover(canvas, kind) {
+	              canvas.addEventListener("mousemove", (ev) => {
+	                if (kind === "scores") return;
+	                const rect = canvas.getBoundingClientRect();
+	                const x = ev.clientX - rect.left;
+	                const padL = 52;
+	                const padR = 16;
+	                const pw = Math.max(1, rect.width - padL - padR);
+	                if (x < padL || x > padL + pw) return;
+	                const tpos = (x - padL) / pw;
+	                const idx = Math.round(tpos * (qnos.length - 1));
+	                const qno = qnos[Math.max(0, Math.min(qnos.length - 1, idx))];
+                  const mi = qnoToIdx.get(String(qno));
+                  const val = (kind === "difficulty") ? currentItemMetrics.diffs[mi] : (kind === "discrimination" ? currentItemMetrics.discs[mi] : currentItemMetrics.blanks[mi]);
+                  showChartTooltip(canvas, kind, qno, val, ev);
+	                if (lockedQno == null) setHighlightQuestion(qno);
+	              });
+	              canvas.addEventListener("mouseleave", () => {
+                  clearChartTooltip();
+	                if (lockedQno == null) setHighlightQuestion(null);
+	              });
+	              canvas.addEventListener("click", () => {
+                  clearChartTooltip();
+	                if (highlightQno) toggleLockQuestion(highlightQno);
+	              });
+	            }
+
+			            attachChartHover(canvasDiff, "difficulty");
+			            attachChartHover(canvasDisc, "discrimination");
+			            attachChartHover(canvasBlank, "blank");
+
+                requestChartsRender = () => drawActiveChart();
+			            window.addEventListener("resize", () => drawActiveChart());
+
+                if (filterEl) {
+                  filterEl.addEventListener("input", () => {
+                    studentQuery = String(filterEl.value || "");
+                    renderActive();
+                  });
+                }
+                if (sortEl) {
+                  sortEl.addEventListener("change", () => {
+                    sortMode = String(sortEl.value || "seat");
+                    renderActive();
+                  });
+                }
+                if (hideCorrectEl) {
+                  hideCorrectEl.addEventListener("change", () => {
+                    hideCorrect = !!hideCorrectEl.checked;
+                    renderTable(currentStudentsView);
+                    updateFocusPanel();
+                  });
+                }
+                if (chartsFollowFilterEl) {
+                  chartsFollowFilterEl.addEventListener("change", () => {
+                    chartsFollowFilter = !!chartsFollowFilterEl.checked;
+                    renderActive();
+                  });
+                }
+                if (clearBtn) clearBtn.addEventListener("click", () => clearAllHighlights());
+                if (jumpBtn) jumpBtn.addEventListener("click", () => {
+                  const raw = String(jumpEl?.value || "").trim();
+                  if (!raw) return;
+                  const q = String(Math.round(Number(raw)));
+                  if (!qnoToIdx.has(q)) return;
+                  lockedQno = q;
+                  highlightQno = q;
+                  applyHighlights();
+                  updateFocusPanel();
+                  drawActiveChart();
+                  scrollToQuestion(q);
+                });
+                if (jumpEl) {
+                  jumpEl.addEventListener("keydown", (ev) => {
+                    if (ev.key === "Enter") {
+                      ev.preventDefault();
+                      jumpBtn?.click();
+                    }
+                  });
+                }
+
+                function isTypingTarget(el) {
+                  if (!el) return false;
+                  const tag = String(el.tagName || "").toUpperCase();
+                  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+                  return !!el.isContentEditable;
+                }
+
+                document.addEventListener("keydown", (ev) => {
+                  if (isTypingTarget(ev.target)) return;
+
+                  if (ev.key === "Escape") {
+                    ev.preventDefault();
+                    clearAllHighlights();
+                    return;
+                  }
+
+                  if (ev.key === "PageUp") {
+                    ev.preventDefault();
+                    cycleChart(-1);
+                    return;
+                  }
+                  if (ev.key === "PageDown") {
+                    ev.preventDefault();
+                    cycleChart(1);
+                    return;
+                  }
+
+                  if (ev.key === "ArrowLeft" || ev.key === "ArrowRight") {
+                    if (!qnos.length) return;
+                    ev.preventDefault();
+                    const delta = (ev.key === "ArrowLeft") ? -1 : 1;
+                    let curIdx = 0;
+                    if (highlightQno && qnoToIdx.has(String(highlightQno))) curIdx = qnoToIdx.get(String(highlightQno));
+                    let nextIdx = Math.max(0, Math.min(qnos.length - 1, curIdx + delta));
+                    const q = String(qnos[nextIdx]);
+                    lockedQno = q;
+                    highlightQno = q;
+                    clearChartTooltip();
+                    applyHighlights();
+                    updateFocusPanel();
+                    drawActiveChart();
+                    scrollToQuestion(q);
+                    return;
+                  }
+
+                  if (ev.key === "ArrowUp" || ev.key === "ArrowDown") {
+                    if (!currentStudentsView.length) return;
+                    ev.preventDefault();
+                    const delta = (ev.key === "ArrowUp") ? -1 : 1;
+                    const cur = String(highlightStudent ?? "");
+                    let curIdx = currentStudentsView.indexOf(cur);
+                    if (curIdx < 0) curIdx = (delta > 0) ? 0 : (currentStudentsView.length - 1);
+                    let nextIdx = Math.max(0, Math.min(currentStudentsView.length - 1, curIdx + delta));
+                    const s = String(currentStudentsView[nextIdx]);
+                    lockedStudent = s;
+                    highlightStudent = s;
+                    applyHighlights();
+                    updateFocusPanel();
+                    scrollToStudent(s);
+                    return;
+                  }
+                });
+
+		            function renderActive() {
+		              const cls = classes.find(c => c.key === activeKey) || classes[0];
+		              if (!cls) return;
+		              buildTabs(classes, activeKey, (k) => { activeKey = k; renderActive(); });
+
+                  currentStudentsAll = (cls.students || []).slice();
+                  const scores = computeScores(qnos, corrects, points, answersByStudent, currentStudentsAll);
+                  currentScoresByStudent = scores.scoresByStudent;
+                  currentBlanksByStudent = scores.blanksByStudent;
+
+                  currentStudentsView = applyStudentsView(currentStudentsAll);
+                  currentStudentsForCharts = chartsFollowFilter ? currentStudentsView : currentStudentsAll;
+                  currentItemMetrics = computeItemMetrics(qnos, corrects, answersByStudent, currentStudentsForCharts, currentScoresByStudent);
+
+                  if (lockedStudent && !currentStudentsView.includes(lockedStudent)) {
+                    lockedStudent = null;
+                    highlightStudent = null;
+                  }
+                  if (highlightStudent && !lockedStudent && !currentStudentsView.includes(highlightStudent)) highlightStudent = null;
+
+                  renderTable(currentStudentsView);
+                  drawActiveChart();
+                  updateFocusPanel();
+	            }
+
+            renderActive();
+            setActiveChart(activeChart);
+          }).catch((err) => {
+            if (hintEl) {
+              hintEl.style.display = "block";
+              hintEl.textContent = `${t.error}: ${String(err || "")}`.trim();
+            }
+          });
+        }
+
+        try {
+          main();
+        } catch (err) {
+          if (hintEl) {
+            hintEl.style.display = "block";
+            hintEl.textContent = `${t.error}: ${String(err || "")}`.trim();
+          }
+        }
+      })();
+    </script>
   {% endif %}
 </body>
 </html>

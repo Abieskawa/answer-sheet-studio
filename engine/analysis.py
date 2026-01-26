@@ -26,7 +26,7 @@ def _write_excel_csv(path: Path, header: List[str], rows: List[List[Any]]) -> No
 def _score_histogram_png(scores: List[float], total_possible: float, out_path: Path, lang: str = "zh_TW") -> None:
     try:
         import cv2  # type: ignore
-    except Exception:
+    except (ImportError, OSError):
         return
 
     lang_norm = (lang or "").strip().lower().replace("-", "_")
@@ -121,7 +121,7 @@ def _score_histogram_png(scores: List[float], total_possible: float, out_path: P
 def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]], out_path: Path, lang: str = "zh_TW") -> None:
     try:
         import cv2  # type: ignore
-    except Exception:
+    except (ImportError, OSError):
         return
 
     lang_norm = (lang or "").strip().lower().replace("-", "_")

@@ -98,15 +98,53 @@ I18N = {
         "result_view_item_analysis_data": "試題分析數據",
         "result_plots_title": "圖表",
         "result_plot_score_hist": "成績分佈",
+        "result_plot_score_hist_guides": "輔助線：實線＝平均（紅）/中位數（藍）；虛線＝百分位數（P12/P25/P75/P88）",
         "result_plot_item_metrics": "題目分析",
+        "result_plot_item_metrics_guides": "輔助線：難度 0.25/0.50/0.75；鑑別度 0.00/0.20/0.40",
         "result_integrated_title": "整合圖表（可用滑鼠懸停查看題號，並與錯題表對照）",
-        "result_plotly_missing_js": "Plotly 載入失敗，請確認網路連線（或稍後重整）。",
+        "result_integrated_hint": "滑鼠移到表格/圖表可同步醒目提示題號；點一下可鎖定，再點一次取消。",
+        "result_integrated_error": "讀取整合資料失敗",
+        "result_interaction_click_to_lock": "點擊可鎖定/取消醒目提示",
+        "result_controls_filter_student": "篩選學生",
+        "result_controls_filter_student_ph": "搜尋座號或 ID",
+        "result_controls_sort": "排序",
+        "result_controls_sort_seat": "座號",
+        "result_controls_sort_score_desc": "分數（高→低）",
+        "result_controls_sort_blank_asc": "空白（少→多）",
+        "result_controls_sort_id": "ID",
+        "result_controls_hide_correct": "隱藏正確",
+        "result_controls_charts_follow_filter": "圖表跟著篩選",
+        "result_controls_jump_question": "跳到題號",
+        "result_controls_jump_question_ph": "題號",
+        "result_controls_go": "前往",
+        "result_controls_clear": "清除醒目/鎖定",
+        "result_controls_not_found": "找不到",
+        "result_focus_no_selection": "把滑鼠移到表格/圖表可查看",
+        "result_focus_answer": "作答",
+        "result_focus_score": "分數",
+        "result_focus_open_page": "開啟該生標註頁",
+        "result_focus_locked": "鎖定",
+        "result_focus_keyboard_hint": "快捷鍵：←/→切換題號、↑/↓切換學生、Esc 清除鎖定、PgUp/PgDn 切換圖",
+        "result_focus_status_correct": "正確",
+        "result_focus_status_wrong": "錯誤",
+        "result_focus_status_blank": "空白",
+        "result_loading": "載入中…",
+        "result_chart_tab_difficulty": "難度",
+        "result_chart_tab_discrimination": "鑑別度",
+        "result_chart_tab_scores": "成績分佈",
+        "result_chart_tab_blank_rate": "空白率",
+        "result_chart_prev": "上一張",
+        "result_chart_next": "下一張",
         "col_question": "題號",
+        "col_correct": "正確答案",
+        "col_student": "學生",
         "col_difficulty": "難度（正答率）",
         "col_discrimination": "鑑別度",
         "col_class": "班級",
         "col_wrong": "錯誤人數",
         "col_blank": "空白人數",
+        "col_wrong_short": "錯",
+        "col_blank_short": "空",
         "result_analysis_files_title": "試題分析檔案",
         "result_analysis_files_hint": "下載完整分析報表（CSV/XLSX/圖片/日誌）。",
         "result_item_table_title": "試題分析數據（預覽）",
@@ -195,15 +233,53 @@ I18N = {
         "result_view_item_analysis_data": "Item analysis data",
         "result_plots_title": "Plots",
         "result_plot_score_hist": "Score distribution",
+        "result_plot_score_hist_guides": "Guide lines: solid = mean (red) / median (blue); dashed = percentiles (P12/P25/P75/P88)",
         "result_plot_item_metrics": "Item analysis",
+        "result_plot_item_metrics_guides": "Guide lines: difficulty 0.25/0.50/0.75; discrimination 0.00/0.20/0.40",
         "result_integrated_title": "Integrated report (hover a point to highlight the corresponding row)",
-        "result_plotly_missing_js": "Plotly failed to load. Please ensure you have internet access, then refresh.",
+        "result_integrated_hint": "Hover the table/charts to highlight a question; click to lock/unlock.",
+        "result_integrated_error": "Failed to load integrated data",
+        "result_interaction_click_to_lock": "Click to lock/unlock highlight",
+        "result_controls_filter_student": "Filter student",
+        "result_controls_filter_student_ph": "Search seat or ID",
+        "result_controls_sort": "Sort",
+        "result_controls_sort_seat": "Seat",
+        "result_controls_sort_score_desc": "Score (high→low)",
+        "result_controls_sort_blank_asc": "Blanks (low→high)",
+        "result_controls_sort_id": "ID",
+        "result_controls_hide_correct": "Hide correct",
+        "result_controls_charts_follow_filter": "Charts follow filter",
+        "result_controls_jump_question": "Jump to question",
+        "result_controls_jump_question_ph": "Qno",
+        "result_controls_go": "Go",
+        "result_controls_clear": "Clear highlight/locks",
+        "result_controls_not_found": "Not found",
+        "result_focus_no_selection": "Hover the table/charts to inspect",
+        "result_focus_answer": "Answer",
+        "result_focus_score": "Score",
+        "result_focus_open_page": "Open annotated page",
+        "result_focus_locked": "locked",
+        "result_focus_keyboard_hint": "Shortcuts: ←/→ question, ↑/↓ student, Esc clear locks, PgUp/PgDn switch chart",
+        "result_focus_status_correct": "Correct",
+        "result_focus_status_wrong": "Wrong",
+        "result_focus_status_blank": "Blank",
+        "result_loading": "Loading…",
+        "result_chart_tab_difficulty": "Difficulty",
+        "result_chart_tab_discrimination": "Discrimination",
+        "result_chart_tab_scores": "Score distribution",
+        "result_chart_tab_blank_rate": "Blank rate",
+        "result_chart_prev": "Prev",
+        "result_chart_next": "Next",
         "col_question": "Question",
+        "col_correct": "Correct",
+        "col_student": "Student",
         "col_difficulty": "Difficulty (accuracy)",
         "col_discrimination": "Discrimination",
         "col_class": "Class",
         "col_wrong": "Wrong",
         "col_blank": "Blank",
+        "col_wrong_short": "Wrong",
+        "col_blank_short": "Blank",
         "result_analysis_files_title": "Item analysis files",
         "result_analysis_files_hint": "Download the full analysis reports (CSV/XLSX/images/logs).",
         "result_item_table_title": "Item analysis data (preview)",
@@ -490,7 +566,8 @@ def result_charts_page(request: Request, job_id: str):
     score_hist = job_dir / "analysis_score_hist.png"
     item_plot = job_dir / "analysis_item_plot.png"
     scores_by_class = job_dir / "analysis_scores_by_class.xlsx"
-    showwrong_json = job_dir / "analysis_showwrong.json"
+    template_csv = job_dir / "analysis_template.csv"
+    roster_csv = job_dir / "roster.csv"
     item_csv = job_dir / "analysis_item.csv"
     scores_csv = job_dir / "analysis_scores.csv"
     analysis_report_pdf = job_dir / "analysis_report.pdf"
@@ -512,7 +589,8 @@ def result_charts_page(request: Request, job_id: str):
             "analysis_score_hist_inline_url": (f"/outputs_inline/{job_id}/analysis_score_hist.png" if score_hist.exists() else None),
             "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
             "analysis_scores_by_class_url": (f"/outputs/{job_id}/analysis_scores_by_class.xlsx" if scores_by_class.exists() else None),
-            "analysis_showwrong_json_url": (f"/outputs/{job_id}/analysis_showwrong.json" if showwrong_json.exists() else None),
+            "analysis_template_csv_url": (f"/outputs/{job_id}/analysis_template.csv" if template_csv.exists() else None),
+            "roster_csv_url": (f"/outputs/{job_id}/roster.csv" if roster_csv.exists() else None),
             "analysis_item_csv_url": (f"/outputs/{job_id}/analysis_item.csv" if item_csv.exists() else None),
             "analysis_scores_csv_url": (f"/outputs/{job_id}/analysis_scores.csv" if scores_csv.exists() else None),
             "analysis_report_url": (f"/outputs/{job_id}/analysis_report.pdf" if analysis_report_pdf.exists() else None),
@@ -1054,102 +1132,450 @@ def _write_showwrong_xlsx(
     except Exception:
         pass
 
-
 def _write_analysis_report_pdf(job_dir: Path, lang: str) -> None:
-    item_csv = Path(job_dir) / "analysis_item.csv"
-    showwrong_json = Path(job_dir) / "analysis_showwrong.json"
-    if not item_csv.exists() or not showwrong_json.exists():
+    import math
+
+    template_csv = Path(job_dir) / "analysis_template.csv"
+    if not template_csv.exists():
         return
 
     t = I18N.get(lang, I18N[DEFAULT_LANG])
 
-    items: dict[int, dict] = {}
     try:
-        with open(item_csv, "r", newline="", encoding="utf-8-sig") as f:
+        with open(template_csv, "r", newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
-            for r in reader:
-                try:
-                    qno = int(float(str(r.get("number") or "").strip()))
-                except Exception:
-                    continue
-                items[qno] = r
+            fieldnames = [str(x or "").strip() for x in (reader.fieldnames or [])]
+            required = ("number", "correct", "points")
+            if not all(k in fieldnames for k in required):
+                return
+            student_cols = [c for c in fieldnames if c not in required and c]
+            template_rows = list(reader)
     except Exception:
         return
 
-    try:
-        payload = json.loads(showwrong_json.read_text(encoding="utf-8"))
-    except Exception:
+    if not student_cols or not template_rows:
         return
+
+    q_numbers: list[int] = []
+    corrects: list[str] = []
+    points: list[float] = []
+    answers_by_student: dict[str, list[str]] = {s: [] for s in student_cols}
+
+    for row in template_rows:
+        raw_no = str(row.get("number") or "").strip()
+        try:
+            qno = int(float(raw_no))  # tolerate Excel-like "1.0"
+        except Exception:
+            continue
+        q_numbers.append(qno)
+        corrects.append(_normalize_answer_cell(row.get("correct") or ""))
+        raw_points = str(row.get("points") or "").strip()
+        try:
+            p = float(raw_points) if raw_points != "" else 0.0
+        except Exception:
+            p = 0.0
+        points.append(float(p))
+        for s in student_cols:
+            answers_by_student[s].append(_normalize_answer_cell(row.get(s) or ""))
+
+    if not q_numbers:
+        return
+
+    # Roster (optional): used for class grouping & ordering.
+    roster_path = Path(job_dir) / "roster.csv"
+    roster_by_person: dict[str, dict[str, str]] = {}
+    try:
+        if roster_path.exists():
+            with open(roster_path, "r", newline="", encoding="utf-8-sig") as f:
+                reader = csv.DictReader(f)
+                for r in reader:
+                    pid = str((r.get("person_id") or "")).strip()
+                    if not pid:
+                        continue
+                    roster_by_person[pid] = {
+                        "grade": str(r.get("grade") or "").strip(),
+                        "class_no": str(r.get("class_no") or "").strip(),
+                        "seat_no": str(r.get("seat_no") or "").strip(),
+                    }
+    except Exception:
+        roster_by_person = {}
+
+    def class_key(meta: dict[str, str]) -> str:
+        g = (meta.get("grade") or "").strip()
+        c = (meta.get("class_no") or "").strip()
+        if g and c:
+            return f"{g}-{c}"
+        if g:
+            return f"{g}-?"
+        if c:
+            return f"?-{c}"
+        return "Unknown"
+
+    def seat_number(meta: dict[str, str]) -> Optional[int]:
+        raw = (meta.get("seat_no") or "").strip()
+        if not raw:
+            return None
+        try:
+            return int(float(raw))
+        except Exception:
+            return None
+
+    def student_sort_key(student_id: str) -> tuple[int, int, str]:
+        meta = roster_by_person.get(student_id, {})
+        seat = seat_number(meta)
+        if seat is None:
+            return (1, 10**9, str(student_id))
+        return (0, seat, str(student_id))
+
+    grouped_students: dict[str, list[str]] = {}
+    for s in student_cols:
+        key = class_key(roster_by_person.get(s, {})) if roster_by_person else "all"
+        grouped_students.setdefault(key, []).append(s)
+    if not grouped_students:
+        grouped_students = {"all": student_cols}
+
+    groups = [(k, sorted(grouped_students[k], key=student_sort_key)) for k in sorted(grouped_students.keys())]
+
+    def compute_scores(students: list[str]) -> dict[str, float]:
+        scores: dict[str, float] = {}
+        for s in students:
+            ans = answers_by_student.get(s, [])
+            score = 0.0
+            for i in range(len(q_numbers)):
+                c = corrects[i] if i < len(corrects) else ""
+                if not c:
+                    continue
+                a = ans[i] if i < len(ans) else ""
+                if a and a == c:
+                    score += float(points[i] if i < len(points) else 0.0)
+            scores[s] = float(score)
+        return scores
+
+    def compute_item_metrics(
+        students: list[str],
+        scores_by_student: dict[str, float],
+    ) -> tuple[list[Optional[float]], list[Optional[float]], list[Optional[float]], list[int], list[int]]:
+        n = len(students)
+        diffs: list[Optional[float]] = [None for _ in q_numbers]
+        discs: list[Optional[float]] = [None for _ in q_numbers]
+        blank_rates: list[Optional[float]] = [None for _ in q_numbers]
+        wrong_counts: list[int] = [0 for _ in q_numbers]
+        blank_counts: list[int] = [0 for _ in q_numbers]
+        if n <= 0:
+            return diffs, discs, blank_rates, wrong_counts, blank_counts
+
+        for i in range(len(q_numbers)):
+            c = corrects[i] if i < len(corrects) else ""
+            if not c:
+                continue
+            ok = 0
+            wrong = 0
+            blank = 0
+            for s in students:
+                ans = answers_by_student.get(s, [])
+                a = ans[i] if i < len(ans) else ""
+                if not a:
+                    blank += 1
+                elif a == c:
+                    ok += 1
+                else:
+                    wrong += 1
+            diffs[i] = ok / n
+            blank_rates[i] = blank / n
+            wrong_counts[i] = int(wrong)
+            blank_counts[i] = int(blank)
+
+        group_n = int(math.floor(n * 0.27)) if n > 30 else int(math.floor(n / 2.0))
+        if group_n > 0:
+            ordered = sorted(students, key=lambda sid: (scores_by_student.get(sid, 0.0), str(sid)))
+            low = set(ordered[:group_n])
+            high = set(ordered[-group_n:])
+            for i in range(len(q_numbers)):
+                c = corrects[i] if i < len(corrects) else ""
+                if not c:
+                    continue
+                low_ok = 0
+                high_ok = 0
+                for s in low:
+                    ans = answers_by_student.get(s, [])
+                    a = ans[i] if i < len(ans) else ""
+                    if a and a == c:
+                        low_ok += 1
+                for s in high:
+                    ans = answers_by_student.get(s, [])
+                    a = ans[i] if i < len(ans) else ""
+                    if a and a == c:
+                        high_ok += 1
+                discs[i] = (high_ok / group_n) - (low_ok / group_n)
+
+        return diffs, discs, blank_rates, wrong_counts, blank_counts
+
+    def fmt2(v: Optional[float]) -> str:
+        return "" if v is None else f"{float(v):.2f}"
+
+    def safe_token(value: str) -> str:
+        token = (value or "").strip().replace("\x00", "")
+        token = re.sub(r"[^A-Za-z0-9-]+", "_", token)
+        token = re.sub(r"_+", "_", token).strip("_.-")
+        return token or "all"
+
+    def make_metric_plot_png(
+        numbers: list[int],
+        values: list[Optional[float]],
+        out_path: Path,
+        title_text: str,
+        *,
+        y_min: Optional[float],
+        y_max: Optional[float],
+        ref_lines: list[float],
+        bgr_color: tuple[int, int, int],
+    ) -> bool:
+        try:
+            import cv2  # type: ignore
+            import numpy as np  # type: ignore
+        except (ImportError, OSError):
+            return False
+
+        width, height = 1200, 300
+        left, right, top, bottom = 70, 30, 40, 45
+        plot_w = width - left - right
+        plot_h = height - top - bottom
+
+        img = np.full((height, width, 3), 255, dtype=np.uint8)
+        axis = (0, 0, 0)
+        grid = (229, 231, 235)  # #e5e7eb
+
+        xs = [float(x) for x in numbers]
+        ys = [None if v is None else float(v) for v in values]
+        if not xs:
+            return False
+
+        x_min = float(min(xs))
+        x_max = float(max(xs))
+        if x_max <= x_min:
+            x_max = x_min + 1.0
+
+        y_vals = [v for v in ys if v is not None and math.isfinite(v)]
+        if y_min is None or y_max is None:
+            if y_vals:
+                y_min = float(min(y_vals))
+                y_max = float(max(y_vals))
+                pad = max(0.1, (y_max - y_min) * 0.1)
+                y_min -= pad
+                y_max += pad
+            else:
+                y_min, y_max = 0.0, 1.0
+        if y_max <= y_min:
+            y_max = y_min + 1.0
+
+        def x_of(x: float) -> int:
+            return int(left + (x - x_min) / (x_max - x_min) * plot_w)
+
+        def y_of(y: float) -> int:
+            return int(top + (1.0 - (y - y_min) / (y_max - y_min)) * plot_h)
+
+        # Axes
+        cv2.line(img, (left, top), (left, top + plot_h), axis, 2)
+        cv2.line(img, (left, top + plot_h), (left + plot_w, top + plot_h), axis, 2)
+
+        # Reference lines
+        for y in ref_lines:
+            if y_min <= y <= y_max:
+                py = y_of(float(y))
+                cv2.line(img, (left, py), (left + plot_w, py), grid, 1)
+
+        # Line + points
+        last: Optional[tuple[int, int]] = None
+        for x, y in zip(xs, ys):
+            if y is None or not math.isfinite(float(y)):
+                last = None
+                continue
+            pt = (x_of(float(x)), y_of(float(y)))
+            if last is not None:
+                cv2.line(img, last, pt, (209, 213, 219), 2)  # #d1d5db
+            cv2.circle(img, pt, 4, bgr_color, thickness=-1)
+            last = pt
+
+        # Title + labels
+        cv2.putText(img, str(title_text), (left, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.9, axis, 2, cv2.LINE_AA)
+        cv2.putText(img, str(t.get("col_question", "Question")), (left + plot_w // 2 - 24, height - 16), cv2.FONT_HERSHEY_SIMPLEX, 0.7, axis, 2, cv2.LINE_AA)
+
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(out_path), img)
+        return True
 
     try:
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4, landscape
         from reportlab.lib.styles import getSampleStyleSheet
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
     except Exception:
         return
 
     styles = getSampleStyleSheet()
-    doc = SimpleDocTemplate(str(Path(job_dir) / "analysis_report.pdf"), pagesize=landscape(A4), leftMargin=24, rightMargin=24, topMargin=22, bottomMargin=22)
+    base_font = "Helvetica"
+    header_font = "Helvetica-Bold"
+    try:
+        pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
+        if str(lang).lower().startswith("zh"):
+            base_font = "STSong-Light"
+            header_font = "STSong-Light"
+    except Exception:
+        pass
+
+    try:
+        styles["Title"].fontName = base_font
+        styles["Heading2"].fontName = base_font
+        styles["BodyText"].fontName = base_font
+    except Exception:
+        pass
+
+    doc = SimpleDocTemplate(
+        str(Path(job_dir) / "analysis_report.pdf"),
+        pagesize=landscape(A4),
+        leftMargin=24,
+        rightMargin=24,
+        topMargin=22,
+        bottomMargin=22,
+    )
     story: list = []
 
     title = t.get("result_download_analysis_pdf") or "Analysis report"
     story.append(Paragraph(str(title), styles["Title"]))
     story.append(Spacer(1, 10))
 
-    classes = payload.get("classes") or []
-    for idx, cls in enumerate(classes):
-        label = str(cls.get("label") or cls.get("key") or "")
-        if idx > 0:
-            story.append(PageBreak())
-        story.append(Paragraph(f"{t.get('col_class', 'Class')}: {label}", styles["Heading2"]))
-        story.append(Spacer(1, 8))
+    metric_specs = [
+        (
+            "difficulty",
+            str(t.get("result_chart_tab_difficulty", "Difficulty")),
+            0.0,
+            1.0,
+            [0.25, 0.5, 0.75],
+            (74, 222, 128),  # BGR-ish green
+        ),
+        (
+            "discrimination",
+            str(t.get("result_chart_tab_discrimination", "Discrimination")),
+            None,
+            None,
+            [0.0, 0.2, 0.4],
+            (235, 99, 37),  # BGR-ish blue-ish
+        ),
+        (
+            "blank_rate",
+            str(t.get("result_chart_tab_blank_rate", "Blank rate")),
+            0.0,
+            1.0,
+            [0.1, 0.2, 0.3],
+            (128, 128, 128),
+        ),
+    ]
 
-        header = [
-            t.get("col_question", "Question"),
-            t.get("col_difficulty", "Difficulty"),
-            t.get("col_discrimination", "Discrimination"),
-            t.get("col_wrong", "Wrong"),
-            t.get("col_blank", "Blank"),
+    def build_compact_rows(
+        per_row: int,
+        diffs: list[Optional[float]],
+        discs: list[Optional[float]],
+        blank_rates: list[Optional[float]],
+        wrong_counts: list[int],
+        blank_counts: list[int],
+    ) -> list[list[str]]:
+        cols_per_q = [
+            t.get("col_question", "Q"),
+            t.get("result_chart_tab_difficulty", t.get("col_difficulty", "Difficulty")),
+            t.get("result_chart_tab_discrimination", t.get("col_discrimination", "Discrimination")),
+            t.get("result_chart_tab_blank_rate", "Blank rate"),
+            t.get("col_wrong_short", t.get("col_wrong", "Wrong")),
+            t.get("col_blank_short", t.get("col_blank", "Blank")),
         ]
-        rows = [header]
+        header = [*cols_per_q] * per_row
+        rows: list[list[str]] = [header]
 
-        for r in (cls.get("rows") or []):
-            try:
-                qno = int(float(str(r.get("number") or "").strip()))
-            except Exception:
-                continue
-            cells = r.get("cells") or []
-            wrong_count = sum(1 for v in cells if str(v or "").strip())
-            blank_count = sum(1 for v in cells if str(v or "").strip() == "空白")
+        def one_q(i: int) -> list[str]:
+            return [
+                str(q_numbers[i]),
+                fmt2(diffs[i]),
+                fmt2(discs[i]),
+                fmt2(blank_rates[i]),
+                str(int(wrong_counts[i])),
+                str(int(blank_counts[i])),
+            ]
 
-            item = items.get(qno) or {}
-            rows.append(
-                [
-                    str(qno),
-                    str(item.get("difficulty") or ""),
-                    str(item.get("discrimination") or ""),
-                    str(wrong_count),
-                    str(blank_count),
-                ]
+        i = 0
+        while i < len(q_numbers):
+            row: list[str] = []
+            for j in range(per_row):
+                idx = i + j
+                if idx < len(q_numbers):
+                    row.extend(one_q(idx))
+                else:
+                    row.extend([""] * len(cols_per_q))
+            rows.append(row)
+            i += per_row
+        return rows
+
+    for class_idx, (label, students) in enumerate(groups):
+        if class_idx > 0:
+            story.append(PageBreak())
+            story.append(Paragraph(f"{t.get('col_class', 'Class')}: {label}", styles["Title"]))
+            story.append(PageBreak())
+
+        scores_by_student = compute_scores(students)
+        diffs, discs, blank_rates, wrong_counts, blank_counts = compute_item_metrics(students, scores_by_student)
+
+        per_row = 2 if len(q_numbers) <= 40 else 3
+        table_rows = build_compact_rows(per_row, diffs, discs, blank_rates, wrong_counts, blank_counts)
+
+        for metric_idx, (metric_key, metric_label, y_min, y_max, ref_lines, bgr) in enumerate(metric_specs):
+            if metric_idx > 0:
+                story.append(PageBreak())
+
+            story.append(Paragraph(f"{t.get('col_class', 'Class')}: {label} ({len(students)}) · {metric_label}", styles["Heading2"]))
+            story.append(Spacer(1, 6))
+
+            col_count = len(table_rows[0]) if table_rows else 0
+            col_widths = None
+            if col_count > 0:
+                # 6 columns per question chunk: Q | Diff | Disc | BlankRate | Wrong | Blank
+                chunk = [28, 48, 54, 54, 44, 44] if per_row <= 2 else [24, 40, 44, 44, 34, 34]
+                col_widths = chunk * per_row
+
+            tbl = Table(table_rows, repeatRows=1, colWidths=col_widths)
+            tbl.setStyle(
+                TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+                        ("FONTNAME", (0, 0), (-1, 0), header_font),
+                        ("FONTSIZE", (0, 0), (-1, 0), 8),
+                        ("FONTNAME", (0, 1), (-1, -1), base_font),
+                        ("FONTSIZE", (0, 1), (-1, -1), 7),
+                        ("GRID", (0, 0), (-1, -1), 0.25, colors.lightgrey),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                        ("TOPPADDING", (0, 0), (-1, -1), 1),
+                        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+                    ]
+                )
             )
+            story.append(tbl)
+            story.append(Spacer(1, 6))
 
-        tbl = Table(rows, repeatRows=1)
-        tbl.setStyle(
-            TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.whitesmoke),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("FONTSIZE", (0, 0), (-1, 0), 10),
-                    ("FONTSIZE", (0, 1), (-1, -1), 9),
-                    ("GRID", (0, 0), (-1, -1), 0.25, colors.lightgrey),
-                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ]
-            )
-        )
-        story.append(tbl)
+            metric_values = {
+                "difficulty": diffs,
+                "discrimination": discs,
+                "blank_rate": blank_rates,
+            }.get(metric_key, diffs)
+
+            token = safe_token(label)
+            chart_path = Path(job_dir) / f"analysis_report_chart_{token}_{metric_key}.png"
+            if make_metric_plot_png(q_numbers, metric_values, chart_path, metric_label, y_min=y_min, y_max=y_max, ref_lines=ref_lines, bgr_color=bgr):
+                chart_w = float(doc.width)
+                chart_h = chart_w * (300.0 / 1200.0)
+                story.append(Image(str(chart_path), width=chart_w, height=chart_h))
 
     doc.build(story)
 
@@ -1376,11 +1802,31 @@ async def api_process(
                 except Exception:
                     pass
             else:
-                if rscript is None:
-                    analysis_error = t["analysis_error_missing_rscript_required"]
+                builtin_ok = False
+                try:
+                    from engine.analysis import run_analysis_template
+
+                    run_analysis_template(template_path, job_dir, lang=lang)
+                    builtin_ok = True
+                except Exception as exc:
+                    builtin_ok = False
+                    analysis_error = f"{t.get('analysis_error_builtin_failed', 'Built-in analysis failed:')} {exc}".strip()
+
+                if builtin_ok:
+                    analysis_message = t.get("analysis_message_done_fallback", t.get("analysis_message_done", "Analysis complete."))
+                    analysis_error = None
+                    try:
+                        _write_analysis_report_pdf(job_dir, lang=lang)
+                    except Exception:
+                        pass
                 else:
-                    reason = _summarize_r_error(r_failed_text) or (r_failed_text or "").strip()
-                    analysis_error = f"{t['analysis_error_r_failed']} {reason}".strip()
+                    if rscript is None:
+                        # Keep the built-in error as the primary reason.
+                        analysis_error = analysis_error or t["analysis_error_missing_rscript_required"]
+                    else:
+                        reason = _summarize_r_error(r_failed_text) or (r_failed_text or "").strip()
+                        if reason:
+                            analysis_error = f"{analysis_error} ({t['analysis_error_r_failed']} {reason})".strip()
 
     meta = _read_job_meta(job_dir)
     if analysis_error:

@@ -38,7 +38,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 - **下載答案卡**：輸入標題、科目、題數（最多 100 題）、每題選項（ABC / ABCD / ABCDE），下載答案卡 PDF（給學生填答）。
 - **下載老師答案檔**：下載 ``answer_key.xlsx``（Excel），填入 ``correct/points`` 後到「上傳處理」上傳。
-- **上傳處理（辨識＋分析）**：上傳多頁 PDF（每頁一位學生）＋老師答案檔 ``answer_key.xlsx``。完成後會提供「開啟結果頁」按鈕（可用新分頁開啟），並輸出 ``results.csv``、``ambiguity.csv``、``annotated.pdf``，以及分析報表/圖表（圖表會依介面語言顯示；建議安裝 R 用 ``ggplot2`` 出圖）。
+- **上傳處理（辨識＋分析）**：上傳多頁 PDF（每頁一位學生）＋老師答案檔 ``answer_key.xlsx``。完成後會提供「開啟結果頁」按鈕（可用新分頁開啟），並輸出 ``results.csv``、``ambiguity.csv``、``annotated.pdf``，以及分析報表/圖表（圖表會依介面語言顯示；需要安裝 R 用 ``ggplot2`` 出圖）。
 - **啟動器**：雙擊啟動器（``start_mac.command`` 或 ``start_windows.vbs``）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 ``http://127.0.0.1:8000``。
   - Windows 會把虛擬環境放在 ``%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>``，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
   - macOS 會把虛擬環境放在 ``~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>``，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
@@ -71,8 +71,8 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 圖表頁（/charts）
 ~~~~~~~~~~~~~~~~~
 
-- 開啟 ``/result/<job_id>/charts`` 可在同一頁查看分析圖表與「試題分析檔案」下載連結。
-- 圖表頁提供互動式圖表：滑鼠 hover 可顯示題號，並與 showwrong（錯題表）同步對照；下方另提供每題難度/鑑別度數字表。
+- 開啟 ``/result/<job_id>/charts`` 可在同一頁查看互動式表格/圖表與「試題分析檔案」下載連結。
+- 互動功能：滑鼠移到表格/圖表可醒目提示題號，點一下可鎖定；支援學生篩選/排序、隱藏正確，以及鍵盤快捷鍵（←/→ 題號、↑/↓ 學生、Esc 清除、PgUp/PgDn 切換圖）。
 - 「試題分析數據（預覽）」為可展開表格（預設收合）；需要完整資料請下載 ``analysis_item.csv``。
 - 若未來新增更多 ``analysis_*`` 輸出（CSV/XLSX/圖片/日誌），結果頁的「試題分析檔案」會自動列出下載連結。
 
@@ -94,7 +94,7 @@ Debug Mode（回報問題用）
 
 - **pip install failed** – 檢查 launcher log，確認有網路、Python 版本為 3.10+；若你是 Python 3.14，建議改用 3.10–3.13。
 - **Port already in use / permission denied** – 啟動器會檢查 port；若 macOS 防火牆阻擋 Python，請到 System Settings > Network > Firewall 放行。
-- **Server not opening** – 先看 launcher log 找出錯誤；也可以在 ``.venv`` 裡直接跑 ``python run_app.py`` 方便除錯。
+- **Server not opening** – 先看 launcher log 找出錯誤；也可以在終端機執行 ``python run_app.py``（需先在同一環境安裝 requirements）方便除錯。
 
 .. _english:
 
@@ -130,23 +130,24 @@ macOS
 
 #. Double-click ``start_mac.command`` (or run ``chmod +x start_mac.command`` once if prompted).
 #. If Python isn’t installed, the launcher offers to download and open the installer (from python.org). After installation finishes, run ``start_mac.command`` again.
-#. First run creates ``.venv`` and installs requirements; later runs reuse the existing ``.venv`` (unless requirements changed).
+#. First run creates a virtual env and installs requirements; later runs reuse the existing env (unless requirements changed).
 #. Your browser opens ``http://127.0.0.1:8000``. Close the browser when you’re done; the server auto-exits after a period of inactivity.
 
 Windows 11
 ^^^^^^^^^^
 
 #. Double-click ``start_windows.vbs``. If Python isn’t installed, it will offer to download/install Python 3.11 automatically (recommended).
+   - For a traditional “Next/Next/Finish” installer wizard (Setup.exe), see ``installer/windows/README.md``.
 #. If you install Python manually, check “Add python.exe to PATH” during installation (and keep the ``py`` launcher enabled if offered).
-#. First run installs requirements; later runs reuse the existing ``.venv`` (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
+#. First run installs requirements; later runs reuse the existing environment (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
 
 Features
 ~~~~~~~~
 
 - **Download page** – choose title, subject, number of questions (up to 100), and choices per question (ABC/ABCD/ABCDE). Download the answer sheet PDF (for students).
 - **Teacher answer key** – download ``answer_key.xlsx`` (Excel), fill ``correct/points``, then upload it on the Upload page.
-- **Upload page (recognize + analyze)** – upload a multi-page PDF scan (one student per page) plus ``answer_key.xlsx``. After processing, you’ll get an **Open result page** button (open in a new tab if desired). Exports ``results.csv``, ``ambiguity.csv``, ``annotated.pdf``, and analysis reports/plots (plots follow the selected UI language; install R for ggplot2 plots).
-- **Launcher** – sets up ``.venv``, installs requirements, starts the local server, and opens the browser.
+- **Upload page (recognize + analyze)** – upload a multi-page PDF scan (one student per page) plus ``answer_key.xlsx``. After processing, you’ll get an **Open result page** button (open in a new tab if desired). Exports ``results.csv``, ``ambiguity.csv``, ``annotated.pdf``, and analysis reports/plots (plots follow the selected UI language; R is required for ggplot2 plots).
+- **Launcher** – sets up the virtual env, installs requirements, starts the local server, and opens the browser.
   - Windows reuses a stable venv at ``%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>``.
   - macOS reuses a stable venv at ``~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>``.
   - To override, set ``ANSWER_SHEET_VENV_DIR`` (points to the venv root dir).
@@ -179,8 +180,8 @@ After recognition, files are written under ``outputs/<job_id>/``:
 Charts Page (/charts)
 ~~~~~~~~~~~~~~~~~~~~~
 
-- Open ``/result/<job_id>/charts`` to view plots and item-analysis downloads on one page.
-- The charts page includes interactive charts: hover a point to see the question number and highlight the corresponding row in the showwrong grid; a per-question metrics table is shown under the plots.
+- Open ``/result/<job_id>/charts`` to view the interactive table/charts and item-analysis downloads on one page.
+- Interactions: hover the table/charts to highlight a question, click to lock; filter/sort students, hide correct, and use keyboard shortcuts (←/→ question, ↑/↓ student, Esc clear, PgUp/PgDn switch chart).
 - “Item analysis data (preview)” is a collapsible table (collapsed by default); download ``analysis_item.csv`` for full data.
 - If more ``analysis_*`` outputs are added later (CSV/XLSX/images/logs), the “Item analysis files” section auto-lists them.
 
@@ -199,4 +200,4 @@ Troubleshooting
 
 - **pip install failed** – Check the launcher log; ensure network access and Python 3.10+. If you’re on Python 3.14, try Python 3.10–3.13.
 - **Port already in use / permission denied** – The launcher checks port availability.
-- **Server not opening** – Use the launcher log or run ``python run_app.py`` inside ``.venv`` for debugging.
+- **Server not opening** – Use the launcher log or run ``python run_app.py`` after installing requirements in the same environment for debugging.

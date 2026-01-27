@@ -14,6 +14,8 @@ Last updated: |today_en|
 
 `點此下載程式（ZIP） <https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip>`_
 
+`GitHub Releases（推薦） <https://github.com/Abieskawa/answer-sheet-studio/releases/latest>`_
+
 Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進行影像辨識（不會上傳到雲端）。
 
 最簡單開始（推薦）
@@ -55,13 +57,15 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 辨識完成後，檔案會寫入 ``outputs/<job_id>/``：
 
-- ``results.csv`` （學生欄位預設為「年級-班級-座號」，例如 ``8-1-01``；重複會自動加 ``_2`` / ``_3`` ）
+- ``results.csv`` （學生欄位預設為「年級-班級-座號」（班級支援 1–9；0 保留），例如 ``8-1-01``；重複會自動加 ``_2`` / ``_3`` ）
 - ``ambiguity.csv``
+- ``roster.csv`` （從答案卡讀出的年級/班級/座號與頁碼）
 - ``annotated.pdf``
 - ``input.pdf`` （原始上傳檔）
 - ``answer_key.xlsx`` （老師答案檔）
 - ``showwrong.xlsx`` （只顯示錯題：題號為列、學生為欄；最後一列為每位學生總分）
 - ``analysis_template.csv``、``analysis_scores.csv``、``analysis_item.csv``、``analysis_summary.csv``
+- ``analysis_scores_by_class.xlsx`` （按班級分表的成績表）
 - ``analysis_score_hist.png``、``analysis_item_plot.png``
 - ``analysis_showwrong.json`` （結果頁互動圖表用）
 - ``analysis_report.pdf`` （分析結果 PDF；每班一頁）
@@ -96,13 +100,14 @@ Debug Mode（回報問題用）
 - **Port already in use / permission denied** – 啟動器會檢查 port；若 macOS 防火牆阻擋 Python，請到 System Settings > Network > Firewall 放行。
 - **Server not opening** – 先看 launcher log 找出錯誤；也可以在終端機執行 ``python run_app.py`` （需先在同一環境安裝 requirements）方便除錯。
 
-E2E Demo（用範例掃描檔跑完整流程）
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+E2E Demo（跑完整流程）
+~~~~~~~~~~~~~~~~~~~~
 
 會自動產生「假老師答案檔」並把所有輸出寫到 ``outputs/<job_id>/``：
 
-#. ``python scripts/e2e_demo.py --input test/八年級期末掃描.pdf``
-#. 依照程式輸出提示開啟 ``http://127.0.0.1:8000/result/<job_id>/charts``
+- 有範例掃描檔時：``python scripts/e2e_demo.py --input test/八年級期末掃描.pdf``
+- 沒有掃描檔時：``python scripts/e2e_demo.py --synthetic-pages 8``
+- 依照程式輸出提示開啟 ``http://127.0.0.1:8000/result/<job_id>/charts``（若伺服器已啟動）
 
 .. _english:
 
@@ -110,6 +115,8 @@ English
 -------
 
 `Download (ZIP) <https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip>`_
+
+`GitHub Releases (recommended) <https://github.com/Abieskawa/answer-sheet-studio/releases/latest>`_
 
 Answer Sheet Studio lets teachers generate printable answer sheets and run local OMR recognition (no cloud upload).
 
@@ -172,13 +179,15 @@ Output Files
 
 After recognition, files are written under ``outputs/<job_id>/``:
 
-- ``results.csv`` (student columns default to ``grade-class-seat`` like ``8-1-01``; duplicates get ``_2`` / ``_3``)
+- ``results.csv`` (student columns default to ``grade-class-seat`` (class 1–9; 0 reserved) like ``8-1-01``; duplicates get ``_2`` / ``_3``)
 - ``ambiguity.csv``
+- ``roster.csv`` (grade/class/seat and page index extracted from the sheet)
 - ``annotated.pdf``
 - ``input.pdf`` (original upload)
 - ``answer_key.xlsx`` (teacher answer key)
 - ``showwrong.xlsx`` (wrong answers only; questions as rows, students as columns; last row is total score per student)
 - ``analysis_template.csv``, ``analysis_scores.csv``, ``analysis_item.csv``, ``analysis_summary.csv``
+- ``analysis_scores_by_class.xlsx`` (scores split by class)
 - ``analysis_score_hist.png``, ``analysis_item_plot.png``
 - ``analysis_showwrong.json`` (interactive report data)
 - ``analysis_report.pdf`` (analysis report PDF; one page per class)
@@ -210,13 +219,14 @@ Troubleshooting
 - **Port already in use / permission denied** – The launcher checks port availability.
 - **Server not opening** – Use the launcher log or run ``python run_app.py`` after installing requirements in the same environment for debugging.
 
-E2E Demo (sample scan)
-~~~~~~~~~~~~~~~~~~~~~~
+E2E Demo (full pipeline)
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Creates a fake teacher answer key and writes all outputs under ``outputs/<job_id>/``:
 
-#. ``python scripts/e2e_demo.py --input test/八年級期末掃描.pdf``
-#. Open ``http://127.0.0.1:8000/result/<job_id>/charts``
+- With a sample scan: ``python scripts/e2e_demo.py --input test/八年級期末掃描.pdf``
+- Without a scan: ``python scripts/e2e_demo.py --synthetic-pages 8``
+- Open ``http://127.0.0.1:8000/result/<job_id>/charts`` (if the server is running)
 
 .. _zh-hans:
 
@@ -224,6 +234,8 @@ Creates a fake teacher answer key and writes all outputs under ``outputs/<job_id
 --------
 
 `点此下载程序（ZIP） <https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip>`_
+
+`GitHub Releases（推荐） <https://github.com/Abieskawa/answer-sheet-studio/releases/latest>`_
 
 Answer Sheet Studio 让老师可以生成可打印的答案卡，并在本机进行图像识别（不会上传到云端）。
 
@@ -262,13 +274,15 @@ Answer Sheet Studio 让老师可以生成可打印的答案卡，并在本机进
 
 识别完成后，档案会写入 ``outputs/<job_id>/``：
 
-- ``results.csv`` （学生栏位预设为「年级-班级-座号」，例如 ``8-1-01``；重复会自动加 ``_2`` / ``_3`` ）
+- ``results.csv`` （学生栏位预设为「年级-班级-座号」（班级支持 1–9；0 保留），例如 ``8-1-01``；重复会自动加 ``_2`` / ``_3`` ）
 - ``ambiguity.csv``
+- ``roster.csv`` （从答案卡读出的年级/班级/座号与页码）
 - ``annotated.pdf``
 - ``input.pdf`` （原始上传档）
 - ``answer_key.xlsx`` （老师答案档）
 - ``showwrong.xlsx`` （只显示错题：题号为列、学生为栏；最后一列为每位学生总分）
 - ``analysis_template.csv``、``analysis_scores.csv``、``analysis_item.csv``、``analysis_summary.csv``
+- ``analysis_scores_by_class.xlsx`` （按班级分表的成绩表）
 - ``analysis_score_hist.png``、``analysis_item_plot.png``
 - ``analysis_showwrong.json`` （结果页互动图表用）
 - ``analysis_report.pdf`` （分析结果 PDF；每班一页）
@@ -303,10 +317,11 @@ Debug Mode（回报问题用）
 - **Port already in use / permission denied** – 启动器会检查 port。
 - **Server not opening** – 先看 launcher log 找出错误；也可以在终端机执行 ``python run_app.py`` （需先在同一环境安装 requirements）方便除错。
 
-E2E Demo（用范例扫描档跑完整流程）
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+E2E Demo（跑完整流程）
+~~~~~~~~~~~~~~~~~~~~
 
 会自动产生「假老师答案档」并把所有输出写到 ``outputs/<job_id>/``：
 
-#. ``python scripts/e2e_demo.py --input test/八年級期末掃描.pdf``
-#. 依照程式输出提示打开 ``http://127.0.0.1:8000/result/<job_id>/charts``
+- 有范例扫描档时：``python scripts/e2e_demo.py --input test/八年級期末掃描.pdf``
+- 没有扫描档时：``python scripts/e2e_demo.py --synthetic-pages 8``
+- 依照程式输出提示打开 ``http://127.0.0.1:8000/result/<job_id>/charts``（若服务器已启动）

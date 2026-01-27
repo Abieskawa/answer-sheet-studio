@@ -420,7 +420,7 @@
               wrongCounts[i] = Math.max(0, n - ok - blank);
 	          }
 
-          // Discrimination (R rule: >30 => floor(n*0.27), else floor(n/2); low is bottom group)
+          // Discrimination (legacy grouping rule: n>30 => floor(n*0.27), else floor(n/2); low=bottom group)
           const groupN = n > 30 ? Math.floor(n * 0.27) : Math.floor(n / 2);
           if (groupN > 0) {
             const ordered = students.slice().sort((a, b) => {

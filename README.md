@@ -46,13 +46,15 @@ Windows 11
 
 辨識完成後，檔案會寫入 `outputs/<job_id>/`：
 
-- `results.csv`（學生欄位預設為「年級-班級-座號」，例如 `8-1-01`；重複會自動加 `_2` / `_3`）
+- `results.csv`（學生欄位預設為「年級-班級-座號」（班級支援 1–9；0 保留），例如 `8-1-01`；重複會自動加 `_2` / `_3`）
 - `ambiguity.csv`
+- `roster.csv`（從答案卡讀出的年級/班級/座號與頁碼）
 - `annotated.pdf`
 - `input.pdf`（原始上傳檔）
 - `answer_key.xlsx`（老師答案檔）
 - `showwrong.xlsx`（只顯示錯題：題號為列、學生為欄；最後一列為每位學生總分）
 - `analysis_template.csv`、`analysis_scores.csv`、`analysis_item.csv`、`analysis_summary.csv`
+- `analysis_scores_by_class.xlsx`（按班級分表的成績表）
 - `analysis_score_hist.png`、`analysis_item_plot.png`
 - `analysis_showwrong.json`（結果頁互動圖表用）
 - `analysis_report.pdf`（分析結果 PDF；每班一頁）
@@ -86,18 +88,26 @@ Windows 11
 
 本機建置文件：
 
+macOS / Linux
 1. `python -m venv .venv && source .venv/bin/activate`
 2. `pip install -r docs/requirements.txt`
 3. `make html`
 
+Windows（PowerShell）
+1. `py -3.11 -m venv .venv`
+2. `.\.venv\Scripts\Activate.ps1`
+3. `pip install -r docs/requirements.txt`
+4. `.\make.bat html`
+
 Sphinx 原始檔在 `source/`；Read the Docs 使用相同設定（`source/conf.py`），並依 RTD 語系建置 `en` / `zh-tw` / `zh-cn`。
 
-### E2E Demo（用範例掃描檔跑完整流程）
+### E2E Demo（跑完整流程）
 
 會自動產生「假老師答案檔」並把所有輸出寫到 `outputs/<job_id>/`：
 
-1. `python scripts/e2e_demo.py --input test/八年級期末掃描.pdf`
-2. 依照程式輸出提示開啟 `http://127.0.0.1:8000/result/<job_id>/charts`
+- 有範例掃描檔時：`python scripts/e2e_demo.py --input test/八年級期末掃描.pdf`
+- 沒有掃描檔時：`python scripts/e2e_demo.py --synthetic-pages 8`
+- 依照程式輸出提示開啟 `http://127.0.0.1:8000/result/<job_id>/charts`（若伺服器已啟動）
 
 ---
 
@@ -147,13 +157,15 @@ Windows 11
 
 识别完成后，档案会写入 `outputs/<job_id>/`：
 
-- `results.csv`（学生栏位预设为「年级-班级-座号」，例如 `8-1-01`；重复会自动加 `_2` / `_3`）
+- `results.csv`（学生栏位预设为「年级-班级-座号」（班级支持 1–9；0 保留），例如 `8-1-01`；重复会自动加 `_2` / `_3`）
 - `ambiguity.csv`
+- `roster.csv`（从答案卡读出的年级/班级/座号与页码）
 - `annotated.pdf`
 - `input.pdf`（原始上传档）
 - `answer_key.xlsx`（老师答案档）
 - `showwrong.xlsx`（只显示错题：题号为列、学生为栏；最后一列为每位学生总分）
 - `analysis_template.csv`、`analysis_scores.csv`、`analysis_item.csv`、`analysis_summary.csv`
+- `analysis_scores_by_class.xlsx`（按班级分表的成绩表）
 - `analysis_score_hist.png`、`analysis_item_plot.png`
 - `analysis_showwrong.json`（结果页互动图表用）
 - `analysis_report.pdf`（分析结果 PDF；每班一页）
@@ -184,18 +196,26 @@ Windows 11
 
 本机建置文件：
 
+macOS / Linux
 1. `python -m venv .venv && source .venv/bin/activate`
 2. `pip install -r docs/requirements.txt`
 3. `make html`
 
+Windows（PowerShell）
+1. `py -3.11 -m venv .venv`
+2. `.\.venv\Scripts\Activate.ps1`
+3. `pip install -r docs/requirements.txt`
+4. `.\make.bat html`
+
 Sphinx 原始档在 `source/`；Read the Docs 使用相同设定（`source/conf.py`），并依 RTD 语系建置 `en` / `zh-tw` / `zh-cn`。
 
-### E2E Demo（用范例扫描档跑完整流程）
+### E2E Demo（跑完整流程）
 
 会自动产生「假老师答案档」并把所有输出写到 `outputs/<job_id>/`：
 
-1. `python scripts/e2e_demo.py --input test/八年級期末掃描.pdf`
-2. 依照程式输出提示打开 `http://127.0.0.1:8000/result/<job_id>/charts`
+- 有范例扫描档时：`python scripts/e2e_demo.py --input test/八年級期末掃描.pdf`
+- 没有扫描档时：`python scripts/e2e_demo.py --synthetic-pages 8`
+- 依照程式输出提示打开 `http://127.0.0.1:8000/result/<job_id>/charts`（若服务器已启动）
 
 ---
 
@@ -246,13 +266,15 @@ Windows 11
 
 After recognition, files are written under `outputs/<job_id>/`:
 
-- `results.csv` (student columns default to `grade-class-seat`, e.g. `8-1-01`; duplicates get `_2` / `_3`)
+- `results.csv` (student columns default to `grade-class-seat` (class 1–9; 0 reserved), e.g. `8-1-01`; duplicates get `_2` / `_3`)
 - `ambiguity.csv`
+- `roster.csv` (grade/class/seat and page index extracted from the sheet)
 - `annotated.pdf`
 - `input.pdf` (original upload)
 - `answer_key.xlsx` (teacher answer key)
 - `showwrong.xlsx` (wrong answers only; questions as rows, students as columns; last row is total score per student)
 - `analysis_template.csv`, `analysis_scores.csv`, `analysis_item.csv`, `analysis_summary.csv`
+- `analysis_scores_by_class.xlsx` (scores split by class)
 - `analysis_score_hist.png`, `analysis_item_plot.png`
 - `analysis_showwrong.json` (interactive report data)
 - `analysis_report.pdf` (analysis report PDF; one page per class)
@@ -283,15 +305,23 @@ After recognition, files are written under `outputs/<job_id>/`:
 
 Build the docs locally:
 
+macOS / Linux
 1. `python -m venv .venv && source .venv/bin/activate` (or your preferred venv)
 2. `pip install -r docs/requirements.txt`
 3. `make html`
 
-The Sphinx source lives in `source/`. Read the Docs uses the same config (`source/conf.py`) and builds `en` / `zh-tw` based on the RTD language setting.
+Windows (PowerShell)
+1. `py -3.11 -m venv .venv`
+2. `.\.venv\Scripts\Activate.ps1`
+3. `pip install -r docs/requirements.txt`
+4. `.\make.bat html`
 
-### E2E Demo (run the full pipeline with the sample scan)
+The Sphinx source lives in `source/`. Read the Docs uses the same config (`source/conf.py`) and builds `en` / `zh-tw` / `zh-cn` based on the RTD language setting.
+
+### E2E Demo (run the full pipeline)
 
 Creates a fake teacher answer key and writes all outputs under `outputs/<job_id>/`:
 
-1. `python scripts/e2e_demo.py --input test/八年級期末掃描.pdf`
-2. Open `http://127.0.0.1:8000/result/<job_id>/charts`
+- With a sample scan: `python scripts/e2e_demo.py --input test/八年級期末掃描.pdf`
+- Without a scan: `python scripts/e2e_demo.py --synthetic-pages 8`
+- Open `http://127.0.0.1:8000/result/<job_id>/charts` (if the server is running)

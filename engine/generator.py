@@ -90,7 +90,7 @@ GRADE_X0 = NAME_LINE_X0  # align with name underline start
 GRADE_STEP = 26
 
 CLASS_Y = PAGE_H - 199
-CLASS_VALUES = list(range(1, 10))
+CLASS_VALUES = list(range(10))  # 0 is reserved/unused (kept for recognizer alignment)
 CLASS_RADIUS = 6.2
 CLASS_X0 = NAME_LINE_X0  # align with name underline start
 CLASS_STEP = 21

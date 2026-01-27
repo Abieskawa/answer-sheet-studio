@@ -695,19 +695,43 @@ def process_pdf_to_csv_and_annotated_pdf(
             flags.append({"page": idx + 1, **flag})
         annotated_images.append(annotated)
 
-    def normalize_person_id(seat_no: Optional[str]) -> Optional[str]:
-        if seat_no is None:
+    def _to_int_str(value: Any) -> Optional[str]:
+        if value is None:
             return None
-        seat = str(seat_no).strip()
-        if not seat:
+        s = str(value).strip()
+        if not s:
             return None
-        if seat.isdigit():
-            return str(int(seat))
-        return seat
+        if s.isdigit():
+            return str(int(s))
+        return s
+
+    def _normalize_seat_no(value: Any) -> Optional[str]:
+        s = _to_int_str(value)
+        if s is None:
+            return None
+        if s.isdigit():
+            n = int(s)
+            if 0 <= n <= 99:
+                return f"{n:02d}"
+            return str(n)
+        return s
+
+    def _base_person_id(row: Dict[str, Any]) -> str:
+        grade = _to_int_str(row.get("grade"))
+        class_no = _to_int_str(row.get("class_no"))
+        seat_no = _normalize_seat_no(row.get("seat_no"))
+        if seat_no is not None:
+            row["seat_no"] = seat_no  # keep output consistent (00–99)
+
+        if grade and class_no and seat_no:
+            return f"{grade}-{class_no}-{seat_no}"
+        if seat_no:
+            return seat_no
+        return f"page_{row['page']}"
 
     used_person_ids: set[str] = set()
     for row in people:
-        base_id = normalize_person_id(row.get("seat_no")) or f"page_{row['page']}"
+        base_id = _base_person_id(row)
         person_id = base_id
         suffix = 2
         while person_id in used_person_ids:
@@ -716,29 +740,33 @@ def process_pdf_to_csv_and_annotated_pdf(
         used_person_ids.add(person_id)
         row["person_id"] = person_id
 
-    def person_sort_key(person_id: str) -> Tuple[int, int, int, str]:
-        def parse_numeric_with_suffix(value: str) -> Optional[Tuple[int, int]]:
-            parts = value.split("_", 1)
-            if not parts or not parts[0].isdigit():
-                return None
-            base = int(parts[0])
-            suffix = int(parts[1]) if len(parts) == 2 and parts[1].isdigit() else 0
-            return base, suffix
+    def _to_int(value: Any) -> Optional[int]:
+        s = _to_int_str(value)
+        if s is None:
+            return None
+        try:
+            return int(s)
+        except Exception:
+            return None
 
-        parsed = parse_numeric_with_suffix(person_id)
-        if parsed is not None:
-            base, suffix = parsed
-            return (0, base, suffix, person_id)
+    def person_sort_key(row: Dict[str, Any]) -> Tuple[int, int, int, int, int, int, str, int]:
+        grade = _to_int(row.get("grade"))
+        class_no = _to_int(row.get("class_no"))
+        seat_no = _to_int(row.get("seat_no"))
+        person_id = str(row.get("person_id", ""))
+        page = int(row.get("page", 0) or 0)
+        return (
+            0 if grade is not None else 1,
+            int(grade or 0),
+            0 if class_no is not None else 1,
+            int(class_no or 0),
+            0 if seat_no is not None else 1,
+            int(seat_no or 0),
+            person_id,
+            page,
+        )
 
-        if person_id.startswith("page_"):
-            parsed = parse_numeric_with_suffix(person_id[5:])
-            if parsed is not None:
-                base, suffix = parsed
-                return (1, base, suffix, person_id)
-
-        return (2, 0, 0, person_id)
-
-    people_sorted = sorted(people, key=lambda row: person_sort_key(str(row.get("person_id", ""))))
+    people_sorted = sorted(people, key=person_sort_key)
     person_ids = [str(row.get("person_id", "")) for row in people_sorted]
 
     # Roster (per-student metadata used for grouping/reporting).

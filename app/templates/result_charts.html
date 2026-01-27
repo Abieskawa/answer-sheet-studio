@@ -112,7 +112,6 @@
         </div>
         <div class="lang-switch" aria-label="Language">
           <button type="button" class="lang-tab{% if lang == 'zh-Hant' %} active{% endif %}" data-lang="zh-Hant">{{ t.lang_zh }}</button>
-          <button type="button" class="lang-tab{% if lang == 'zh-Hans' %} active{% endif %}" data-lang="zh-Hans">{{ t.lang_zh_hans }}</button>
           <button type="button" class="lang-tab{% if lang == 'en' %} active{% endif %}" data-lang="en">{{ t.lang_en }}</button>
         </div>
       </nav>
@@ -198,7 +197,7 @@
           {% if t.result_plot_score_hist_guides is defined %}
             <p class="hint">{{ t.result_plot_score_hist_guides }}</p>
           {% endif %}
-          <img src="{{ analysis_score_hist_inline_url }}" alt="{{ t.result_plot_score_hist }}" loading="lazy" />
+          <img src="{{ analysis_score_hist_inline_url }}" alt="{{ t.result_plot_score_hist }}" loading="eager" />
         </div>
       {% endif %}
       {% if analysis_item_plot_inline_url %}
@@ -207,7 +206,7 @@
           {% if t.result_plot_item_metrics_guides is defined %}
             <p class="hint">{{ t.result_plot_item_metrics_guides }}</p>
           {% endif %}
-          <img src="{{ analysis_item_plot_inline_url }}" alt="{{ t.result_plot_item_metrics }}" loading="lazy" />
+          <img src="{{ analysis_item_plot_inline_url }}" alt="{{ t.result_plot_item_metrics }}" loading="eager" />
         </div>
       {% endif %}
     </div>
@@ -1335,11 +1334,60 @@
       if (!btn) return;
 
       const PRINT_CLASS = "chart-print";
+      let detailsSnapshot = [];
+      const snapshotAndExpandDetails = () => {
+        try {
+          const details = Array.from(document.querySelectorAll("details"));
+          detailsSnapshot = details.map((d) => [d, Boolean(d.open)]);
+          details.forEach((d) => (d.open = true));
+        } catch (_) {
+          detailsSnapshot = [];
+        }
+      };
+      const restoreDetails = () => {
+        try {
+          for (const [d, wasOpen] of detailsSnapshot) {
+            d.open = Boolean(wasOpen);
+          }
+        } catch (_) {}
+        detailsSnapshot = [];
+      };
+      const waitForImages = (timeoutMs = 2500) => {
+        try {
+          const imgs = Array.from(document.images || []);
+          const pending = imgs.filter((img) => !img.complete);
+          if (!pending.length) return Promise.resolve();
+          return new Promise((resolve) => {
+            let done = false;
+            const timer = window.setTimeout(() => {
+              if (done) return;
+              done = true;
+              resolve();
+            }, timeoutMs);
+            let remaining = pending.length;
+            const onDone = () => {
+              remaining -= 1;
+              if (remaining > 0 || done) return;
+              done = true;
+              window.clearTimeout(timer);
+              resolve();
+            };
+            pending.forEach((img) => {
+              img.addEventListener("load", onDone, { once: true });
+              img.addEventListener("error", onDone, { once: true });
+            });
+          });
+        } catch (_) {
+          return Promise.resolve();
+        }
+      };
       const cleanup = () => {
         document.querySelectorAll(`img.${PRINT_CLASS}`).forEach((el) => el.remove());
+        restoreDetails();
       };
       const prepare = () => {
         cleanup();
+        snapshotAndExpandDetails();
         document.querySelectorAll("canvas.chart").forEach((canvas) => {
           try {
             if (!canvas.width || !canvas.height) return;
@@ -1352,8 +1400,9 @@
         });
       };
 
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         prepare();
+        await waitForImages();
         window.print();
         window.setTimeout(cleanup, 1000);
       });

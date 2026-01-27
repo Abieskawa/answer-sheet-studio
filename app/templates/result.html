@@ -7,9 +7,13 @@
 <div class="downloads">
   <a class="download" href="{{ csv_url }}">{{ t.result_download_results }}</a>
   <a class="download" href="{{ pdf_url }}">{{ t.result_download_annotated }}</a>
+  {% if analysis_report_url %}
+    <a class="download" href="{{ analysis_report_url }}">{{ t.result_download_analysis_pdf }}</a>
+  {% endif %}
   {% if showwrong_url %}
     <a class="download" href="{{ showwrong_url }}">{{ t.result_download_showwrong }}</a>
   {% endif %}
+  <button class="download" type="button" id="printBtn" title="{{ t.result_print_pdf_hint }}">{{ t.result_print_pdf }}</button>
 </div>
 
 {% if analysis_error %}
@@ -51,4 +55,12 @@
 {% endif %}
 
 <p class="hint">{{ t.result_hint_unstable }}</p>
+
+<script>
+  (() => {
+    const btn = document.getElementById("printBtn");
+    if (!btn) return;
+    btn.addEventListener("click", () => window.print());
+  })();
+</script>
 {% endblock %}

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ 'en' if lang == 'en' else 'zh-Hant' }}">
+<html lang="{{ lang }}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,12 +8,23 @@
     :root { color-scheme: light; }
     body { margin: 0; background: #fff; color: #111827; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "PingFang TC", "Microsoft JhengHei", sans-serif; }
     .wrap { max-width: 980px; margin: 0 auto; padding: 24px 18px 40px; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .brand { font-weight: 700; letter-spacing: 0.4px; }
+    .nav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+    .nav-links { display: flex; align-items: center; gap: 12px; }
+    .nav a { color: #6b7280; text-decoration: none; font-size: 13px; }
+    .nav a:hover { color: #111827; text-decoration: underline; }
+    .lang-switch { display: flex; align-items: center; gap: 8px; }
+    button.lang-tab { padding: 6px 10px; border-radius: 999px; background: #fff; border: 1px solid #e5e7eb; color: #6b7280; font-weight: 600; cursor: pointer; font-size: 12px; }
+    button.lang-tab:hover { background: #f9fafb; color: #111827; }
+    button.lang-tab.active { border-color: #0ea5e9; background: #eff6ff; color: #111827; }
     h1 { margin: 0 0 8px; font-size: 22px; }
     .meta { margin: 0 0 18px; color: #6b7280; font-size: 13px; }
     .meta code { background: #f3f4f6; padding: 2px 6px; border-radius: 6px; }
     .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 18px; }
     .btn { display: inline-block; padding: 10px 12px; border-radius: 10px; border: 1px solid #e5e7eb; text-decoration: none; color: #111827; background: #fff; }
     .btn:hover { background: #f9fafb; }
+    button.btn { cursor: pointer; font: inherit; }
     .plots { display: grid; gap: 14px; }
     .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #fff; }
     .hint { margin: 0 0 8px; font-size: 13px; color: #6b7280; }
@@ -72,10 +83,40 @@
     canvas.chart { width: 100%; height: 360px; display: block; }
     canvas.chart[hidden] { display: none; }
     .chart-tooltip { position: absolute; left: 12px; top: 12px; background: rgba(17, 24, 39, 0.92); color: #fff; font-size: 12px; padding: 6px 8px; border-radius: 10px; pointer-events: none; max-width: 80%; }
+    img.chart-print { display: none; }
+    .footer { margin-top: 18px; color: #6b7280; font-size: 12px; text-align: center; }
+    .footer a { color: #6b7280; text-decoration: none; }
+    .footer a:hover { color: #111827; text-decoration: underline; }
+
+    @media print {
+      @page { size: A4 landscape; margin: 10mm; }
+      body { background: #fff; }
+      .header, .toolbar, .controls, .class-tabs, .chart-tabs, .focus-panel, .footer { display: none !important; }
+      .wrap { max-width: none; padding: 0; }
+      .grid-wrap { max-height: none; overflow: visible; border: none; }
+      table.matrix { width: 100%; min-width: 0; }
+      canvas.chart { display: none !important; }
+      img.chart-print { display: block !important; width: 100%; height: auto; }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
+    <header class="header">
+      <div class="brand">Answer Sheet Studio</div>
+      <nav class="nav">
+        <div class="nav-links">
+          <a href="/">{{ t.nav_download }}</a>
+          <a href="/upload">{{ t.nav_upload }}</a>
+          <a href="/update">{{ t.nav_update }}</a>
+        </div>
+        <div class="lang-switch" aria-label="Language">
+          <button type="button" class="lang-tab{% if lang == 'zh-Hant' %} active{% endif %}" data-lang="zh-Hant">{{ t.lang_zh }}</button>
+          <button type="button" class="lang-tab{% if lang == 'zh-Hans' %} active{% endif %}" data-lang="zh-Hans">{{ t.lang_zh_hans }}</button>
+          <button type="button" class="lang-tab{% if lang == 'en' %} active{% endif %}" data-lang="en">{{ t.lang_en }}</button>
+        </div>
+      </nav>
+    </header>
     <h1>{{ t.result_plots_title }}</h1>
     <p class="meta">{{ t.result_file }}<code>{{ display_filename }}</code> · {{ t.result_job_id }}<code>{{ job_id }}</code></p>
 
@@ -91,6 +132,7 @@
       {% if analysis_scores_by_class_url %}
         <a class="btn" href="{{ analysis_scores_by_class_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_scores_by_class }}</a>
       {% endif %}
+      <button class="btn" type="button" id="printBtn" title="{{ t.result_print_pdf_hint }}">{{ t.result_print_pdf }}</button>
     </div>
 
     {% if analysis_error %}
@@ -213,6 +255,16 @@
         </details>
       </div>
     {% endif %}
+
+    <footer class="footer">
+      <div>
+        {{ t.footer_local }} ·
+        <a href="{{ docs_url }}" target="_blank" rel="noopener noreferrer">{{ t.footer_docs }}</a>
+        ·
+        <a href="https://github.com/Abieskawa/answer-sheet-studio/releases/latest" target="_blank" rel="noopener noreferrer">{{ t.footer_download }}</a>
+      </div>
+      <div style="margin-top:6px">{{ t.footer_reopen_hint }}</div>
+    </footer>
   </div>
 
   {% if analysis_template_csv_url %}
@@ -1249,5 +1301,65 @@
       })();
     </script>
   {% endif %}
+
+  <script>
+    (() => {
+      const maxAge = 60 * 60 * 24 * 365;
+      document.querySelectorAll(".lang-tab").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const value = btn.dataset.lang;
+          if (!value) return;
+          document.cookie = `lang=${value}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
+          const url = new URL(window.location.href);
+          url.searchParams.delete("lang");
+          window.location.href = url.toString();
+        });
+      });
+    })();
+
+    (() => {
+      const intervalSec = Number("{{ heartbeat_interval_sec|default(60) }}") || 60;
+      const ping = () => {
+        fetch("/api/heartbeat", { method: "POST", keepalive: true }).catch(() => {});
+      };
+      ping();
+      window.setInterval(ping, Math.max(15, intervalSec) * 1000);
+      window.addEventListener("pagehide", ping, { capture: true });
+      window.addEventListener("visibilitychange", () => {
+        if (!document.hidden) ping();
+      });
+    })();
+
+    (() => {
+      const btn = document.getElementById("printBtn");
+      if (!btn) return;
+
+      const PRINT_CLASS = "chart-print";
+      const cleanup = () => {
+        document.querySelectorAll(`img.${PRINT_CLASS}`).forEach((el) => el.remove());
+      };
+      const prepare = () => {
+        cleanup();
+        document.querySelectorAll("canvas.chart").forEach((canvas) => {
+          try {
+            if (!canvas.width || !canvas.height) return;
+            const img = document.createElement("img");
+            img.className = PRINT_CLASS;
+            img.alt = canvas.getAttribute("aria-label") || "chart";
+            img.src = canvas.toDataURL("image/png");
+            canvas.insertAdjacentElement("afterend", img);
+          } catch (_) {}
+        });
+      };
+
+      btn.addEventListener("click", () => {
+        prepare();
+        window.print();
+        window.setTimeout(cleanup, 1000);
+      });
+      window.addEventListener("beforeprint", prepare);
+      window.addEventListener("afterprint", cleanup);
+    })();
+  </script>
 </body>
 </html>

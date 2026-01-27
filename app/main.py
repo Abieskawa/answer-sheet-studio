@@ -31,11 +31,12 @@ _JOB_ID_RE = re.compile(r"^[0-9a-fA-F-]{8,64}$")
 _INLINE_OUTPUT_FILENAMES = {"analysis_score_hist.png", "analysis_item_plot.png"}
 
 LANG_COOKIE_NAME = "lang"
-SUPPORTED_LANGS = ("zh-Hant", "en")
+SUPPORTED_LANGS = ("zh-Hant", "zh-Hans", "en")
 DEFAULT_LANG = "zh-Hant"
 
 DOCS_URL_BY_LANG = {
     "zh-Hant": "https://answer-sheet-studio.readthedocs.io/zh-tw/latest/",
+    "zh-Hans": "https://answer-sheet-studio.readthedocs.io/zh-cn/latest/",
     "en": "https://answer-sheet-studio.readthedocs.io/en/latest/",
 }
 
@@ -43,12 +44,14 @@ I18N = {
     "zh-Hant": {
         "lang_zh": "繁體中文",
         "lang_en": "English",
+        "lang_zh_hans": "简体中文",
         "nav_download": "下載答案卡",
         "nav_upload": "上傳處理",
         "nav_update": "更新",
         "footer_local": "本機運行 / 不上傳到雲端",
         "footer_docs": "說明文件",
         "footer_download": "下載",
+        "footer_reopen_hint": "若看到「127.0.0.1 拒絕連線」，請重新執行 start_mac.command（macOS）或 start_windows.vbs（Windows）啟動。",
         "download_title": "下載答案卡",
         "download_label_title": "標題（預設：定期評量 答案卷）",
         "download_ph_title": "例如：第一次段考",
@@ -94,6 +97,8 @@ I18N = {
         "result_download_annotated": "下載 annotated.pdf",
         "result_download_analysis_pdf": "下載分析結果 PDF",
         "result_download_showwrong": "下載 showwrong.xlsx（只顯示錯題）",
+        "result_print_pdf": "列印／存成 PDF",
+        "result_print_pdf_hint": "用瀏覽器列印（⌘/Ctrl+P）：macOS 選「PDF → 另存為 PDF」；Windows 選「Microsoft Print to PDF」。",
         "result_back_to_downloads": "查看試題分析原始數據",
         "result_view_item_analysis_data": "試題分析數據",
         "result_plots_title": "圖表",
@@ -178,12 +183,14 @@ I18N = {
     "en": {
         "lang_zh": "繁體中文",
         "lang_en": "English",
+        "lang_zh_hans": "简体中文",
         "nav_download": "Download",
         "nav_upload": "Upload",
         "nav_update": "Update",
         "footer_local": "Runs locally / no cloud upload",
         "footer_docs": "Docs",
         "footer_download": "Download",
+        "footer_reopen_hint": "If you see “127.0.0.1 refused to connect”, rerun start_mac.command (macOS) or start_windows.vbs (Windows) to start the local server.",
         "download_title": "Download Answer Sheet",
         "download_label_title": "Title (default: Exam Answer Sheet)",
         "download_ph_title": "e.g., Midterm 1",
@@ -229,6 +236,8 @@ I18N = {
         "result_download_annotated": "Download annotated.pdf",
         "result_download_analysis_pdf": "Download analysis report PDF",
         "result_download_showwrong": "Download showwrong.xlsx (wrong answers only)",
+        "result_print_pdf": "Print / Save as PDF",
+        "result_print_pdf_hint": "Print via your browser (Cmd/Ctrl+P): macOS choose “PDF → Save as PDF”; Windows choose “Microsoft Print to PDF”.",
         "result_back_to_downloads": "View item analysis raw data",
         "result_view_item_analysis_data": "Item analysis data",
         "result_plots_title": "Plots",
@@ -311,6 +320,108 @@ I18N = {
         "analysis_note_discrimination_rule_50": "Discrimination: if students ≤ 30, uses top/bottom 50% (correct_high − correct_low).",
     },
 }
+
+# A minimal Simplified Chinese (zh-Hans) UI: start from zh-Hant and override key strings.
+if "zh-Hans" not in I18N:
+    I18N["zh-Hans"] = dict(I18N.get("zh-Hant", {}))
+I18N["zh-Hans"].update(
+    {
+        "lang_zh": "繁體中文",
+        "lang_en": "English",
+        "lang_zh_hans": "简体中文",
+        "nav_download": "下载答案卡",
+        "nav_upload": "上传处理",
+        "footer_local": "本机运行 / 不上传到云端",
+        "footer_docs": "说明文档",
+        "footer_reopen_hint": "若看到「127.0.0.1 拒绝连接」，请重新执行 start_mac.command（macOS）或 start_windows.vbs（Windows）启动。",
+        "download_title": "下载答案卡",
+        "download_label_title": "标题（默认：定期评量 答案卷）",
+        "download_label_subject": "科目（可留空）",
+        "download_label_num_questions": "题数（1–100；上传识别时也要填一样）",
+        "download_label_choices_count": "每题选项（ABC/ABCD/ABCDE）",
+        "download_btn_sheet": "下载答案卡 PDF",
+        "download_btn_answer_key": "下载老师答案档（Excel）",
+        "download_hint_sheet": "先下载并打印答案卡 PDF（给学生填）。",
+        "download_hint_answer_key": "需要编辑正确答案/配分时，再下载老师答案档（Excel）填 correct/points，然后到「上传处理」上传即可。",
+        "upload_title": "上传处理",
+        "upload_label_num_questions": "题数（1–100；请依每份扫描档案输入，需与答案卡一致）",
+        "upload_label_choices_count": "每题选项（ABC/ABCD/ABCDE；需与答案卡一致）",
+        "upload_label_pdf": "上传多页 PDF（每页一位）",
+        "upload_label_answer_key": "上传老师答案档（Excel .xlsx；correct/points）",
+        "upload_btn_process": "开始识别并分析",
+        "upload_processing": "处理中，请稍候…",
+        "upload_open_result": "打开结果页（含图表）",
+        "upload_open_result_hint": "处理完成后请点上方按钮打开结果页。",
+        "upload_error_generic": "处理失败，请查看 outputs/launcher.log 或 outputs/server.log。",
+        "update_title": "更新",
+        "update_hint": "下载最新 ZIP 后在此上传套用更新。更新过程中会短暂重新启动。",
+        "update_open_releases": "打开下载页（GitHub Releases）",
+        "update_open_zip": "打开 ZIP 下载（main.zip）",
+        "update_btn_git": "用 Git 更新（git pull）",
+        "update_git_hint": "（需要 Git，且此文件夹是 git clone）",
+        "update_git_no_repo": "此文件夹不是 git repository（没有 .git），请改用 ZIP 更新。",
+        "update_git_no_git": "找不到 Git，请先安装 Git 或改用 ZIP 更新。",
+        "update_git_dirty": "检测到本机有未提交的修改，为避免冲突已停止 Git 更新；请先备份/提交/还原后再试。",
+        "update_label_zip": "上传更新 ZIP",
+        "update_btn_apply": "套用更新并重新启动",
+        "update_started": "已开始更新，请稍候（会短暂重新启动）。",
+        "update_local_only": "只允许在本机（localhost）进行更新。",
+        "update_invalid_zip": "请上传有效的 ZIP 档（.zip）。",
+        "result_title": "处理完成",
+        "result_file": "档案：",
+        "result_download_results": "下载 results.csv",
+        "result_download_annotated": "下载 annotated.pdf",
+        "result_download_analysis_pdf": "下载分析结果 PDF",
+        "result_download_showwrong": "下载 showwrong.xlsx（只显示错题）",
+        "result_print_pdf": "打印／存成 PDF",
+        "result_print_pdf_hint": "用浏览器打印（⌘/Ctrl+P）：macOS 选「PDF → 另存为 PDF」；Windows 选「Microsoft Print to PDF」。",
+        "result_plots_title": "图表",
+        "result_plot_score_hist": "成绩分布",
+        "result_plot_item_metrics": "题目分析",
+        "result_controls_filter_student": "筛选学生",
+        "result_controls_filter_student_ph": "搜索座号或 ID",
+        "result_controls_sort_seat": "座号",
+        "result_controls_sort_score_desc": "分数（高→低）",
+        "result_controls_sort_blank_asc": "空白（少→多）",
+        "result_controls_hide_correct": "隐藏正确",
+        "result_controls_jump_question": "跳到题号",
+        "result_controls_jump_question_ph": "题号",
+        "result_controls_clear": "清除醒目/锁定",
+        "result_focus_status_wrong": "错误",
+        "result_loading": "载入中…",
+        "result_chart_tab_difficulty": "难度",
+        "result_chart_tab_discrimination": "鉴别度",
+        "result_chart_tab_scores": "成绩分布",
+        "result_chart_tab_blank_rate": "空白率",
+        "result_chart_prev": "上一张",
+        "result_chart_next": "下一张",
+        "col_question": "题号",
+        "col_correct": "正确答案",
+        "col_student": "学生",
+        "col_difficulty": "难度（正答率）",
+        "col_discrimination": "鉴别度",
+        "col_class": "班级",
+        "col_wrong": "错误人数",
+        "col_blank": "空白人数",
+        "col_wrong_short": "错",
+        "col_blank_short": "空",
+        "result_analysis_files_title": "试题分析档案",
+        "result_analysis_files_hint": "下载完整分析报表（CSV/XLSX/图片/日志）。",
+        "result_item_table_title": "试题分析数据（预览）",
+        "result_item_table_hint": "此处仅显示前 200 列；完整资料请下载 analysis_item.csv。",
+        "debug_title": "Debug Mode",
+        "debug_hint": "一般使用者不需要这个页面。若需要回报问题，请依指示下载档案并提供 Job ID。",
+        "debug_label_job_id": "Job ID",
+        "debug_btn_open": "打开 Debug 下载",
+        "debug_error_not_found": "找不到此 Job ID 的输出资料夹。请确认 Job ID 是否正确。",
+        "analysis_error_missing_rscript": "找不到 Rscript（请先安装 R）。",
+        "analysis_error_missing_rscript_required": "找不到 Rscript（请先安装 R，否则无法产生分析结果）。",
+        "analysis_error_r_failed": "R 分析失败：",
+        "analysis_error_builtin_failed": "内建分析失败：",
+        "analysis_message_done": "分析完成，可下载报表与图表。",
+        "analysis_message_done_fallback": "分析完成。",
+    }
+)
 
 
 def _normalize_i18n() -> None:
@@ -528,6 +639,7 @@ def result_page(request: Request, job_id: str):
 
     score_hist = job_dir / "analysis_score_hist.png"
     item_plot = job_dir / "analysis_item_plot.png"
+    analysis_report_pdf = job_dir / "analysis_report.pdf"
     discr_note_key = _discrimination_note_key(job_dir)
 
     return template_response(
@@ -540,6 +652,7 @@ def result_page(request: Request, job_id: str):
             "csv_url": f"/outputs/{job_id}/results.csv",
             "pdf_url": f"/outputs/{job_id}/annotated.pdf",
             "showwrong_url": (f"/outputs/{job_id}/showwrong.xlsx" if (job_dir / "showwrong.xlsx").exists() else None),
+            "analysis_report_url": (f"/outputs/{job_id}/analysis_report.pdf" if analysis_report_pdf.exists() else None),
             "analysis_error": (str(meta.get("analysis_error") or "") or None),
             "analysis_message": (str(meta.get("analysis_message") or "") or None),
             "analysis_discrimination_note_key": discr_note_key,

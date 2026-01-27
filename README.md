@@ -15,7 +15,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
   - Windows 會把虛擬環境放在 `%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>`，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
   - macOS 會把虛擬環境放在 `~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>`，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
   - 如需自訂位置，可設定環境變數 `ANSWER_SHEET_VENV_DIR`（指向 venv 根目錄）。
-- 網頁介面支援 **English / 繁體中文**，可用頁首的語言切換。
+- 網頁介面支援 **English / 繁體中文 / 简体中文**，可用頁首的語言切換。
 
 ### 系統需求
 
@@ -31,7 +31,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 macOS
 1. 雙擊 `start_mac.command`（若提示權限，先執行一次 `chmod +x start_mac.command`）。若尚未安裝 Python，會提示下載並開啟安裝程式。
 2. 第一次會建立虛擬環境並安裝依賴套件；之後會重用既有環境（除非 `requirements.txt` 有變更）。
-3. 瀏覽器會自動開啟 `http://127.0.0.1:8000`。用完關閉瀏覽器即可；伺服器會在一段時間無操作後自動結束。
+3. 瀏覽器會自動開啟 `http://127.0.0.1:8000`。用完關閉瀏覽器即可；伺服器會在一段時間無操作後自動結束。若之後看到 `ERR_CONNECTION_REFUSED` /「127.0.0.1 拒絕連線」，請再雙擊啟動器重新啟動。
 
 Windows 11
 1. 雙擊 `start_windows.vbs`。若尚未安裝 Python，會提示自動下載/安裝 Python 3.11（建議）。
@@ -65,6 +65,7 @@ Windows 11
 
 - `/result/<job_id>/charts` 會把互動式表格/圖表與「試題分析檔案」集中在同一頁。
 - 互動功能：滑鼠移到表格/圖表可醒目提示題號，點一下可鎖定；支援學生篩選/排序、隱藏正確，以及鍵盤快捷鍵（←/→ 題號、↑/↓ 學生、Esc 清除、PgUp/PgDn 切換圖）。
+- 可用頁面上的「列印／存成 PDF」按鈕，透過瀏覽器列印功能輸出成可列印的 PDF。
 - 「試題分析數據（預覽）」為可展開的表格（預設收合）；需要完整資料請下載 `analysis_item.csv`。
 
 ### 更新
@@ -92,7 +93,39 @@ Windows 11
 2. `pip install -r docs/requirements.txt`
 3. `make html`
 
-Sphinx 原始檔在 `source/`；Read the Docs 使用相同設定（`source/conf.py`），並依 RTD 語系建置 `en` / `zh-tw`。
+Sphinx 原始檔在 `source/`；Read the Docs 使用相同設定（`source/conf.py`），並依 RTD 語系建置 `en` / `zh-tw` / `zh-cn`。
+
+### E2E Demo（用範例掃描檔跑完整流程）
+
+會自動產生「假老師答案檔」並把所有輸出寫到 `outputs/<job_id>/`：
+
+1. `python scripts/e2e_demo.py --input test/八年級期末掃描.pdf`
+2. 依照程式輸出提示開啟 `http://127.0.0.1:8000/result/<job_id>/charts`
+
+---
+
+## 简体中文
+
+点此下载程序（ZIP）：https://github.com/Abieskawa/answer-sheet-studio/archive/refs/heads/main.zip  
+GitHub Releases（推荐）：https://github.com/Abieskawa/answer-sheet-studio/releases/latest  
+在线文档（Read the Docs）：https://answer-sheet-studio.readthedocs.io/zh-cn/latest/
+
+Answer Sheet Studio 让老师可以生成可打印的答案卡，并在本机进行影像识别（不会上传到云端）：
+
+- **下载答案卡**：输入标题、科目、题数（最多 100 题）、每题选项（`ABC` / `ABCD` / `ABCDE`），下载答案卡 PDF（给学生填答）。
+- **下载老师答案档**：下载 `answer_key.xlsx`（Excel），填入 `correct/points` 之后到「上传处理」上传。
+- **上传处理（识别＋分析）**：上传多页 PDF（每页一位学生）＋老师答案档 `answer_key.xlsx`。完成后会提供「打开结果页」按钮，并输出 `results.csv`、`ambiguity.csv`、`annotated.pdf` 与分析报表/图表。
+- 网页界面支持 **English / 繁體中文 / 简体中文**，可用页首的语言切换。
+
+快速开始（简要）
+
+- macOS：双击 `start_mac.command`
+- Windows：双击 `start_windows.vbs`
+- 若之后看到 `ERR_CONNECTION_REFUSED` /「127.0.0.1 拒绝连接」，请再双击启动器重新启动。
+
+图表页（/charts）
+
+- 可用页面上的「打印／存成 PDF」按钮，通过浏览器打印功能输出成可打印的 PDF。
 
 ---
 
@@ -112,7 +145,7 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
   - Windows: `%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>`
   - macOS: `~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>`
   - To override, set `ANSWER_SHEET_VENV_DIR` (points to the venv root dir).
-- The web UI supports **English** and **Traditional Chinese**. Use the language tabs in the header.
+- The web UI supports **English**, **Traditional Chinese**, and **Simplified Chinese**. Use the language tabs in the header.
 
 ### Requirements
 
@@ -128,7 +161,7 @@ Answer Sheet Studio lets teachers generate printable answer sheets and run local
 macOS
 1. Double-click `start_mac.command` (or run `chmod +x start_mac.command` once if prompted). If Python isn’t installed, it will offer to download and open the installer.
 2. First run creates a virtual env and installs requirements; later runs reuse the existing env (unless requirements changed).
-3. Your browser opens `http://127.0.0.1:8000`. Close the browser when you’re done; the server auto-exits after a period of inactivity.
+3. Your browser opens `http://127.0.0.1:8000`. Close the browser when you’re done; the server auto-exits after a period of inactivity. If you later see `ERR_CONNECTION_REFUSED` / “127.0.0.1 refused to connect”, rerun the launcher to start the local server again.
 
 Windows 11
 1. Double-click `start_windows.vbs`. If Python isn’t installed, it will offer to download/install Python 3.11 automatically (recommended).
@@ -162,6 +195,7 @@ After recognition, files are written under `outputs/<job_id>/`:
 
 - `/result/<job_id>/charts` puts plots and “Item analysis files” on one page.
 - Interactions: hover the table/charts to highlight a question, click to lock; filter/sort students, hide correct, and use keyboard shortcuts (←/→ question, ↑/↓ student, Esc clear, PgUp/PgDn switch chart).
+- Use the “Print / Save as PDF” button to export a printable PDF via your browser’s print dialog.
 - “Item analysis data (preview)” is a collapsible table (collapsed by default); download `analysis_item.csv` for full data.
 
 ### Updating

@@ -70,7 +70,7 @@ latex_elements = {
   \setCJKmonofont{#1}
 }
 
-% Prefer Noto CJK on Read the Docs; fall back to common macOS fonts.
+%% Prefer Noto CJK on Read the Docs; fall back to common macOS fonts.
 \IfFontExistsTF{%(cjk_first)s}{
   \sphinxsetcjkfonts{%(cjk_first)s}
 }{
@@ -87,8 +87,8 @@ latex_elements = {
   }
 }
 
-% Sphinx may write \selectlanguage*{...} into .aux/.toc; babel doesn't support
-% the star-form, so make it accept and ignore the star.
+%% Sphinx may write \selectlanguage*{...} into .aux/.toc; babel doesn't support
+%% the star-form, so make it accept and ignore the star.
 \makeatletter
 \@ifpackageloaded{babel}{
   \let\sphinx@selectlanguage\selectlanguage

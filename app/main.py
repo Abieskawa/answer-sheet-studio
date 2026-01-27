@@ -75,7 +75,7 @@ I18N = {
         "upload_open_result": "開啟結果頁（含圖表）",
         "upload_open_result_hint": "處理完成後請點上方按鈕開啟結果頁。",
         "upload_error_generic": "處理失敗，請查看 outputs/launcher.log 或 outputs/server.log。",
-        "upload_hint_output": "完成後會輸出 results.csv、annotated.pdf，以及答案分析報表/圖表（需要先安裝 R；程式會在需要時自動嘗試安裝 R 套件：readr、dplyr、tidyr、ggplot2）。",
+        "upload_hint_output": "完成後會輸出 results.csv、annotated.pdf，以及答案分析報表/圖表。",
         "update_title": "更新",
         "update_hint": "下載最新 ZIP 後在此上傳套用更新。更新過程會短暫重新啟動。",
         "update_open_releases": "開啟下載頁（GitHub Releases）",
@@ -171,9 +171,6 @@ I18N = {
         "debug_dl_annotated": "下載 annotated.pdf",
         "debug_dl_input": "下載 input.pdf（原始上傳檔）",
         "debug_report_hint": "回報時請提供：Job ID、results.csv、ambiguity.csv、annotated.pdf（必要時 input.pdf）。",
-        "analysis_error_missing_rscript": "找不到 Rscript（請先安裝 R）。",
-        "analysis_error_missing_rscript_required": "找不到 Rscript（請先安裝 R，否則無法產生分析結果）。",
-        "analysis_error_r_failed": "R 分析失敗：",
         "analysis_error_builtin_failed": "內建分析失敗：",
         "analysis_message_done": "分析完成，可下載報表與圖表。",
         "analysis_message_done_fallback": "分析完成。",
@@ -214,7 +211,7 @@ I18N = {
         "upload_open_result": "Open result page (with plots)",
         "upload_open_result_hint": "When processing finishes, click the button above to open the result page.",
         "upload_error_generic": "Processing failed. See outputs/launcher.log or outputs/server.log.",
-        "upload_hint_output": "Outputs results.csv, annotated.pdf, and analysis reports/plots (R is required; the app auto-attempts to install R packages when needed: readr, dplyr, tidyr, ggplot2).",
+        "upload_hint_output": "Outputs results.csv, annotated.pdf, and analysis reports/plots.",
         "update_title": "Update",
         "update_hint": "Download the latest ZIP and upload it here. The app will restart briefly.",
         "update_open_releases": "Open download page (GitHub Releases)",
@@ -310,9 +307,6 @@ I18N = {
         "debug_dl_annotated": "Download annotated.pdf",
         "debug_dl_input": "Download input.pdf (original upload)",
         "debug_report_hint": "When reporting, include: Job ID, results.csv, ambiguity.csv, annotated.pdf (and input.pdf if needed).",
-        "analysis_error_missing_rscript": "Rscript not found (please install R).",
-        "analysis_error_missing_rscript_required": "Rscript not found (please install R; analysis outputs cannot be generated without it).",
-        "analysis_error_r_failed": "R analysis failed:",
         "analysis_error_builtin_failed": "Built-in analysis failed:",
         "analysis_message_done": "Analysis complete. Download reports and plots below.",
         "analysis_message_done_fallback": "Analysis complete.",
@@ -409,14 +403,12 @@ I18N["zh-Hans"].update(
         "result_analysis_files_hint": "下载完整分析报表（CSV/XLSX/图片/日志）。",
         "result_item_table_title": "试题分析数据（预览）",
         "result_item_table_hint": "此处仅显示前 200 列；完整资料请下载 analysis_item.csv。",
+        "upload_hint_output": "完成后会输出 results.csv、annotated.pdf，以及答案分析报表/图表。",
         "debug_title": "Debug Mode",
         "debug_hint": "一般使用者不需要这个页面。若需要回报问题，请依指示下载档案并提供 Job ID。",
         "debug_label_job_id": "Job ID",
         "debug_btn_open": "打开 Debug 下载",
         "debug_error_not_found": "找不到此 Job ID 的输出资料夹。请确认 Job ID 是否正确。",
-        "analysis_error_missing_rscript": "找不到 Rscript（请先安装 R）。",
-        "analysis_error_missing_rscript_required": "找不到 Rscript（请先安装 R，否则无法产生分析结果）。",
-        "analysis_error_r_failed": "R 分析失败：",
         "analysis_error_builtin_failed": "内建分析失败：",
         "analysis_message_done": "分析完成，可下载报表与图表。",
         "analysis_message_done_fallback": "分析完成。",
@@ -781,7 +773,6 @@ def _analysis_file_links(job_id: str) -> list[dict]:
         "analysis_summary.csv": "analysis_summary.csv",
         "analysis_score_hist.png": "analysis_score_hist.png",
         "analysis_item_plot.png": "analysis_item_plot.png",
-        "analysis_r.log": "analysis_r.log (R log)",
     }
 
     def add_if_exists(name: str) -> None:
@@ -814,80 +805,6 @@ def _analysis_file_links(job_id: str) -> list[dict]:
         pass
 
     return files
-
-
-def _find_rscript() -> Optional[str]:
-    rscript = shutil.which("Rscript") or shutil.which("Rscript.exe")
-    if rscript:
-        return rscript
-
-    candidates: list[Path] = []
-    if os.name == "nt":
-        roots = [os.environ.get("ProgramFiles"), os.environ.get("ProgramFiles(x86)")]
-        for root in roots:
-            if not root:
-                continue
-            r_dir = Path(root) / "R"
-            if not r_dir.exists():
-                continue
-            for exe in sorted(r_dir.glob("R-*/bin/Rscript.exe")):
-                candidates.append(exe)
-    else:
-        candidates.extend(
-            [
-                Path("/usr/local/bin/Rscript"),
-                Path("/opt/homebrew/bin/Rscript"),
-                Path("/Library/Frameworks/R.framework/Resources/bin/Rscript"),
-            ]
-        )
-
-    for cand in candidates:
-        try:
-            if cand.exists():
-                return str(cand)
-        except Exception:
-            continue
-    return None
-
-
-def _summarize_r_error(text: Optional[str], limit: int = 220) -> Optional[str]:
-    if not text:
-        return None
-    msg = (text or "").strip().replace("\r", "\n")
-    lines = [ln.strip() for ln in msg.split("\n") if ln.strip()]
-    if not lines:
-        return None
-
-    m = re.search(r"Missing R packages and auto-install failed:\s*([^\n]+)", msg, flags=re.IGNORECASE)
-    if m:
-        reason = f"missing R packages: {m.group(1).strip()}"
-    else:
-        m = re.search(r"Missing required packages:\s*([^\n]+)", msg, flags=re.IGNORECASE)
-        if m:
-            reason = f"missing R packages: {m.group(1).strip()}"
-        else:
-            m = re.search(r"there is no package called ['\"]([^'\"]+)['\"]", msg, flags=re.IGNORECASE)
-            if m:
-                reason = f"missing R package: {m.group(1)}"
-            else:
-                m = re.search(r"Missing R packages and auto-install failed:.*?Error:\\s*([^\n]+)", msg, flags=re.IGNORECASE | re.DOTALL)
-                if m:
-                    reason = m.group(1).strip()
-                else:
-                    m = re.search(r"Error:\\s*([^\n]+)", msg, flags=re.IGNORECASE)
-                    if m:
-                        reason = m.group(1).strip()
-                    else:
-                        m = re.search(r"Error in [^:]+:\\s*([^\n]+)", msg, flags=re.IGNORECASE)
-                        if m:
-                            reason = m.group(1).strip()
-                        else:
-                            reason = lines[-1]
-
-    reason = re.sub(r"\s+", " ", reason).strip()
-    if len(reason) > limit:
-        reason = reason[:limit].rstrip() + "…"
-    return reason
 
 
 def _normalize_answer_cell(value: object) -> str:
@@ -1877,69 +1794,19 @@ async def api_process(
         except Exception as exc:
             analysis_error = f"Analysis template error: {exc}"
         else:
-            rscript = _find_rscript()
-            script_path = ROOT_DIR / "engine" / "item_analysis_cli.R"
-            r_failed_text: Optional[str] = None
-            r_ok = False
+            try:
+                from engine.analysis import run_analysis_template
 
-            if rscript is not None and script_path.exists():
-                import subprocess
-
-                proc = subprocess.run(
-                    [rscript, str(script_path), "--input", str(template_path), "--outdir", str(job_dir), "--lang", str(lang)],
-                    cwd=str(ROOT_DIR),
-                    capture_output=True,
-                    text=True,
-                    errors="replace",
-                )
-                if proc.returncode == 0:
-                    r_ok = True
-                else:
-                    out_text = ((proc.stdout or "") + (proc.stderr or "")).strip()
-                    if len(out_text) > 2000:
-                        out_text = out_text[-2000:]
-                    r_failed_text = out_text or f"code {proc.returncode}"
-                    try:
-                        (job_dir / "analysis_r.log").write_text(
-                            ((proc.stdout or "") + "\n" + (proc.stderr or "")).strip() + "\n",
-                            encoding="utf-8",
-                            errors="replace",
-                        )
-                    except Exception:
-                        pass
-
-            if r_ok:
-                analysis_message = t["analysis_message_done"]
+                run_analysis_template(template_path, job_dir, lang=lang)
+                analysis_message = t.get("analysis_message_done", "Analysis complete.")
+                analysis_error = None
+            except Exception as exc:
+                analysis_error = f"{t.get('analysis_error_builtin_failed', 'Built-in analysis failed:')} {exc}".strip()
+            else:
                 try:
                     _write_analysis_report_pdf(job_dir, lang=lang)
                 except Exception:
                     pass
-            else:
-                builtin_ok = False
-                try:
-                    from engine.analysis import run_analysis_template
-
-                    run_analysis_template(template_path, job_dir, lang=lang)
-                    builtin_ok = True
-                except Exception as exc:
-                    builtin_ok = False
-                    analysis_error = f"{t.get('analysis_error_builtin_failed', 'Built-in analysis failed:')} {exc}".strip()
-
-                if builtin_ok:
-                    analysis_message = t.get("analysis_message_done_fallback", t.get("analysis_message_done", "Analysis complete."))
-                    analysis_error = None
-                    try:
-                        _write_analysis_report_pdf(job_dir, lang=lang)
-                    except Exception:
-                        pass
-                else:
-                    if rscript is None:
-                        # Keep the built-in error as the primary reason.
-                        analysis_error = analysis_error or t["analysis_error_missing_rscript_required"]
-                    else:
-                        reason = _summarize_r_error(r_failed_text) or (r_failed_text or "").strip()
-                        if reason:
-                            analysis_error = f"{analysis_error} ({t['analysis_error_r_failed']} {reason})".strip()
 
     meta = _read_job_meta(job_dir)
     if analysis_error:

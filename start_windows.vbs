@@ -25,10 +25,12 @@ Sub LogLine(msg)
 End Sub
 
 LogLine "start_windows.vbs launched, repo=" & repo
+
 recommendedPython = WshShell.Environment("Process")("ANSWER_SHEET_PYTHON_VERSION")
 If recommendedPython = "" Then
     recommendedPython = "3.11.8"
 End If
+LogLine "recommendedPython=" & recommendedPython
 
 Function ReadTextFile(path)
     On Error Resume Next
@@ -59,239 +61,6 @@ Sub TryOpenProgressPage()
         WScript.Sleep 100
     Next
     LogLine "progress_url.txt not found; launcher may not have started."
-End Sub
-
-Function DetectLatestRWindowsExe()
-    On Error Resume Next
-    Dim ps, cmd, rc, out, tempDir, outPath, f
-    tempDir = WshShell.ExpandEnvironmentStrings("%TEMP%")
-    outPath = tempDir & "\answer_sheet_studio_r_latest.txt"
-    ' Query CRAN and extract the latest R-x.y.z-win.exe filename
-    ps = "$ErrorActionPreference='Stop';" & _
-         "$base='https://cran.r-project.org/bin/windows/base/';" & _
-         "$html=(Invoke-WebRequest -Uri $base -UseBasicParsing).Content;" & _
-         "$ms=[regex]::Matches($html,'R-([0-9]+\\.[0-9]+\\.[0-9]+)-win\\.exe');" & _
-         "$vers=@(); foreach($m in $ms){ $vers += [version]$m.Groups[1].Value };" & _
-         "if($vers.Count -eq 0){ throw 'No R installer found' };" & _
-         "$v=($vers | Sort-Object -Descending | Select-Object -First 1);" & _
-         "('R-' + $v.ToString() + '-win.exe') | Set-Content -Encoding ASCII -NoNewline '" & Replace(outPath, "\", "\\") & "';"
-    cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command " & q & ps & q
-    rc = WshShell.Run(cmd, 0, True)
-    If rc <> 0 Then
-        DetectLatestRWindowsExe = ""
-        Exit Function
-    End If
-    If Not fso.FileExists(outPath) Then
-        DetectLatestRWindowsExe = ""
-        Exit Function
-    End If
-    Set f = fso.OpenTextFile(outPath, 1, False)
-    out = f.ReadAll
-    f.Close
-    DetectLatestRWindowsExe = Trim(out)
-End Function
-
-Function NormalizeEnvPath(value)
-    On Error Resume Next
-    Dim v
-    v = Trim(CStr(value))
-    ' If the env var is undefined, ExpandEnvironmentStrings returns "%NAME%".
-    If InStr(v, "%") > 0 Then
-        v = ""
-    End If
-    NormalizeEnvPath = v
-End Function
-
-Function VersionGreater(a, b)
-    On Error Resume Next
-    Dim aParts, bParts, i, ai, bi
-    aParts = Split(CStr(a), ".")
-    bParts = Split(CStr(b), ".")
-    For i = 0 To 2
-        ai = 0
-        bi = 0
-        If i <= UBound(aParts) Then ai = CLng(Val(aParts(i)))
-        If i <= UBound(bParts) Then bi = CLng(Val(bParts(i)))
-        If ai > bi Then
-            VersionGreater = True
-            Exit Function
-        End If
-        If ai < bi Then
-            VersionGreater = False
-            Exit Function
-        End If
-    Next
-    VersionGreater = False
-End Function
-
-Function RegReadString(key)
-    On Error Resume Next
-    Dim v
-    v = ""
-    v = WshShell.RegRead(key)
-    If Err.Number <> 0 Then
-        Err.Clear
-        v = ""
-    End If
-    RegReadString = Trim(CStr(v))
-End Function
-
-Function FindRscriptFromInstallPath(installPath)
-    On Error Resume Next
-    Dim base, candidate
-    base = Trim(CStr(installPath))
-    If base = "" Then
-        FindRscriptFromInstallPath = ""
-        Exit Function
-    End If
-    If Right(base, 1) = "\" Then
-        base = Left(base, Len(base) - 1)
-    End If
-    candidate = base & "\bin\Rscript.exe"
-    If Not fso.FileExists(candidate) Then
-        candidate = base & "\bin\x64\Rscript.exe"
-    End If
-    If Not fso.FileExists(candidate) Then
-        candidate = base & "\bin\i386\Rscript.exe"
-    End If
-    If fso.FileExists(candidate) Then
-        FindRscriptFromInstallPath = candidate
-        Exit Function
-    End If
-    FindRscriptFromInstallPath = ""
-End Function
-
-Function FindRscriptFromRegistry()
-    On Error Resume Next
-    Dim keys, key, installPath, cand
-    keys = Array( _
-        "HKLM\SOFTWARE\R-core\R\InstallPath", _
-        "HKLM\SOFTWARE\R-core\R64\InstallPath", _
-        "HKLM\SOFTWARE\WOW6432Node\R-core\R\InstallPath", _
-        "HKLM\SOFTWARE\WOW6432Node\R-core\R64\InstallPath", _
-        "HKCU\SOFTWARE\R-core\R\InstallPath", _
-        "HKCU\SOFTWARE\R-core\R64\InstallPath", _
-        "HKCU\SOFTWARE\WOW6432Node\R-core\R\InstallPath", _
-        "HKCU\SOFTWARE\WOW6432Node\R-core\R64\InstallPath" _
-    )
-    For Each key In keys
-        installPath = RegReadString(key)
-        cand = FindRscriptFromInstallPath(installPath)
-        If cand <> "" Then
-            FindRscriptFromRegistry = cand
-            Exit Function
-        End If
-    Next
-    FindRscriptFromRegistry = ""
-End Function
-
-Function FindRscriptExe()
-    On Error Resume Next
-    Dim localAppData, programFiles, programFilesX86, programW6432, roots, root, rRoot, folder, subfolder
-    Dim localPrograms
-    Dim name, ver, bestVer, bestPath, candidate
-
-    bestVer = ""
-    bestPath = ""
-
-    localAppData = NormalizeEnvPath(WshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%"))
-    programFiles = NormalizeEnvPath(WshShell.ExpandEnvironmentStrings("%ProgramFiles%"))
-    programFilesX86 = NormalizeEnvPath(WshShell.ExpandEnvironmentStrings("%ProgramFiles(x86)%"))
-    programW6432 = NormalizeEnvPath(WshShell.ExpandEnvironmentStrings("%ProgramW6432%"))
-
-    localPrograms = ""
-    If localAppData <> "" Then
-        localPrograms = localAppData & "\Programs"
-    End If
-
-    roots = Array(localPrograms, programW6432, programFiles, programFilesX86)
-
-    For Each root In roots
-        If root <> "" Then
-            rRoot = root & "\R"
-            If fso.FolderExists(rRoot) Then
-                Set folder = fso.GetFolder(rRoot)
-                For Each subfolder In folder.SubFolders
-                    name = subfolder.Name
-                    If LCase(Left(name, 2)) = "r-" Then
-                        ver = Mid(name, 3)
-
-                        candidate = subfolder.Path & "\bin\Rscript.exe"
-                        If Not fso.FileExists(candidate) Then
-                            candidate = subfolder.Path & "\bin\x64\Rscript.exe"
-                        End If
-                        If Not fso.FileExists(candidate) Then
-                            candidate = subfolder.Path & "\bin\i386\Rscript.exe"
-                        End If
-
-                        If fso.FileExists(candidate) Then
-                            If bestVer = "" Or VersionGreater(ver, bestVer) Then
-                                bestVer = ver
-                                bestPath = candidate
-                            End If
-                        End If
-                    End If
-                Next
-            End If
-        End If
-    Next
-
-    If bestPath = "" Then
-        bestPath = FindRscriptFromRegistry()
-    End If
-
-    FindRscriptExe = bestPath
-End Function
-
-Function DownloadAndInstallR()
-    On Error Resume Next
-    Dim exeName, url, tempDir, outPath, ps, cmd, rc
-    exeName = DetectLatestRWindowsExe()
-    If exeName = "" Then
-        DownloadAndInstallR = False
-        Exit Function
-    End If
-    url = "https://cran.r-project.org/bin/windows/base/" & exeName
-    tempDir = WshShell.ExpandEnvironmentStrings("%TEMP%")
-    outPath = tempDir & "\answer_sheet_studio_" & exeName
-
-    ps = "$ErrorActionPreference='Stop';" & _
-         "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;" & _
-         "$url='" & Replace(url, "'", "''") & "';" & _
-         "$out='" & Replace(outPath, "'", "''") & "';" & _
-         "try { Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing } catch { (New-Object Net.WebClient).DownloadFile($url, $out) };" & _
-         "try { $sig=Get-AuthenticodeSignature -FilePath $out; if ($sig.Status -ne 'Valid') { throw ('Invalid installer signature: ' + $sig.Status) } } catch { throw };" & _
-         "Start-Process -FilePath $out;"
-
-    cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command " & q & ps & q
-    rc = WshShell.Run(cmd, 0, True)
-    DownloadAndInstallR = (rc = 0)
-End Function
-
-Sub EnsureRInstalledOrExit()
-    On Error Resume Next
-    If CanRun("Rscript -e " & q & "quit(status=0)" & q) Then
-        Exit Sub
-    End If
-
-    Dim rscriptExe
-    rscriptExe = FindRscriptExe()
-    If rscriptExe <> "" Then
-        If CanRun(q & rscriptExe & q & " -e " & q & "quit(status=0)" & q) Then
-            Exit Sub
-        End If
-    End If
-    ' R is required for item analysis and plots.
-    If DownloadAndInstallR() Then
-        WshShell.Popup "R installer started." & vbCrLf & vbCrLf & _
-            "After installation finishes, run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
-    Else
-        WshShell.Popup "R was not found." & vbCrLf & vbCrLf & _
-            "We opened CRAN in your browser. Please install R, then run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 48
-        On Error Resume Next
-        WshShell.Run "https://cran.r-project.org/bin/windows/base/", 1, False
-    End If
-    WScript.Quit 1
 End Sub
 
 Function CanRun(cmd)
@@ -339,13 +108,11 @@ Sub TryRunFromKnownInstall(tag)
     pythonw = localAppData & "\Programs\Python\Python" & tag & "\pythonw.exe"
     python = localAppData & "\Programs\Python\Python" & tag & "\python.exe"
     If fso.FileExists(pythonw) Then
-        EnsureRInstalledOrExit
         RunAsync WrapLauncherCmd(q & pythonw & q & " " & q & launcher & q)
         TryOpenProgressPage
         WScript.Quit
     End If
     If fso.FileExists(python) Then
-        EnsureRInstalledOrExit
         RunAsync WrapLauncherCmd(q & python & q & " " & q & launcher & q)
         TryOpenProgressPage
         WScript.Quit
@@ -354,13 +121,11 @@ Sub TryRunFromKnownInstall(tag)
     pythonw = programFiles & "\Python" & tag & "\pythonw.exe"
     python = programFiles & "\Python" & tag & "\python.exe"
     If fso.FileExists(pythonw) Then
-        EnsureRInstalledOrExit
         RunAsync WrapLauncherCmd(q & pythonw & q & " " & q & launcher & q)
         TryOpenProgressPage
         WScript.Quit
     End If
     If fso.FileExists(python) Then
-        EnsureRInstalledOrExit
         RunAsync WrapLauncherCmd(q & python & q & " " & q & launcher & q)
         TryOpenProgressPage
         WScript.Quit
@@ -407,25 +172,21 @@ probe = q & "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 
 
 ' Prefer supported Python versions (3.10+) via the Windows py launcher (pyw) if available.
 If CanRun("pyw -3.10 -c " & probe) Then
-    EnsureRInstalledOrExit
     RunAsync WrapLauncherCmd("pyw -3.10 " & q & launcher & q)
     TryOpenProgressPage
     WScript.Quit
 End If
 If CanRun("pyw -3.11 -c " & probe) Then
-    EnsureRInstalledOrExit
     RunAsync WrapLauncherCmd("pyw -3.11 " & q & launcher & q)
     TryOpenProgressPage
     WScript.Quit
 End If
 If CanRun("pyw -3.12 -c " & probe) Then
-    EnsureRInstalledOrExit
     RunAsync WrapLauncherCmd("pyw -3.12 " & q & launcher & q)
     TryOpenProgressPage
     WScript.Quit
 End If
 If CanRun("pyw -3.13 -c " & probe) Then
-    EnsureRInstalledOrExit
     RunAsync WrapLauncherCmd("pyw -3.13 " & q & launcher & q)
     TryOpenProgressPage
     WScript.Quit
@@ -433,7 +194,6 @@ End If
 
 ' Fallback: pythonw (no console window)
 If CanRun("pythonw -c " & probe) Then
-    EnsureRInstalledOrExit
     RunAsync WrapLauncherCmd("pythonw " & q & launcher & q)
     TryOpenProgressPage
     WScript.Quit
@@ -462,3 +222,4 @@ End If
 
 On Error Resume Next
 WshShell.Run "https://www.python.org/downloads/windows/", 1, False
+WScript.Quit 1

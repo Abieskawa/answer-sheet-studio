@@ -42,7 +42,7 @@ def main() -> int:
     )
     parser.add_argument("--num-questions", type=int, default=50, help="Number of questions (1–100).")
     parser.add_argument("--choices-count", type=int, default=4, choices=(3, 4, 5), help="Choices per question (3/4/5).")
-    parser.add_argument("--lang", default="zh-Hant", help="Report language (zh-Hant/en).")
+    parser.add_argument("--lang", default="zh-Hant", choices=("zh-Hant", "zh-Hans", "en"), help="Report language (zh-Hant/zh-Hans/en).")
     parser.add_argument("--seed", type=int, default=7, help="RNG seed for the fake answer key.")
     parser.add_argument("--job-id", default="", help="Optional job id (default: random UUID).")
 
@@ -127,4 +127,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

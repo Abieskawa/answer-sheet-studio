@@ -112,7 +112,6 @@
         </div>
         <div class="lang-switch" aria-label="Language">
           <button type="button" class="lang-tab{% if lang == 'zh-Hant' %} active{% endif %}" data-lang="zh-Hant">{{ t.lang_zh }}</button>
-          <button type="button" class="lang-tab{% if lang == 'zh-Hans' %} active{% endif %}" data-lang="zh-Hans">{{ t.lang_zh_hans }}</button>
           <button type="button" class="lang-tab{% if lang == 'en' %} active{% endif %}" data-lang="en">{{ t.lang_en }}</button>
         </div>
       </nav>
@@ -176,6 +175,9 @@
 		        <div class="chart-tabs" aria-label="Charts">
 		          <button type="button" class="chart-btn" data-chart="difficulty" aria-selected="true">{{ t.result_chart_tab_difficulty }}</button>
 		          <button type="button" class="chart-btn" data-chart="discrimination" aria-selected="false">{{ t.result_chart_tab_discrimination }}</button>
+              {% if analysis_score_hist_inline_url %}
+		            <button type="button" class="chart-btn" data-chart="scores" aria-selected="false">{{ t.result_chart_tab_scores }}</button>
+              {% endif %}
 		          <button type="button" class="chart-btn" data-chart="blank" aria-selected="false">{{ t.result_chart_tab_blank_rate }}</button>
 	          <span class="spacer" aria-hidden="true"></span>
 	          <button type="button" class="chart-nav" data-nav="prev">{{ t.result_chart_prev }}</button>
@@ -185,6 +187,9 @@
               <div id="chartTooltip" class="chart-tooltip" hidden></div>
 		          <canvas id="chartDifficulty" class="chart" aria-label="Difficulty chart"></canvas>
 		          <canvas id="chartDiscrimination" class="chart" aria-label="Discrimination chart" hidden></canvas>
+              {% if analysis_score_hist_inline_url %}
+                <img id="chartScores" src="{{ analysis_score_hist_inline_url }}" alt="{{ t.result_plot_score_hist }}" loading="eager" hidden />
+              {% endif %}
 		          <canvas id="chartBlankRate" class="chart" aria-label="Blank rate chart" hidden></canvas>
 	        </div>
 	        <p class="hint" id="integratedHint" style="display:none;color:#b91c1c"></p>
@@ -198,7 +203,7 @@
           {% if t.result_plot_score_hist_guides is defined %}
             <p class="hint">{{ t.result_plot_score_hist_guides }}</p>
           {% endif %}
-          <img src="{{ analysis_score_hist_inline_url }}" alt="{{ t.result_plot_score_hist }}" loading="lazy" />
+          <img src="{{ analysis_score_hist_inline_url }}" alt="{{ t.result_plot_score_hist }}" loading="eager" />
         </div>
       {% endif %}
       {% if analysis_item_plot_inline_url %}
@@ -207,7 +212,7 @@
           {% if t.result_plot_item_metrics_guides is defined %}
             <p class="hint">{{ t.result_plot_item_metrics_guides }}</p>
           {% endif %}
-          <img src="{{ analysis_item_plot_inline_url }}" alt="{{ t.result_plot_item_metrics }}" loading="lazy" />
+          <img src="{{ analysis_item_plot_inline_url }}" alt="{{ t.result_plot_item_metrics }}" loading="eager" />
         </div>
       {% endif %}
     </div>
@@ -290,6 +295,7 @@
 	        const canvasDiff = document.getElementById("chartDifficulty");
 	        const canvasDisc = document.getElementById("chartDiscrimination");
 	        const canvasBlank = document.getElementById("chartBlankRate");
+          const imgScores = document.getElementById("chartScores");
 
 	        const t = {
 	          loading: {{ (t.result_loading if t.result_loading is defined else "Loading…") | tojson }},
@@ -586,16 +592,20 @@
           tableHost.textContent = t.loading;
 
 		          const chartBtns = Array.from(document.querySelectorAll(".chart-btn"));
-		          const chartNavBtns = Array.from(document.querySelectorAll(".chart-nav"));
+		          const chartNavBtns = Array.from(document.querySelectorAll(".chart-tabs .chart-nav[data-nav]"));
 		          let activeChart = "difficulty";
-		          const chartOrder = ["difficulty", "discrimination", "blank"];
+		          const chartOrder = chartBtns
+                .map((btn) => String(btn.dataset.chart || "").trim())
+                .filter((key) => key && (key !== "scores" || !!imgScores));
               let requestChartsRender = () => {};
 
 		          function setActiveChart(key) {
+                clearChartTooltip();
 		            activeChart = key;
 		            for (const btn of chartBtns) btn.setAttribute("aria-selected", (btn.dataset.chart === key) ? "true" : "false");
 		            canvasDiff.hidden = key !== "difficulty";
 		            canvasDisc.hidden = key !== "discrimination";
+                if (imgScores) imgScores.hidden = key !== "scores";
 		            canvasBlank.hidden = key !== "blank";
                 requestAnimationFrame(() => requestChartsRender());
 		          }
@@ -901,6 +911,7 @@
               }
 
               function drawActiveChart() {
+                if (activeChart === "scores") return;
                 const xs = qnos.map(q => safeFloat(q)).map(v => (v == null ? null : v)).filter(v => v != null);
                 const qHighlight = highlightQno ? (safeFloat(highlightQno) ?? null) : null;
 
@@ -1335,11 +1346,60 @@
       if (!btn) return;
 
       const PRINT_CLASS = "chart-print";
+      let detailsSnapshot = [];
+      const snapshotAndExpandDetails = () => {
+        try {
+          const details = Array.from(document.querySelectorAll("details"));
+          detailsSnapshot = details.map((d) => [d, Boolean(d.open)]);
+          details.forEach((d) => (d.open = true));
+        } catch (_) {
+          detailsSnapshot = [];
+        }
+      };
+      const restoreDetails = () => {
+        try {
+          for (const [d, wasOpen] of detailsSnapshot) {
+            d.open = Boolean(wasOpen);
+          }
+        } catch (_) {}
+        detailsSnapshot = [];
+      };
+      const waitForImages = (timeoutMs = 2500) => {
+        try {
+          const imgs = Array.from(document.images || []);
+          const pending = imgs.filter((img) => !img.complete);
+          if (!pending.length) return Promise.resolve();
+          return new Promise((resolve) => {
+            let done = false;
+            const timer = window.setTimeout(() => {
+              if (done) return;
+              done = true;
+              resolve();
+            }, timeoutMs);
+            let remaining = pending.length;
+            const onDone = () => {
+              remaining -= 1;
+              if (remaining > 0 || done) return;
+              done = true;
+              window.clearTimeout(timer);
+              resolve();
+            };
+            pending.forEach((img) => {
+              img.addEventListener("load", onDone, { once: true });
+              img.addEventListener("error", onDone, { once: true });
+            });
+          });
+        } catch (_) {
+          return Promise.resolve();
+        }
+      };
       const cleanup = () => {
         document.querySelectorAll(`img.${PRINT_CLASS}`).forEach((el) => el.remove());
+        restoreDetails();
       };
       const prepare = () => {
         cleanup();
+        snapshotAndExpandDetails();
         document.querySelectorAll("canvas.chart").forEach((canvas) => {
           try {
             if (!canvas.width || !canvas.height) return;
@@ -1352,8 +1412,9 @@
         });
       };
 
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         prepare();
+        await waitForImages();
         window.print();
         window.setTimeout(cleanup, 1000);
       });

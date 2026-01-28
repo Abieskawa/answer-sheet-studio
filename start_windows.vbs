@@ -161,7 +161,7 @@ Function DownloadAndInstallPython(version)
          "$out='" & Replace(outPath, "'", "''") & "';" & _
          "try { Invoke-WebRequest -Uri $url -OutFile $out -UseBasicParsing } catch { (New-Object Net.WebClient).DownloadFile($url, $out) };" & _
          "try { $sig=Get-AuthenticodeSignature -FilePath $out; if ($sig.Status -ne 'Valid') { throw ('Invalid installer signature: ' + $sig.Status) } } catch { throw };" & _
-         "Start-Process -FilePath $out -ArgumentList '/passive','InstallAllUsers=0','PrependPath=1','Include_pip=1','Include_launcher=1','Include_test=0' -Wait;"
+         "Start-Process -FilePath $out -ArgumentList '/passive','InstallAllUsers=0','PrependPath=0','Include_pip=1','Include_launcher=1','Include_test=0' -Wait;"
 
     cmd = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command " & q & ps & q
     rc = WshShell.Run(cmd, 0, True)

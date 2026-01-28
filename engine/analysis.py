@@ -128,9 +128,9 @@ def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]],
     is_zh = lang_norm.startswith("zh")
     s = {
         "no_items": "沒有題目資料" if is_zh else "No item data",
-        "title": "題目分析" if is_zh else "Item analysis",
+        "title": "試題分析" if is_zh else "Item analysis",
         "x": "題號" if is_zh else "Question",
-        "difficulty": "難度（正答率）" if is_zh else "Difficulty (accuracy)",
+        "difficulty": "正確率" if is_zh else "Difficulty (accuracy)",
         "discrimination": "鑑別度" if is_zh else "Discrimination",
         "blank_rate": "空白率" if is_zh else "Blank rate",
     }
@@ -367,8 +367,8 @@ def run_analysis_template(template_csv_path: Path, outdir: Path, lang: str = "zh
 
     _write_excel_csv(
         outdir / "analysis_item.csv",
-        ["number", "correct", "points", "difficulty", "discrimination", "blank_rate", "multi_rate", "other_rate", "p_A", "p_B", "p_C", "p_D", "p_E"],
-        item_rows,
+        ["number", "correct", "points", "difficulty", "discrimination", "p_A", "p_B", "p_C", "p_D", "p_E"],
+        [r[:5] + r[8:] for r in item_rows],
     )
 
     # Summary

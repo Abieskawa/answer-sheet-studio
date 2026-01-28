@@ -1120,6 +1120,46 @@
                 });
 
                 applyHighlights();
+                
+                // Add footer rows for Difficulty and Discrimination (Requirement 1, 4)
+                // We append them to tbody or create tfoot. tfoot is better for printing usually as it can repeat, 
+                // but here we just want them at the bottom.
+                
+                const tfoot = document.createElement("tfoot");
+                
+                function addStatRow(label, values, fmt, kind) {
+                    const tr = document.createElement("tr");
+                    const th0 = document.createElement("th");
+                    th0.className = "sticky-left";
+                    th0.textContent = label;
+                    th0.style.background = "#f9fafb";
+                    tr.appendChild(th0);
+                    
+                    for (let i = 0; i < qnos.length; i++) {
+                        const td = document.createElement("td");
+                        td.textContent = fmt ? fmt(values[i]) : String(values[i] ?? "");
+                        td.style.background = "#f9fafb";
+                        td.style.textAlign = "center";
+                        td.style.fontSize = "12px";
+                        if (kind) {
+                             // Add tooltip handlers for these cells too? 
+                             td.addEventListener("mousemove", (ev) => {
+                                 showChartTooltip(canvasDiff, kind, qnos[i], values[i], ev); // Use any canvas for tooltip positioning
+                             });
+                             td.addEventListener("mouseleave", clearChartTooltip);
+                        }
+                        tr.appendChild(td);
+                    }
+                    tfoot.appendChild(tr);
+                }
+                
+                // Add Difficulty (Correctness)
+                addStatRow(t.difficulty, currentItemMetrics.diffs, (v) => fmt2(v), "difficulty");
+                
+                // Add Discrimination
+                addStatRow(t.discrimination, currentItemMetrics.discs, (v) => fmt2(v), "discrimination");
+                
+                table.appendChild(tfoot);
               }
 
 			            function attachChartHover(canvas, kind) {
@@ -1309,6 +1349,52 @@
             hintEl.textContent = `${t.error}: ${String(err || "")}`.trim();
           }
         }
+      window.printAllCharts = () => {
+          // Temporarily unhide all canvases and draw them
+          const oldActive = activeChart;
+          const charts = ["difficulty", "discrimination", "blank"];
+          charts.forEach(k => {
+              activeChart = k;
+              drawActiveChart();
+              // Force sync draw
+              const c = (k==="difficulty"?canvasDiff:(k==="discrimination"?canvasDisc:canvasBlank));
+              if(c && c.hidden) {
+                  // If it's hidden, drawActiveChart might skip sizing?
+                  // drawLineChart sets width/height based on bounding client rect.
+                  // If hidden, rect is 0. We must unhide briefly.
+                  c.hidden = false;
+                  drawActiveChart(); 
+                  c.hidden = true; 
+              } else {
+                  drawActiveChart();
+              }
+          });
+          activeChart = oldActive;
+          drawActiveChart();
+      };
+      
+      // Hook into the print preparation
+      const originalPrepare = window.renderAllChartsForPrint;
+      window.renderAllChartsForPrint = async () => {
+          if (window.printAllCharts) window.printAllCharts();
+          // Give a small tick for renders to settle?
+          await new Promise(r => setTimeout(r, 50));
+          if (originalPrepare) originalPrepare();
+      };
+      
+      const btn = document.getElementById("printBtn");
+      if(btn) {
+         // Replace the previous listener or wrapped it?
+         // The previous listener in the other script block calls prepare().
+         // We redefined window.renderAllChartsForPrint to inject our logic.
+         // But the event listener was already attached.
+         // We need to override the click handler in the *other* script block?
+         // Actually, we can just intercept the click here if we want, or rely on beforeprint.
+         // But 'beforeprint' is sync, and drawing might need time.
+         // Let's add a new listener to printBtn that runs FIRST.
+         btn.addEventListener("click", window.renderAllChartsForPrint, {capture: true});
+      }
+
       })();
     </script>
   {% endif %}
@@ -1406,10 +1492,26 @@
             const img = document.createElement("img");
             img.className = PRINT_CLASS;
             img.alt = canvas.getAttribute("aria-label") || "chart";
+            // Ensure all charts are rendered before printing:
+            // The canvas might be hidden (display:none) but we can still grab dataURL if it has content.
+            // But if it was never drawn, it's empty. We rely on prepare() to have drawn them? 
+            // We need to modify renderActive to draw ALL charts for printing? 
+            // Actually, let's just use what we have. 
+            // Wait, if it wasn't drawn, it's blank. 
+            // We should force draw everyone.
             img.src = canvas.toDataURL("image/png");
             canvas.insertAdjacentElement("afterend", img);
           } catch (_) {}
         });
+
+        // FORCE DRAW ALL CHARTS FOR PRINT
+        if (typeof requestChartsRender === "function") {
+           // This is tricky because we need access to the closure variables (canvasDiff, etc.)
+           // But this script block is separate.
+           // However, we can trigger a custom event or expose a global.
+           // Let's rely on the user manually switching tabs? No, that's bad.
+           // Better: Add a global function in the main script block to render all.
+        }
       };
 
       btn.addEventListener("click", async () => {
@@ -1420,6 +1522,7 @@
       });
       window.addEventListener("beforeprint", prepare);
       window.addEventListener("afterprint", cleanup);
+      window.renderAllChartsForPrint = prepare; // Expose for main script to hook if needed
     })();
   </script>
 </body>

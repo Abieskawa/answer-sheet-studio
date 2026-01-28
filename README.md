@@ -11,6 +11,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 - **下載答案卡**：輸入標題、科目、題數（最多 100 題）、每題選項（`ABC` / `ABCD` / `ABCDE`），下載答案卡 PDF（給學生填答）。
 - **下載老師答案檔**：下載 `answer_key.xlsx`（Excel），填入 `correct/points` 之後到「上傳處理」上傳。
 - **上傳處理（辨識＋分析）**：上傳多頁 PDF（每頁一位學生）＋老師答案檔 `answer_key.xlsx`。完成後會提供「開啟結果頁」按鈕（可用新分頁開啟），並輸出 `results.csv`（題號為列、學生為欄）、`ambiguity.csv`（空白/模稜兩可/多選）、`annotated.pdf`（標註辨識結果）與分析報表/圖表（圖表會依介面語言顯示）。
+- **完整分析報告**：在圖表頁點擊「列印／存成 PDF」，即可一鍵下載包含所有圖表、成績分佈及詳細試題分析（含正確率/鑑別度）的完整報告。
 - **啟動器**：雙擊啟動器（`start_mac.command` 或 `start_windows.vbs`）即可建立虛擬環境、安裝套件、啟動伺服器並開啟 `http://127.0.0.1:8000`。
   - Windows 會把虛擬環境放在 `%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>`，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
   - macOS 會把虛擬環境放在 `~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>`，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
@@ -53,7 +54,7 @@ Windows 11
 - `input.pdf`（原始上傳檔）
 - `answer_key.xlsx`（老師答案檔）
 - `showwrong.xlsx`（只顯示錯題：題號為列、學生為欄；最後一列為每位學生總分）
-- `analysis_template.csv`、`analysis_scores.csv`、`analysis_item.csv`、`analysis_summary.csv`
+- `analysis_scores.csv`、`analysis_item.csv`、`analysis_summary.csv`（`analysis_template.csv` 預設隱藏）
 - `analysis_scores_by_class.xlsx`（按班級分表的成績表）
 - `analysis_score_hist.png`、`analysis_item_plot.png`
 - `analysis_showwrong.json`（結果頁互動圖表用）
@@ -64,7 +65,7 @@ Windows 11
 
 - `/result/<job_id>/charts` 會把互動式表格/圖表與「試題分析檔案」集中在同一頁。
 - 互動功能：滑鼠移到表格/圖表可醒目提示題號，點一下可鎖定；支援學生篩選/排序、隱藏正確，以及鍵盤快捷鍵（←/→ 題號、↑/↓ 學生、Esc 清除、PgUp/PgDn 切換圖）。
-- 可用頁面上的「列印／存成 PDF」按鈕，透過瀏覽器列印功能輸出成可列印的 PDF。
+- 可用頁面上的「列印／存成 PDF」按鈕，透過瀏覽器列印功能輸出成可列印的 PDF（包含所有圖表與下方詳細數據表格）。
 - 「試題分析數據（預覽）」為可展開的表格（預設收合）；需要完整資料請下載 `analysis_item.csv`。
 
 ### 更新
@@ -165,7 +166,7 @@ After recognition, files are written under `outputs/<job_id>/`:
 - `input.pdf` (original upload)
 - `answer_key.xlsx` (teacher answer key)
 - `showwrong.xlsx` (wrong answers only; questions as rows, students as columns; last row is total score per student)
-- `analysis_template.csv`, `analysis_scores.csv`, `analysis_item.csv`, `analysis_summary.csv`
+- `analysis_scores.csv`, `analysis_item.csv`, `analysis_summary.csv` (`analysis_template.csv` is hidden by default)
 - `analysis_scores_by_class.xlsx` (scores split by class)
 - `analysis_score_hist.png`, `analysis_item_plot.png`
 - `analysis_showwrong.json` (interactive report data)
@@ -176,7 +177,7 @@ After recognition, files are written under `outputs/<job_id>/`:
 
 - `/result/<job_id>/charts` puts plots and “Item analysis files” on one page.
 - Interactions: hover the table/charts to highlight a question, click to lock; filter/sort students, hide correct, and use keyboard shortcuts (←/→ question, ↑/↓ student, Esc clear, PgUp/PgDn switch chart).
-- Use the “Print / Save as PDF” button to export a printable PDF via your browser’s print dialog.
+- Use the “Print / Save as PDF” button to export a printable PDF (includes all charts and the detailed data table).
 - “Item analysis data (preview)” is a collapsible table (collapsed by default); download `analysis_item.csv` for full data.
 
 ### Updating

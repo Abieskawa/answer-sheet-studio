@@ -1,0 +1,45 @@
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+
+# App-generated output
+outputs/
+_incoming/
+test/
+
+# Docs build output
+build/
+
+# Editor/OS cruft
+.idea/
+.vscode/
+
+# Local caches
+.pycache*/
+
+# Personal/Sensitive Data
+*.xlsx
+*.xlsx.bak
+
+# Temporary Test Scripts
+verify_fix.py
+test.png
+
+# System/IDE
+.DS_Store
+Thumbs.db
+desktop.ini
+.gemini/
+.agent/
+*.log
+dist/
+*.bak
+*.tmp
+*.*~

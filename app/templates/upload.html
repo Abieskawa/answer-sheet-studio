@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ t.upload_title }}</h1>
+<form class="form" action="/api/process" method="post" enctype="multipart/form-data">
+  <label>{{ t.upload_label_num_questions }}
+    <input type="number" name="num_questions" min="1" max="100" placeholder="{{ t.upload_ph_num_questions }}" required />
+  </label>
+
+  <label>{{ t.upload_label_choices_count }}
+    <select name="choices_count">
+      <option value="3">ABC</option>
+      <option value="4" selected>ABCD</option>
+      <option value="5">ABCDE</option>
+    </select>
+  </label>
+
+  <label>{{ t.upload_label_pdf }}
+    <input type="file" name="pdf" accept="application/pdf" required />
+  </label>
+
+  <label>{{ t.upload_label_answer_key }}
+    <input type="file" name="answer_key" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+  </label>
+
+  <button type="submit">{{ t.upload_btn_process }}</button>
+  <div id="processing" class="hint" style="display:none">
+    <progress style="width:260px"></progress>
+    <span>{{ t.upload_processing }}</span>
+  </div>
+
+  <div id="resultLinkWrap" class="downloads" style="display:none">
+    <a id="resultLink" class="download" href="#" target="_blank" rel="noopener noreferrer">{{ t.upload_open_result }}</a>
+  </div>
+  <p id="resultLinkHint" class="hint" style="display:none">{{ t.upload_open_result_hint }}</p>
+  <p id="resultLinkError" class="hint" style="display:none;color:#fca5a5"></p>
+
+  <p class="hint">{{ t.upload_hint_output }}</p>
+</form>
+
+<script>
+  (() => {
+    const key = "answer_sheet_studio_choices_count";
+    const select = document.querySelector('select[name="choices_count"]');
+    if (!select) return;
+    const saved = localStorage.getItem(key);
+    if (saved && /^(3|4|5)$/.test(saved)) select.value = saved;
+    select.addEventListener("change", () => localStorage.setItem(key, select.value));
+  })();
+
+  (() => {
+    const form = document.querySelector("form.form");
+    const processing = document.getElementById("processing");
+    const btn = form ? form.querySelector('button[type="submit"]') : null;
+    const resultWrap = document.getElementById("resultLinkWrap");
+    const resultLink = document.getElementById("resultLink");
+    const resultHint = document.getElementById("resultLinkHint");
+    const resultError = document.getElementById("resultLinkError");
+    if (!form || !processing || !btn || !resultWrap || !resultLink || !resultHint || !resultError) return;
+
+    form.addEventListener("submit", async (e) => {
+      if (!window.fetch || !window.FormData) return;
+      e.preventDefault();
+
+      btn.disabled = true;
+      processing.style.display = "block";
+      resultWrap.style.display = "none";
+      resultHint.style.display = "none";
+      resultError.style.display = "none";
+      resultError.textContent = "";
+
+      try {
+        const resp = await fetch(form.action, {
+          method: form.method || "POST",
+          body: new FormData(form),
+          credentials: "same-origin",
+        });
+        const finalUrl = resp.url || "";
+        await resp.text().catch(() => {});
+        if (!resp.ok || !finalUrl.includes("/result/")) {
+          throw new Error(`HTTP ${resp.status}`);
+        }
+        resultLink.href = finalUrl;
+        resultWrap.style.display = "flex";
+        resultHint.style.display = "block";
+      } catch (_) {
+        resultError.textContent = "{{ t.upload_error_generic }}";
+        resultError.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        processing.style.display = "none";
+      }
+    });
+  })();
+</script>
+{% endblock %}

@@ -246,18 +246,14 @@ def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]],
     # ABSOLUTE CALIBRATION: Total width 1130. Left 100 aligns with Table Labels (60+40).
     # Question area is exactly 1030. Right margin 0 to prevent drift.
     width, height = 1130, 300
-    left, right, top, bottom = 100, 0, 20, 20
+    left, right, top, bottom = 110, 0, 20, 20
     panel_gap = 22
 
     is_zh = lang_norm.startswith("zh")
     s = {
         "no_items": "沒有試題資料" if is_zh else "No item data",
         "title": "試題分析趨勢圖" if is_zh else "Item Analysis Trends",
-        "x": "題號" if is_zh else "Question #",
-        "y": "比例" if is_zh else "Rate",
-        "difficulty": "正確率" if is_zh else "Diff (Correct rate)",
-        "discrimination": "鑑別度" if is_zh else "Disc (Discrimination)",
-        "blank_rate": "空白率" if is_zh else "Blank rate",
+        "difficulty": "正確率" if is_zh else "Correct Rate",
     }
 
     # Only keep Correct Rate (Difficulty) as requested for vertical space
@@ -298,7 +294,7 @@ def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]],
         cv2.rectangle(img, (left, y0), (left + plot_w, y1), (245, 245, 245), thickness=-1)
         
         # DRAW VERTICAL GRID LINES: High contrast (120) for visual guidance across the report
-        grid_color = (120, 120, 120) 
+        grid_color = (220, 220, 220) 
         for i in range(q_count + 1):
             gx = int(left + i * unit_w)
             cv2.line(img, (gx, 0), (gx, height), grid_color, 1) # Full height
@@ -309,13 +305,29 @@ def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]],
         ys = [v for v in values if v is not None and not math.isnan(float(v))]
         if not ys:
             continue
-        y_min = float(min(ys))
-        y_max = float(max(ys))
-        if y_max <= y_min:
-            y_max = y_min + 1.0
+        if metric == "difficulty":
+            y_min, y_max = 0.0, 1.0
+        else:
+            ys = [v for v in values if v is not None and not math.isnan(float(v))]
+            if not ys:
+                continue
+            y_min = float(min(ys))
+            y_max = float(max(ys))
+            if y_max <= y_min:
+                y_max = y_min + 1.0
 
         def y_of(v: float) -> int:
             return int(y1 - (float(v) - y_min) / (y_max - y_min) * (panel_h - 8) - 4)
+
+        # DRAW HORIZONTAL GRID LINES & LABELS
+        for level in [0, 0.25, 0.5, 0.75, 1.0]:
+            ly = y_of(level)
+            cv2.line(img, (left, ly), (left + plot_w, ly), (220, 220, 220), 1)
+            # Add short tick line
+            cv2.line(img, (left - 5, ly), (left, ly), (80, 80, 80), 1)
+            # Add labels with OpenCV (Always visible, closer to axis)
+            label = f"{level:.2f}"
+            cv2.putText(img, label, (left - 35, ly + 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (80, 80, 80), 1, cv2.LINE_AA)
 
         last_pt: Optional[Tuple[int, int]] = None
         for x, v in zip(numbers, values):
@@ -342,33 +354,39 @@ def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]],
         "C:\\Windows\\Fonts\\simsun.ttc",  # SimSun
         "C:\\Windows\\Fonts\\mingliu.ttc", # MingLiU
     ]
-    font = None
+    font_path = None
     for fp in font_paths:
         if os.path.exists(fp):
             try:
-                font_title = ImageFont.truetype(fp, 24)
-                font_axis = ImageFont.truetype(fp, 18)
-                font = fp
+                # Use a slightly smaller font for the axis labels
+                font_axis = ImageFont.truetype(fp, 14)
+                font_path = fp
                 break
             except Exception: pass
             
-    if font:
-        # [ABSOLUTE CLEANUP] No text should be drawn INSIDE the image.
-        # This keeps the grid perfectly clean for vertical alignment with the PDF tables.
-        pass
-        
-        # [CLEANUP] Remove all internal text to prevent "ugly" overlap as user requested.
-        # The PDF section headers describe the sections.
-        pass
+    if font_path:
+        # Draw Y-axis labels in the left margin area (difficulty only for now)
+        for idx, metric in enumerate(metrics):
+            if metric == "difficulty":
+                # Ensure we use exactly the same scaling as the background grid
+                y0_p = top + idx * (panel_h + panel_gap)
+                y1_p = y0_p + panel_h
+                def y_of_p(v: float) -> int:
+                    return int(y1_p - (float(v) - 0.0) / (1.0 - 0.0) * (panel_h - 8) - 4)
+                
+                for level in [0, 0.25, 0.5, 0.75, 1.0]:
+                    ly = y_of_p(level)
+                    label = f"{level:.2f}"
+                    bbox = draw.textbbox((0, 0), label, font=font_axis)
+                    tw = bbox[2] - bbox[0]
+                    th = bbox[3] - bbox[1]
+                    draw.text((left - tw - 8, ly - th // 2), label, font=font_axis, fill=(80, 80, 80))
 
         img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
     else:
         # Fallback to English if no font found (unlikely on Windows)
-        cv2.putText(img, "Item Analysis", (left, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2, cv2.LINE_AA)
+        cv2.putText(img, "Y-Axis labels added", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (120, 120, 120), 1, cv2.LINE_AA)
 
-    # Convert back to OpenCV format if we used Pillow
-    if font:
-        img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
     # Use imencode to avoid Unicode path issues on Windows
     success, encoded = cv2.imencode('.png', img)
@@ -848,13 +866,25 @@ class PrecisionGridChart(Flowable):
             curr_x += w
             canvas.line(curr_x, 0, curr_x, self.height)
         
-        # 2. 數據繪製
+        # 1.1 繪製水平背景格線與 Y 軸標籤
+        canvas.setStrokeColorRGB(0.85, 0.85, 0.85)
+        canvas.setFont(self.font_name, 7)
+        canvas.setFillColorRGB(0.4, 0.4, 0.4)
+        for level in [0, 0.25, 0.5, 0.75, 1.0]:
+            _, ly = self.get_xy(0, level, 0.0, 1.0)
+            # 繪製水平線 (橫跨整個問題區)
+            canvas.line(0, ly, self.width, ly)
+            # 繪製短刻度線 (幫助視覺對準)
+            canvas.line(-5, ly, 0, ly)
+            # 文字標記 (距離縮近至 -20)
+            canvas.drawString(-20, ly - 2, f"{level:.2f}")
+        
+        # 1. 數據繪製
         valid_vals = [v for v in self.data if v is not None]
         if not valid_vals: return
         
-        # 原始邏輯：動態計算 Y 軸比例
-        y_min, y_max = min(valid_vals), max(valid_vals)
-        if y_max <= y_min: y_max = y_min + 1.0
+        # 強制使用 0-1 範圍以對齊標籤
+        y_min, y_max = 0.0, 1.0
 
         points = []
         for i, val in enumerate(self.data):

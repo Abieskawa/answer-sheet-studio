@@ -97,20 +97,20 @@ I18N = {
         "result_title": "讀取結果",
         "result_file": "檔案：",
         "result_job_id": "Job ID：",
-        "result_download_results": "下載 results.csv",
-        "result_download_annotated": "下載 標示圖案 (PDF)",
-        "result_download_analysis_pdf": "下載 分析結果 PDF",
-        "result_download_showwrong": "下載 僅顯示錯題(含總分) (Excel)",
-        "result_download_integrated_p1": "下載 整合試題分析報表 (Excel)",
-        "result_download_integrated_p2": "下載 整合試題分析報表 (PDF)",
-        "result_print_pdf": "列印／存成 PDF",
+        "result_download_results": "下載讀卡結果(csv)",
+        "result_download_annotated": "下載 劃記檔案 (pdf)",
+        "result_download_analysis_pdf": "下載 (正確舊版本分析) (pdf)",
+        "result_download_showwrong": "下載 僅顯示錯題 (csv)",
+        "result_download_integrated_p1": "試題分析整合報表(csv)",
+        "result_download_integrated_p2": "試題分析整合報表(pdf)",
+        "result_print_pdf": "網頁列印",
         "result_print_pdf_hint": "用瀏覽器列印（⌘/Ctrl+P）：macOS 選「PDF → 另存為 PDF」；Windows 選「Microsoft Print to PDF」。",
         "result_back_to_downloads": "查看試題分析原始數據",
-        "result_view_item_analysis_data": "試題分析數據",
+        "result_view_item_analysis_data": "試題分析數據(csv)",
         "result_plots_title": "圖表",
-        "result_plot_score_hist": "成績分佈",
+        "result_plot_score_hist": "成績分佈(png)",
         "result_plot_score_hist_guides": "輔助線：實線＝平均（紅）/中位數（藍）；虛線＝百分位數（P12/P25/P75/P88）",
-        "result_plot_item_metrics": "題目分析",
+        "result_plot_item_metrics": "試題分析(csv)",
         "result_plot_item_metrics_guides": "輔助線：難度 0.25/0.50/0.75；鑑別度 0.00/0.20/0.40",
         "result_integrated_title": "整合圖表（可用滑鼠懸停查看題號，並與錯題表對照）",
         "result_integrated_hint": "滑鼠移到表格/圖表可同步醒目提示題號；點一下可鎖定，再點一次取消。",
@@ -161,7 +161,10 @@ I18N = {
         "result_item_table_title": "試題分析數據（預覽）",
         "result_item_table_hint": "此處僅顯示前 200 列；完整資料請下載 analysis_item.csv。",
         "result_item_table_truncated": "（共 {total_rows} 列，顯示前 {shown_rows} 列）",
-        "result_download_scores_by_class": "analysis_scores_by_class.xlsx（按班級）",
+        "analysis_scores": "成績分析表(csv)",
+        "analysis_item": "試題分析(csv)",
+        "analysis_scores_by_class": "分數統計(csv)",
+        "result_download_scores_by_class": "分數統計(分班)(excel)",
         "result_hint_unstable": "如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。",
         "result_debug_hint": "需要回報問題時，可到 Debug Mode 下載診斷檔案（輸入 Job ID）。",
         "result_debug_open": "開啟 Debug Mode",
@@ -184,11 +187,7 @@ I18N = {
         "analysis_note_discrimination_rule_50": "鑑別度：學生數 ≤ 30 時採前後 50%（高分組答對率 − 低分組答對率）。",
         "class_unknown": "未分班",
         "class_all": "全體",
-        "roster": "學生清單",
-        "analysis_scores": "學生成績單",
-        "analysis_item": "試題分析表",
         "analysis_summary": "成績統計摘要",
-        "analysis_scores_by_class": "班級成績表",
     },
     "en": {
         "lang_zh": "繁體中文",
@@ -244,8 +243,10 @@ I18N = {
         "result_job_id": "Job ID:",
         "result_download_results": "Download results.csv",
         "result_download_annotated": "Download annotated.pdf",
-        "result_download_analysis_pdf": "Download analysis report PDF",
+        "result_download_analysis_pdf": "試題分析整合報表",
         "result_download_showwrong": "Download showwrong.xlsx (wrong answers only)",
+        "result_download_integrated_p1": "Integrated report",
+        "result_download_integrated_p2": "Integrated report",
         "result_print_pdf": "Print / Save as PDF",
         "result_print_pdf_hint": "Print via your browser (Cmd/Ctrl+P): macOS choose “PDF → Save as PDF”; Windows choose “Microsoft Print to PDF”.",
         "result_back_to_downloads": "View item analysis raw data",
@@ -379,8 +380,10 @@ I18N["zh-Hans"].update(
         "result_file": "档案：",
         "result_download_results": "下载 results.csv",
         "result_download_annotated": "下载 annotated.pdf",
-        "result_download_analysis_pdf": "下载分析结果 PDF",
+        "result_download_analysis_pdf": "试题分析整合报表",
         "result_download_showwrong": "下载 showwrong.xlsx（只显示错题）",
+        "result_download_integrated_p1": "试题分析整合报表",
+        "result_download_integrated_p2": "试题分析整合报表",
         "result_print_pdf": "打印／存成 PDF",
         "result_print_pdf_hint": "用浏览器打印（⌘/Ctrl+P）：macOS 选「PDF → 另存为 PDF」；Windows 选「Microsoft Print to PDF」。",
         "result_plots_title": "图表",
@@ -645,7 +648,7 @@ def result_page(request: Request, job_id: str):
 
     score_hist = job_dir / "analysis_score_hist.png"
     item_plot = job_dir / "analysis_item_plot.png"
-    analysis_report_pdf = job_dir / "analysis_report.pdf"
+    analysis_report_pdf = job_dir / "試題分析整合報表.pdf"
     discr_note_key = _discrimination_note_key(job_dir)
 
     lang = request.cookies.get(LANG_COOKIE_NAME, DEFAULT_LANG)
@@ -663,7 +666,7 @@ def result_page(request: Request, job_id: str):
             "csv_url": f"/outputs/{job_id}/results.csv",
             "pdf_url": f"/outputs/{job_id}/annotated.pdf",
             "showwrong_url": (f"/outputs/{job_id}/showwrong.xlsx" if (job_dir / "showwrong.xlsx").exists() else None),
-            "analysis_report_url": (f"/outputs/{job_id}/analysis_report.pdf" if analysis_report_pdf.exists() else None),
+            "analysis_report_url": None, # 停用,
             "analysis_error": (str(meta.get("analysis_error") or "") or None),
             "analysis_message": (str(meta.get("analysis_message") or "") or None),
             "analysis_discrimination_note_key": discr_note_key,
@@ -694,7 +697,7 @@ def result_charts_page(request: Request, job_id: str):
     roster_csv = job_dir / "roster.csv"
     item_csv = job_dir / "analysis_item.csv"
     scores_csv = job_dir / "analysis_scores.csv"
-    analysis_report_pdf = job_dir / "analysis_report.pdf"
+    analysis_report_pdf = job_dir / "試題分析整合報表.pdf"
     item_table = _read_analysis_item_table(job_dir)
     discr_note_key = _discrimination_note_key(job_dir)
 
@@ -722,7 +725,7 @@ def result_charts_page(request: Request, job_id: str):
             "roster_csv_url": (f"/outputs/{job_id}/roster.csv" if roster_csv.exists() else None),
             "analysis_item_csv_url": (f"/outputs/{job_id}/analysis_item.csv" if item_csv.exists() else None),
             "analysis_scores_csv_url": (f"/outputs/{job_id}/analysis_scores.csv" if scores_csv.exists() else None),
-            "analysis_report_url": (f"/outputs/{job_id}/analysis_report.pdf" if analysis_report_pdf.exists() else None),
+            "analysis_report_url":None,#停用
             "analysis_item_table": item_table,
             "analysis_files": _analysis_file_links(job_id, t),
         },
@@ -789,16 +792,13 @@ def _analysis_file_links(job_id: str, t: dict) -> list[dict]:
     job_dir = OUTPUTS_DIR / job_id
     files: list[dict] = []
     label_by_name = {
-        "roster.csv": t.get("roster", "roster.csv"),
-        "analysis_scores.csv": t.get("analysis_scores", "analysis_scores.csv"),
-        "analysis_scores_by_class.xlsx": t.get("analysis_scores_by_class", "analysis_scores_by_class.xlsx"),
-        "analysis_item.csv": t.get("analysis_item", "analysis_item.csv"),
-        "analysis_summary.csv": t.get("analysis_summary", "analysis_summary.csv"),
-        "analysis_score_hist.png": t.get("result_plot_score_hist", "analysis_score_hist.png"),
-        "analysis_item_plot.png": t.get("result_plot_item_metrics", "analysis_item_plot.png"),
-        "試題分析整合檔.xlsx": t.get("result_download_integrated_p1", "Integrated Report (Excel)"),
-        "試題分析整合檔.pdf": t.get("result_download_integrated_p2", "Integrated Report (PDF)"),
-        "試題分析整合報表(高解析).pdf": "試題分析整合報表 (PDF 高解析版)",
+        "roster.csv": t.get("roster", "名冊(csv)"),
+        "analysis_scores.csv": t.get("analysis_scores", "成績明細.CSV"),
+        "analysis_item.csv": t.get("analysis_item", "試題分析.CSV"),
+        "analysis_score_hist.png": t.get("result_plot_score_hist", "成績分布圖.PNG"),
+        "analysis_summary.csv": "成績分布數據(csv)",
+        "試題分析整合報表.pdf": t.get("result_download_integrated_p2", "試題分析整合報表.PDF"),
+        "試題分析整合檔.xlsx": t.get("result_download_integrated_p1", "試題分析整合報表.XLSX"),
     }
 
     def add_if_exists(name: str) -> None:
@@ -822,9 +822,15 @@ def _analysis_file_links(job_id: str, t: dict) -> list[dict]:
                 continue
             if name == "analysis_template.csv":  # Explicitly hide this
                 continue
+            if name == "analysis_report.pdf":  # Hide old-version report
+                continue
+            if name == "analysis_item_plot.png":  # Hide item plot PNG (too large/redundant)
+                continue
             if not (name.startswith("analysis_") or name.startswith("試題")):
                 continue
             if path.is_dir():
+                continue
+            if name == "analysis_scores_by_class.xlsx": 
                 continue
             if not any(name.lower().endswith(ext) for ext in (".csv", ".xlsx", ".png", ".pdf", ".log", ".txt")):
                 continue
@@ -1845,12 +1851,10 @@ async def api_process(
             except Exception as exc:
                 analysis_error = f"{t.get('analysis_error_builtin_failed', 'Built-in analysis failed:')} {exc}".strip()
             else:
-                # pass to fix indentation after disabling old generator
-                pass
-                # try:
-                #     _write_analysis_report_pdf(job_dir, lang=lang)
-                # except Exception:
-                #     pass
+                try:
+                    _write_analysis_report_pdf(job_dir, lang=lang)
+                except Exception:
+                    pass
 
     meta = _read_job_meta(job_dir)
     if analysis_error:
@@ -2043,31 +2047,33 @@ def download_output(job_id: str, filename: str):
 
     download_name = filename
     if filename == "results.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_results.csv"
+        download_name = f"{upload_base_ascii}_{job_tag}_讀卡結果.csv"
     elif filename == "ambiguity.csv":
         download_name = f"{upload_base_ascii}_{job_tag}_ambiguity.csv"
     elif filename == "annotated.pdf":
-        download_name = f"{upload_base_ascii}_{job_tag}_annotated.pdf"
+        download_name = f"{upload_base_ascii}_{job_tag}_標示圖案.pdf"
     elif filename == "input.pdf":
         download_name = f"{upload_base_ascii}_{job_tag}_input.pdf"
     elif filename == "answer_key.xlsx":
         download_name = f"{upload_base_ascii}_{job_tag}_answer_key.xlsx"
     elif filename == "showwrong.xlsx":
-        download_name = f"{upload_base_ascii}_{job_tag}_showwrong.xlsx"
+        download_name = f"{upload_base_ascii}_{job_tag}_僅顯示錯題.xlsx"
     elif filename == "analysis_scores.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_analysis_scores.csv"
+        download_name = f"{upload_base_ascii}_{job_tag}_分析總表.csv"
+    elif filename == "analysis_scores_by_class.xlsx":
+        download_name = f"{upload_base_ascii}_{job_tag}_分數統計.xlsx"
     elif filename == "analysis_item.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_analysis_item.csv"
+        download_name = f"{upload_base_ascii}_{job_tag}_試題分析.csv"
     elif filename == "analysis_summary.csv":
         download_name = f"{upload_base_ascii}_{job_tag}_analysis_summary.csv"
     elif filename == "analysis_score_hist.png":
-        download_name = f"{upload_base_ascii}_{job_tag}_analysis_score_hist.png"
+        download_name = f"{upload_base_ascii}_{job_tag}_成績分佈.png"
     elif filename == "analysis_item_plot.png":
-        download_name = f"{upload_base_ascii}_{job_tag}_analysis_item_plot.png"
+        download_name = f"{upload_base_ascii}_{job_tag}_試題分析.png"
     elif filename == "analysis_showwrong.json":
         download_name = f"{upload_base_ascii}_{job_tag}_analysis_showwrong.json"
     elif filename == "analysis_report.pdf":
-        download_name = f"{upload_base_ascii}_{job_tag}_analysis_report.pdf"
+        download_name = f"{upload_base_ascii}_{job_tag}_試題分析整合報表.pdf"
 
     media = "application/octet-stream"
     if filename.lower().endswith(".pdf"):
@@ -2172,95 +2178,19 @@ if "zh-Hans" in I18N:
         "result_title": "读取结果",
         "result_file": "档案：",
         "result_job_id": "Job ID：",
-        "result_download_results": "下载 results.csv",
+        "result_download_results": "下载读卡结果",
         "result_download_annotated": "下载 标示图案 (PDF)",
-        "result_download_analysis_pdf": "下载 分析结果 PDF",
-        "result_download_showwrong": "下载 仅显示错题(含总分) (Excel)",
-        "result_download_integrated_p1": "下载 整合试题分析报表 (Excel)",
-        "result_download_integrated_p2": "下载 整合试题分析报表 (PDF)",
-        "result_print_pdf": "打印／存成 PDF",
-        "result_print_pdf_hint": "用浏览器打印（⌘/Ctrl+P）：macOS 选「PDF → 另存为 PDF」；Windows 选「Microsoft Print to PDF」。",
-        "result_back_to_downloads": "查看试题分析原始数据",
-        "result_view_item_analysis_data": "试题分析数据",
-        "result_plots_title": "图表",
+        "result_download_analysis_pdf": "下载 试题分析整合报表 (PDF)",
+        "result_download_showwrong": "下载 仅显示错题 (Excel)",
         "result_plot_score_hist": "成绩分布",
         "result_plot_score_hist_guides": "辅助线：实线＝平均（红）/中位数（蓝）；虚线＝百分位数（P12/P25/P75/P88）",
-        "result_plot_item_metrics": "题目分析",
+        "result_plot_item_metrics": "试题分析",
         "result_plot_item_metrics_guides": "辅助线：难度 0.25/0.50/0.75；鉴别度 0.00/0.20/0.40",
-        "result_integrated_title": "整合图表（可用滑鼠悬停查看题號，并与错题表对照）",
-        "result_integrated_hint": "滑鼠移到表格/图表可同步醒目提示题號；点一下可锁定，再点一次取消。",
-        "result_integrated_error": "读取整合资料失败",
-        "result_interaction_click_to_lock": "点击可锁定/取消醒目提示",
-        "result_controls_filter_student": "筛选学生",
-        "result_controls_filter_student_ph": "搜索座号或 ID",
-        "result_controls_sort": "排序",
-        "result_controls_sort_seat": "座号",
-        "result_controls_sort_score_desc": "分数（高→低）",
-        "result_controls_sort_blank_asc": "空白（少→多）",
-        "result_controls_sort_id": "ID",
-        "result_controls_hide_correct": "隐藏正确",
-        "result_controls_charts_follow_filter": "图表跟着筛选",
-        "result_controls_jump_question": "跳到题号",
-        "result_controls_jump_question_ph": "题号",
-        "result_controls_go": "前往",
-        "result_controls_clear": "清除醒目/锁定",
-        "result_controls_not_found": "找不到",
-        "result_focus_no_selection": "把滑鼠移到表格/图表可查看",
-        "result_focus_answer": "作答",
-        "result_focus_score": "分数",
-        "result_focus_open_page": "开启该生标注页",
-        "result_focus_locked": "锁定",
-        "result_focus_keyboard_hint": "快捷键：←/→切换题號、↑/↓切换学生、Esc 清除锁定、PgUp/PgDn 切换图",
-        "result_focus_status_correct": "正确",
-        "result_focus_status_wrong": "错误",
-        "result_focus_status_blank": "空白",
-        "result_loading": "载入中…",
-        "result_chart_tab_difficulty": "难度",
-        "result_chart_tab_discrimination": "鉴别度",
-        "result_chart_tab_scores": "成绩分布",
-        "result_chart_tab_blank_rate": "空白率",
-        "result_chart_prev": "上一张",
-        "result_chart_next": "下一张",
-        "col_question": "题号",
-        "col_correct": "正确答案",
-        "col_student": "学生",
-        "col_difficulty": "难度（正答率）",
-        "col_discrimination": "鉴别度",
-        "col_class": "班级",
-        "col_wrong": "错误人数",
-        "col_blank": "空白人数",
-        "col_wrong_short": "错",
-        "col_blank_short": "空",
-        "result_analysis_files_title": "试题分析档案",
-        "result_analysis_files_hint": "下载完整分析报表（CSV/XLSX/图片/日志）。",
-        "result_item_table_title": "试题分析数据（预览）",
-        "result_item_table_hint": "此处仅显示前 200 列；完整资料请下载 analysis_item.csv。",
-        "result_item_table_truncated": "（共 {total_rows} 列，显示前 {shown_rows} 列）",
-        "result_download_scores_by_class": "各班分数 (XLSX)",
-        "result_hint_unstable": "如果结果不稳，通常是扫描歪斜或太淡；可以提高扫描解析度（建议 300dpi）或改用较深的笔。",
-        "result_debug_hint": "需要回报问题时，可到 Debug Mode 下载诊断档案（输入 Job ID）。",
-        "result_debug_open": "开启 Debug Mode",
-        "debug_title": "Debug Mode",
-        "debug_hint": "一般使用者不需要这个页面。若需要回报问题，请依指示下载档案并提供 Job ID。",
-        "debug_label_job_id": "Job ID",
-        "debug_ph_job_id": "贴上处理完成页面显示的 Job ID",
-        "debug_btn_open": "开启 Debug 下载",
-        "debug_error_invalid_job_id": "Job ID 格式不正确。请贴上处理完成页面显示的 Job ID。",
-        "debug_error_not_found": "找不到此 Job ID 的输出资料夹。请确认 Job ID 是否正确。",
-        "debug_dl_results": "下载 results.csv",
-        "debug_dl_ambiguity": "下载 ambiguity.csv",
-        "debug_dl_annotated": "下载 annotated.pdf",
-        "debug_dl_input": "下载 input.pdf（原始上传档）",
-        "debug_report_hint": "回报时请提供：Job ID、results.csv、ambiguity.csv、annotated.pdf（必要时 input.pdf）。",
-        "analysis_error_builtin_failed": "内建分析失败：",
-        "analysis_message_done": "分析完成，可下载报表与图表。",
-        "analysis_message_done_fallback": "分析完成。",
-        "analysis_note_discrimination_rule_27": "鉴别度：学生数 > 30 時採前后 27%（高分组答对率 − 低分组答对率）。",
-        "analysis_note_discrimination_rule_50": "鉴别度：学生数 ≤ 30 時採前后 50%（高分组答对率 − 低分组答对率）。",
+        "result_download_scores_by_class": "下载分数统计",
         "roster": "学生资讯",
         "analysis_item": "试题分析",
         "analysis_summary": "分数统计",
         "analysis_scores": "全部学生分数",
-        "analysis_scores_by_class": "各班分数",
+        "analysis_scores_by_class": "分数统计",
     })
 

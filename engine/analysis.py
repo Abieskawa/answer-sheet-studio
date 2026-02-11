@@ -46,7 +46,7 @@ def _score_histogram_png(scores: List[float], total_possible: float, out_path: P
     }
 
     width, height = 800, 450
-    left, right, top, bottom = 70, 30, 50, 60
+    left, right, top, bottom = 90, 30, 50, 60
     plot_w = width - left - right
     plot_h = height - top - bottom
 
@@ -71,27 +71,17 @@ def _score_histogram_png(scores: List[float], total_possible: float, out_path: P
 
     edges = np.arange(0.0, max_x + binwidth, binwidth, dtype=float)
     counts, _ = np.histogram(np.array(scores, dtype=float), bins=edges)
-    y_max = int(max(int(counts.max(initial=0)), 1))
+    # Give 25% room at the top for labels
+    y_max_raw = int(counts.max(initial=0))
+    y_max = int(max(int(y_max_raw * 1.25 + 1), 1))
 
     x_scale = plot_w / float(max_x)
     y_scale = plot_h / float(y_max)
 
     axis_color = (0, 0, 0)
-    bar_color = (233, 165, 14)  # BGR for #0ea5e9
+    bar_color = (180, 180, 180)  # Gray
     mean_color = (68, 68, 239)  # BGR for #ef4444
     median_color = (246, 130, 59)  # BGR-ish blue
-
-    # Axes
-    cv2.line(img, (left, height - bottom), (left + plot_w, height - bottom), axis_color, 2)
-    cv2.line(img, (left, top), (left, height - bottom), axis_color, 2)
-
-    # Y ticks (integer students)
-    tick_color = (160, 160, 160)
-    for yv in range(0, y_max + 1):
-        y = int(height - bottom - yv * y_scale)
-        cv2.line(img, (left - 5, y), (left, y), axis_color, 2)
-        cv2.line(img, (left, y), (left + plot_w, y), tick_color, 1)
-        cv2.putText(img, str(yv), (left - 42, y + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.55, axis_color, 2, cv2.LINE_AA)
 
     # Bars
     for i, c in enumerate(counts.tolist()):
@@ -103,7 +93,31 @@ def _score_histogram_png(scores: List[float], total_possible: float, out_path: P
         y0 = int(y1 - (float(c) * y_scale))
         if c > 0:
             cv2.rectangle(img, (x0, y0), (x1 - 1, y1), bar_color, thickness=-1)
-            cv2.rectangle(img, (x0, y0), (x1 - 1, y1), (255, 255, 255), thickness=1)
+            cv2.rectangle(img, (x0, y0), (x1 - 1, y1), (255, 255, 255), thickness=1)    
+
+    # Axes
+    cv2.line(img, (left, height - bottom), (left + plot_w, height - bottom), axis_color, 2)
+    cv2.line(img, (left, top), (left, height - bottom), axis_color, 2)
+
+    # Y ticks (integer students)
+    tick_color = (160, 160, 160)
+    for yv in range(0, y_max + 1):
+        y = int(height - bottom - yv * y_scale)
+        cv2.line(img, (left - 5, y), (left, y), axis_color, 2)
+        cv2.line(img, (left, y), (left + plot_w, y), tick_color, 1)
+        cv2.putText(img, str(yv), (left - 45, y + 6), cv2.FONT_HERSHEY_SIMPLEX, 0.55, axis_color, 2, cv2.LINE_AA)
+
+    # --- 4. 新增：畫 X 軸刻度與分數數字 ---
+    # 每 10 分標註一個刻度
+    for xv in range(0, int(max_x) + 1, 10):
+        x = int(left + xv * x_scale)
+        if x > left + plot_w: break
+        # 畫 X 軸小刻度線
+        cv2.line(img, (x, height - bottom), (x, height - bottom + 5), axis_color, 2)
+        # 標註分數數字
+        cv2.putText(img, str(xv), (x - 10, height - bottom + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.55, axis_color, 2, cv2.LINE_AA)
+
+    
 
     scores_arr = np.array(scores, dtype=float)
     mean_v = float(scores_arr.mean())
@@ -114,8 +128,14 @@ def _score_histogram_png(scores: List[float], total_possible: float, out_path: P
         return int(left + max(0.0, min(max_x, float(v))) * x_scale)
 
     q_color = (90, 90, 90)
+    
+    # Draw dashed lines for percentiles (Thicker line as requested: thickness 2)
     for v in (q88, q75, q25, q12):
-        cv2.line(img, (x_of(v), top), (x_of(v), height - bottom), q_color, 1)
+        vx = x_of(v)
+        # Draw dashed line manually
+        dash_len = 5
+        for y in range(top, height - bottom, dash_len * 2):
+            cv2.line(img, (vx, y), (vx, min(y + dash_len, height - bottom)), q_color, 2)
 
     cv2.line(img, (x_of(mean_v), top), (x_of(mean_v), height - bottom), mean_color, 2)
     cv2.line(img, (x_of(median_v), top), (x_of(median_v), height - bottom), median_color, 2)
@@ -139,25 +159,68 @@ def _score_histogram_png(scores: List[float], total_possible: float, out_path: P
         font_label = ImageFont.truetype(font, 13)
         draw.text((left, 10), s["title"], font=font_title, fill=(0,0,0))
         draw.text((left + plot_w // 2, height - 25), s["x"], font=font_axis, fill=(0,0,0))
-        draw.text((5, top + plot_h // 2), s["y"], font=font_axis, fill=(0,0,0))
+        # Move "Students" label to top left to avoid any overlap
+        draw.text((10, top - 35), s["y"], font=font_axis, fill=(0,0,0))
         
-        # Draw labels with Jittering for guide lines
+        
+        # Draw labels with background boxes for better aesthetics
+        # --- 修正版：智慧避讓與精確對齊 ---
         labels = [
-            (mean_v, s["mean"], (239, 68, 68)), # Red
-            (q50, s["median"], (59, 130, 246)), # Blue
-            (q88, "P88", (100, 100, 100)),
-            (q75, "P75", (100, 100, 100)),
-            (q25, "P25", (100, 100, 100)),
-            (q12, "P12", (100, 100, 100))
+            (mean_v, s["mean"], (239, 68, 68), (255, 255, 255)),   # 紅色底
+            (q50, s["median"], (59, 130, 246), (255, 255, 255)),   # 深灰底
+            (q88, "P88", (130, 130, 130), (255, 255, 255)),      # 灰底
+            (q75, "P75", (130, 130, 130), (255, 255, 255)),
+            (q25, "P25", (130, 130, 130), (255, 255, 255)),
+            (q12, "P12", (130, 130, 130), (255, 255, 255))
         ]
-        # Jitter logic: if x-coordinates are too close, shift Y
-        labels.sort(key=lambda x: x[0])
-        for i, (val, txt, clr) in enumerate(labels):
-            lx = x_of(val)
-            ly = top + 5 if (i % 2 == 0) else top + 20 # Alternate Y for basic jitter
-            draw.text((lx + 2, ly), txt, font=font_label, fill=clr)
+        labels.sort(key=lambda x: x[0])  # 依分數從低到高排序，方便避讓計算
 
-        img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+        last_x1 = -999.0      # 紀錄前一個標籤框的右邊界
+        current_layer = 0     # 當前使用的垂直層級索引
+        layers = [2, 22, 42]  # 定義三層不同的 Y 軸偏移，間距加大以防垂直重疊
+
+        for i, (val, txt, bg_clr, txt_clr) in enumerate(labels):
+            lx = x_of(val)
+            
+            # 1. 精確計算文字尺寸與內部偏移
+            bbox = draw.textbbox((0, 0), txt, font=font_label)
+            tw = bbox[2] - bbox[0]
+            th = bbox[3] - bbox[1]
+            
+            # 2. 智慧避讓邏輯：如果當前 X 座標太靠近前一個標籤的右邊
+            pad_x = 6  # 左右內邊距
+            pad_y = 3  # 上下內邊距
+            this_x0 = lx - (tw / 2) - pad_x
+            
+            if this_x0 < last_x1 + 8:  # 距離小於 8 像素就換層
+                current_layer = (current_layer + 1) % len(layers)
+            else:
+                current_layer = 0 # 距離夠遠則回到第一層
+            
+            ly_base = top + layers[current_layer]
+            
+            # 3. 計算背景框位置（以 lx 為水平中心點）
+            box_x0 = lx - (tw / 2) - pad_x
+            box_y0 = ly_base - pad_y
+            box_x1 = lx + (tw / 2) + pad_x
+            box_y1 = ly_base + th + pad_y
+            
+            # 4. 繪製背景矩形
+            draw.rectangle([box_x0, box_y0, box_x1, box_y1], fill=bg_clr)
+            
+            # 5. 繪製文字（修正 bbox 偏移，達到完美中心對齊）
+            # text_draw_x = 中心點 - (文字寬度/2) - 文字本身的內部起始位移
+            text_draw_x = lx - (tw / 2) - bbox[0]
+            text_draw_y = ly_base - bbox[1]
+            
+            draw.text((text_draw_x, text_draw_y), txt, font=font_label, fill=txt_clr)
+            
+            # 更新最後右邊界，供下一個標籤判斷
+            last_x1 = box_x1
+        # --- 修正結束 ---
+
+
+
         img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
     else:
         # Emergency fallback
@@ -374,10 +437,10 @@ def _write_analysis_scores_by_class_xlsx(outdir: Path) -> None:
         
         data = [
             pid,
-            float(row.get("score", 0)),
-            int(row.get("blank_count", 0)),
-            float(row.get("total_possible", 0)),
-            row.get("percent", "")
+            float(row.get("得分", 0)),
+            int(row.get("空白數", 0)),
+            float(row.get("滿分", 0)),
+            row.get("百分比", "")
         ]
         
         if cls not in by_class:
@@ -723,20 +786,10 @@ def generate_integrated_report(job_dir: Path, lang: str = "zh_TW") -> None:
         pass
 
     # 3. Generate PDF (Standard Integrated Report)
-    out_pdf = job_dir / "試題分析整合檔.pdf"
-    _generate_integrated_pdf_v2(
-        out_pdf, 
-        student_header=header_ans, 
-        student_data=excel_rows[1:1+len(student_cols)],
-        metric_header=m_header,
-        metric_data=[ans_row, diff_row, disc_row],
-        job_dir=job_dir, 
-        lang=lang, 
-        is_zh=is_zh
-    )
-
+    # [DELETE] Old version removed to unify output
+    
     # 4. Generate PDF (Improved Precision Alignment Version)
-    out_pdf_v2 = job_dir / "試題分析整合報表(高解析).pdf"
+    out_pdf_v2 = job_dir / "試題分析整合報表.pdf" # Renamed to main name
     _generate_integrated_pdf_v2(
         out_pdf_v2, 
         student_header=header_ans, 
@@ -752,10 +805,6 @@ def generate_integrated_report(job_dir: Path, lang: str = "zh_TW") -> None:
 
 from reportlab.platypus import Flowable
 class PrecisionGridChart(Flowable):
-    """
-    A custom ReportLab Flowable that draws a trend plot directly on the canvas,
-    perfectly aligned with a given list of column widths (Grid-Tied).
-    """
     def __init__(self, data_series, col_widths, height=200, font_name="Helvetica"):
         Flowable.__init__(self)
         processed = []
@@ -768,57 +817,63 @@ class PrecisionGridChart(Flowable):
                 processed.append(None)
         self.data = processed
         self.col_widths = col_widths
-        # width is only the question area (1030 points) to avoid merged cell centering issues
-        self.width = sum(col_widths[2:])
+        # 這裡決定了畫布的總寬度（只包含問題區）
+        self.q_ws = col_widths[2:] 
+        self.width = sum(self.q_ws)
         self.height = height
         self.font_name = font_name
 
+    def get_xy(self, i, val, y_min, y_max):
+        """
+        將原本在 draw 內部的 get_xy 移出來，
+        這樣外部呼叫就不會報錯。
+        """
+        # 使用 q_ws 確保 x 軸相對於合併單元格的起點對齊
+        x = sum(self.q_ws[:i]) + self.q_ws[i] / 2
+        
+        # Y 軸計算，增加安全除法防止 y_max == y_min
+        denom = (y_max - y_min) if y_max != y_min else 1.0
+        y = 10 + (val - y_min) / denom * (self.height - 20)
+        return x, y
+
     def draw(self):
         canvas = self.canv
-        # In Unified Grid mode, label columns are handled by the Table containing this Flowable.
-        # We only draw the question boundaries and the plot inside the merged cell area.
-        q_ws = self.col_widths[2:]
-        q_count = len(q_ws)
+        q_ws = self.q_ws
         
-        # 1. Background Grid (Aligned with question column boundaries)
-        canvas.setStrokeColorRGB(0.9, 0.9, 0.9) # Faded grid lines
+        # 1. 繪製背景網格（垂直線）
+        canvas.setStrokeColorRGB(0.9, 0.9, 0.9)
         canvas.setLineWidth(0.3)
-        
         curr_x = 0
         for w in q_ws[:-1]:
             curr_x += w
             canvas.line(curr_x, 0, curr_x, self.height)
         
-        # 2. Data Plotting
+        # 2. 數據繪製
         valid_vals = [v for v in self.data if v is not None]
         if not valid_vals: return
         
+        # 原始邏輯：動態計算 Y 軸比例
         y_min, y_max = min(valid_vals), max(valid_vals)
         if y_max <= y_min: y_max = y_min + 1.0
-        
-        def get_xy(i, val):
-            # X is the center of the i-th question column relative to the START of the merged cell
-            x = sum(q_ws[:i]) + q_ws[i] / 2
-            y = 10 + (val - y_min) / (y_max - y_min) * (self.height - 20)
-            return x, y
 
         points = []
         for i, val in enumerate(self.data):
             if val is not None:
-                points.append(get_xy(i, val))
+                # 呼叫移到外部的 get_xy
+                points.append(self.get_xy(i, val, y_min, y_max))
         
-        # Draw Lines
+        # 繪製線條
         canvas.setStrokeColorRGB(0.2, 0.2, 0.2)
         canvas.setLineWidth(1.5)
-        p = canvas.beginPath()
         if points:
+            p = canvas.beginPath()
             p.moveTo(points[0][0], points[0][1])
             for x, y in points[1:]:
                 p.lineTo(x, y)
             canvas.drawPath(p)
             
-        # Draw Points
-        canvas.setFillColorRGB(0.3, 0.3, 0.8) # Blue points
+        # 繪製藍點
+        canvas.setFillColorRGB(0.3, 0.3, 0.8)
         for x, y in points:
             canvas.circle(x, y, 2.5, fill=1, stroke=0)
 

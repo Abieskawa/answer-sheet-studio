@@ -31,6 +31,8 @@ build/
 # Temporary Test Scripts
 verify_fix.py
 test.png
+engine/analysis_test.py
+"engine/test need only.py"
 
 # System/IDE
 .DS_Store
@@ -43,3 +45,4 @@ dist/
 *.bak
 *.tmp
 *.*~
+colleague_fix/

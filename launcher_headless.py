@@ -137,7 +137,7 @@ class _ProgressHandler(BaseHTTPRequestHandler):
       <p class="muted">Installing dependencies / starting server… This may take a few minutes on first run.</p>
       <div class="row">
         <span class="pill" id="phase">starting</span>
-        <span class="pill" id="msg">Starting…</span>
+        <span class="pill" id="msg">正在啟動...</span>
       </div>
       <div style="margin-top:12px">
         <progress id="bar" max="100" value="10"></progress>
@@ -146,7 +146,7 @@ class _ProgressHandler(BaseHTTPRequestHandler):
         <a id="open" href="{APP_URL}" target="_blank" rel="noopener">Open Answer Sheet Studio</a>
         <span style="opacity:.7">You can close this tab.</span>
       </div>
-      <pre id="log" aria-label="launcher log"></pre>
+      <pre id="log" aria-label="launcher log" style="display:none"></pre>
     </div>
     <script>
       (() => {{
@@ -165,13 +165,45 @@ class _ProgressHandler(BaseHTTPRequestHandler):
           done: 100,
           error: 100
         }};
+        const msgMap = {{
+          "Starting…": "正在啟動...",
+          "Preparing installation…": "準備安裝環境...",
+          "Virtual environment already exists.": "虛擬環境已就緒",
+          "Virtual environment is ready.": "虛擬環境準備完成",
+          "Recreating virtual environment (old version).": "正在更新虛擬環境版本...",
+          "Creating virtual environment…": "正在建立虛擬環境...",
+          "Failed to create venv (see launcher.log).": "建立環境失敗 (請看 log)",
+          "Virtual environment created.": "虛擬環境建立完成",
+          "Python packages already installed.": "Python 套件已安裝",
+          "Python packages are already installed.": "套件檢查完成",
+          "Upgrading pip…": "正在更新安裝工具 (pip)...",
+          "Installing requirements ...": "正在安裝相依套件...",
+          "Installing Python packages…": "正在下載並安裝 Python 套件 (OpenCV, FastAPI)... 這可能需要幾分鐘",
+          "Failed to install requirements (see launcher.log).": "套件安裝失敗 (請看 log)",
+          "Python packages installed.": "套件安裝完成",
+          "Server already running.": "伺服器已在執行中",
+          "Starting server…": "正在啟動伺服器...",
+          "Server is ready.": "伺服器已就緒！",
+          "Server not reachable (see server.log).": "伺服器連線失敗",
+          "Unexpected error": "發生未預期的錯誤",
+          "Python 3.10+ is required": "需要 Python 3.10 以上版本"
+        }};
         let timer = null;
         const poll = async () => {{
           try {{
             const res = await fetch("/status", {{ cache: "no-store" }});
             const j = await res.json();
             phaseEl.textContent = j.phase || "starting";
-            msgEl.textContent = j.message || "";
+            const rawMsg = j.message || "";
+            let displayMsg = rawMsg;
+            // Simple substring matching for improved UX
+            for (const [key, val] of Object.entries(msgMap)) {{
+               if (rawMsg.includes(key)) {{
+                   displayMsg = val;
+                   break;
+               }}
+            }}
+            msgEl.textContent = displayMsg;
             bar.value = weights[j.phase] ?? 10;
             if (j.log_tail) {{
               logEl.textContent = j.log_tail;
@@ -184,9 +216,18 @@ class _ProgressHandler(BaseHTTPRequestHandler):
             }}
             if (j.app_url) {{
               openEl.href = j.app_url;
+              // Auto-redirect on success
+              if (j.phase === "done") {{
+                  setTimeout(() => {{
+                      window.location.replace(j.app_url);
+                  }}, 1500);
+              }}
             }}
             if (j.phase === "done" || j.phase === "error") {{
               doneEl.style.display = "block";
+              if (j.phase === "error") {{
+                  logEl.style.display = "block";
+              }}
               if (timer) {{
                 clearInterval(timer);
                 timer = null;
@@ -314,8 +355,6 @@ def _run_logged(args: list[str]) -> int:
     _log(f"$ {' '.join(args)}")
     with open(LAUNCHER_LOG, "a", encoding="utf-8") as log:
         kwargs = {}
-        if os.name == "nt":
-            kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         p = subprocess.run(
             args,
             cwd=str(REPO_DIR),
@@ -323,7 +362,7 @@ def _run_logged(args: list[str]) -> int:
             stderr=subprocess.STDOUT,
             text=True,
             errors="replace",
-            **kwargs,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0) if os.name == "nt" else 0,
         )
         return int(p.returncode)
 
@@ -357,7 +396,8 @@ def _resolve_best_python() -> Optional[Path]:
                 # We use subprocess directly here (not _run_logged) to just query quietly
                 # Prevent window popup with creationflags if possible, though 'py' usually handles it.
                 kwargs = {}
-                kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                if os.name == "nt":
+                    kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
                 
                 proc = subprocess.run(
                     cmd, 
@@ -460,7 +500,7 @@ def start_server(py: Path) -> None:
                         parts = line.strip().split()
                         pid = parts[-1]
                         _log(f"Found process {pid} listening on port {APP_PORT}. Killing it for a fresh start.")
-                        subprocess.run(f"taskkill /F /PID {pid} /T", shell=True, capture_output=True)
+                        subprocess.run(f"taskkill /F /PID {pid} /T", shell=True, capture_output=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
                 time.sleep(1) # Wait for release
             except Exception as e:
                 _log(f"Failed to kill existing process: {e}")

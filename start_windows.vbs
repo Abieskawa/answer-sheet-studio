@@ -55,8 +55,9 @@ Sub RunAsync(cmd)
 End Sub
 
 Function WrapLauncherCmd(cmd)
-    ' Force OPEN_BROWSER=0 so VBS handles browser opening
-    WrapLauncherCmd = "cmd.exe /c " & q & "set ANSWER_SHEET_OPEN_BROWSER=0&" & cmd & q
+    ' Force OPEN_BROWSER=0 via process environment variable instead of cmd /c
+    WshShell.Environment("Process")("ANSWER_SHEET_OPEN_BROWSER") = "0"
+    WrapLauncherCmd = cmd
 End Function
 
 Sub WaitAndOpenUrl(url, port)
@@ -126,19 +127,19 @@ If CanRun("pythonw" & probe) Then
     WScript.Quit
 End If
 
-' Priority 2: Python Launcher (py -3w) - picks the latest 3.x installed
-If CanRun("py -3w" & probe) Then
-    LaunchThroughLauncher("py -3w")
-    WScript.Quit
-End If
-
-' Priority 3: Generic pyw
+' Priority 2: Generic pyw
 If CanRun("pyw" & probe) Then
     LaunchThroughLauncher("pyw")
     WScript.Quit
 End If
 
-' Priority 4: Specific versions (only if the above fail)
+' Priority 3: Python Launcher (py -3w)
+If CanRun("py -3w" & probe) Then
+    LaunchThroughLauncher("py -3w")
+    WScript.Quit
+End If
+
+' Priority 4: Specific versions
 pyVers = Array("3.11", "3.10", "3.12")
 For Each v In pyVers
     cmd = "pyw -" & v

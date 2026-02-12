@@ -470,12 +470,28 @@ def ensure_requirements(py: Path) -> None:
         _wizard_pause("Python packages are already installed.")
         return
 
+<<<<<<< HEAD
+=======
+    allow_source = os.environ.get("ANSWER_SHEET_ALLOW_SOURCE", "").strip().lower() in {"1", "true", "yes"}
+
+>>>>>>> 82684a2 (Make start_mac.command executable)
     _set_progress("pip_upgrade", "Upgrading pip…")
     _log("Installing requirements ...")
     _run_logged([str(py), "-m", "pip", "install", "--upgrade", "pip"])
     _set_progress("pip_install", "Installing Python packages…")
     rc = _run_logged([str(py), "-m", "pip", "install", "--only-binary=:all:", "-r", str(REQ_PATH)])
     if rc != 0:
+<<<<<<< HEAD
+=======
+        if not allow_source:
+            msg = (
+                "Binary wheels not available. Install Python 3.11/3.12 (recommended) or set "
+                "ANSWER_SHEET_ALLOW_SOURCE=1 to build from source."
+            )
+            _set_progress("error", msg)
+            raise SystemExit(msg)
+        _log("Binary wheels missing; falling back to source install (this may take a long time).")
+>>>>>>> 82684a2 (Make start_mac.command executable)
         rc = _run_logged([str(py), "-m", "pip", "install", "-r", str(REQ_PATH)])
     if rc != 0:
         _set_progress("error", "Failed to install requirements (see launcher.log).")

@@ -1,6 +1,5 @@
 import hashlib
 import json
-import locale
 import os
 import socket
 import subprocess
@@ -39,105 +38,6 @@ _PROGRESS_STATE: dict = {
     "app_up": False,
 }
 
-SUPPORTED_LANGS = ("zh-Hant", "en")
-DEFAULT_LANG = "zh-Hant"
-
-
-def _normalize_lang(value: str) -> Optional[str]:
-    if not value:
-        return None
-    s = value.strip().lower().replace("_", "-")
-    if not s:
-        return None
-    if s.startswith("zh"):
-        return "zh-Hant"
-    if s.startswith("en"):
-        return "en"
-    return None
-
-
-def _detect_launcher_lang() -> str:
-    env_lang = _normalize_lang(os.environ.get("ANSWER_SHEET_LANG", ""))
-    if env_lang:
-        return env_lang
-    for key in ("LC_ALL", "LC_CTYPE", "LANG", "LANGUAGE"):
-        value = os.environ.get(key, "")
-        lang = _normalize_lang(value)
-        if lang:
-            return lang
-    try:
-        loc = locale.getdefaultlocale()[0] if locale.getdefaultlocale() else ""
-    except Exception:
-        loc = ""
-    lang = _normalize_lang(loc or "")
-    return lang or DEFAULT_LANG
-
-
-LAUNCHER_LANG = _detect_launcher_lang()
-
-LAUNCHER_I18N = {
-    "zh-Hant": {
-        "html_lang": "zh-Hant",
-        "title": "Answer Sheet Studio - 安裝中",
-        "brand": "Answer Sheet Studio",
-        "subtitle": "正在安裝相依套件 / 啟動伺服器…首次執行可能需要幾分鐘。",
-        "open_app": "開啟 Answer Sheet Studio",
-        "close_tab": "可以關閉此分頁。",
-        "not_found": "找不到頁面",
-        "phase_map": {
-            "starting": "啟動中",
-            "venv": "建立環境",
-            "pip_upgrade": "更新工具",
-            "pip_install": "安裝套件",
-            "server": "啟動伺服器",
-            "done": "完成",
-            "error": "錯誤",
-        },
-        "msg_map": {
-            "Starting…": "正在啟動...",
-            "Preparing installation…": "準備安裝環境...",
-            "Virtual environment already exists.": "虛擬環境已就緒",
-            "Virtual environment is ready.": "虛擬環境準備完成",
-            "Recreating virtual environment (old version).": "正在更新虛擬環境版本...",
-            "Creating virtual environment…": "正在建立虛擬環境...",
-            "Failed to create venv (see launcher.log).": "建立環境失敗 (請看 log)",
-            "Virtual environment created.": "虛擬環境建立完成",
-            "Python packages already installed.": "Python 套件已安裝",
-            "Python packages are already installed.": "套件檢查完成",
-            "Upgrading pip…": "正在更新安裝工具 (pip)...",
-            "Installing requirements ...": "正在安裝相依套件...",
-            "Installing Python packages…": "正在下載並安裝 Python 套件 (OpenCV, FastAPI)... 這可能需要幾分鐘",
-            "Failed to install requirements (see launcher.log).": "套件安裝失敗 (請看 log)",
-            "Python packages installed.": "套件安裝完成",
-            "Server already running.": "伺服器已在執行中",
-            "Starting server…": "正在啟動伺服器...",
-            "Server is ready.": "伺服器已就緒！",
-            "Server not reachable (see server.log).": "伺服器連線失敗",
-            "Unexpected error": "發生未預期的錯誤",
-            "Python 3.10+ is required": "需要 Python 3.10 以上版本",
-        },
-    },
-    "en": {
-        "html_lang": "en",
-        "title": "Answer Sheet Studio - Installing",
-        "brand": "Answer Sheet Studio",
-        "subtitle": "Installing dependencies / starting server… This may take a few minutes on first run.",
-        "open_app": "Open Answer Sheet Studio",
-        "close_tab": "You can close this tab.",
-        "not_found": "Not found",
-        "phase_map": {
-            "starting": "Starting",
-            "venv": "Preparing venv",
-            "pip_upgrade": "Upgrading pip",
-            "pip_install": "Installing packages",
-            "server": "Starting server",
-            "done": "Done",
-            "error": "Error",
-        },
-        "msg_map": {},
-    },
-}
-
 
 def _log(line: str) -> None:
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -173,13 +73,6 @@ def _tail_text(path: Path, max_lines: int = 80, max_bytes: int = 64 * 1024) -> s
             f.seek(max(0, size - max_bytes))
             data = f.read()
         text = data.decode("utf-8", errors="replace")
-        if os.name == "nt" and "�" in text:
-            try:
-                mbcs_text = data.decode("mbcs", errors="replace")
-                if mbcs_text.count("�") < text.count("�"):
-                    text = mbcs_text
-            except Exception:
-                pass
         lines = text.splitlines()
         if len(lines) > max_lines:
             lines = lines[-max_lines:]
@@ -209,7 +102,6 @@ class _ProgressHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:  # noqa: N802
-        i18n = LAUNCHER_I18N.get(LAUNCHER_LANG, LAUNCHER_I18N[DEFAULT_LANG])
         if self.path.startswith("/status"):
             payload = dict(_PROGRESS_STATE)
             payload["log_tail"] = _tail_text(LAUNCHER_LOG)
@@ -218,17 +110,15 @@ class _ProgressHandler(BaseHTTPRequestHandler):
             return
 
         if self.path not in {"/", "/index.html"}:
-            self._send(404, "text/plain; charset=utf-8", i18n["not_found"].encode("utf-8"))
+            self._send(404, "text/plain; charset=utf-8", b"Not found")
             return
 
-        msg_map = json.dumps(i18n["msg_map"], ensure_ascii=False)
-        phase_map = json.dumps(i18n["phase_map"], ensure_ascii=False)
         html = f"""<!doctype html>
-<html lang="{i18n['html_lang']}">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{i18n['title']}</title>
+    <title>Answer Sheet Studio - Installing</title>
     <style>
       :root {{ color-scheme: light dark; }}
       body {{ font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 24px; }}
@@ -243,18 +133,18 @@ class _ProgressHandler(BaseHTTPRequestHandler):
   </head>
   <body>
     <div class="card">
-      <p class="title">{i18n['brand']}</p>
-      <p class="muted">{i18n['subtitle']}</p>
+      <p class="title">Answer Sheet Studio</p>
+      <p class="muted">Installing dependencies / starting server… This may take a few minutes on first run.</p>
       <div class="row">
-        <span class="pill" id="phase">{i18n['phase_map'].get('starting', 'starting')}</span>
-        <span class="pill" id="msg">{i18n['msg_map'].get('Starting…', 'Starting...')}</span>
+        <span class="pill" id="phase">starting</span>
+        <span class="pill" id="msg">正在啟動...</span>
       </div>
       <div style="margin-top:12px">
         <progress id="bar" max="100" value="10"></progress>
       </div>
       <div id="done" style="display:none; margin-top:12px">
-        <a id="open" href="{APP_URL}" target="_blank" rel="noopener">{i18n['open_app']}</a>
-        <span style="opacity:.7">{i18n['close_tab']}</span>
+        <a id="open" href="{APP_URL}" target="_blank" rel="noopener">Open Answer Sheet Studio</a>
+        <span style="opacity:.7">You can close this tab.</span>
       </div>
       <pre id="log" aria-label="launcher log" style="display:none"></pre>
     </div>
@@ -266,7 +156,6 @@ class _ProgressHandler(BaseHTTPRequestHandler):
         const bar = document.getElementById("bar");
         const doneEl = document.getElementById("done");
         const openEl = document.getElementById("open");
-        const phaseMap = {phase_map};
         const weights = {{
           starting: 5,
           venv: 15,
@@ -276,13 +165,35 @@ class _ProgressHandler(BaseHTTPRequestHandler):
           done: 100,
           error: 100
         }};
-        const msgMap = {msg_map};
+        const msgMap = {{
+          "Starting…": "正在啟動...",
+          "Preparing installation…": "準備安裝環境...",
+          "Virtual environment already exists.": "虛擬環境已就緒",
+          "Virtual environment is ready.": "虛擬環境準備完成",
+          "Recreating virtual environment (old version).": "正在更新虛擬環境版本...",
+          "Creating virtual environment…": "正在建立虛擬環境...",
+          "Failed to create venv (see launcher.log).": "建立環境失敗 (請看 log)",
+          "Virtual environment created.": "虛擬環境建立完成",
+          "Python packages already installed.": "Python 套件已安裝",
+          "Python packages are already installed.": "套件檢查完成",
+          "Upgrading pip…": "正在更新安裝工具 (pip)...",
+          "Installing requirements ...": "正在安裝相依套件...",
+          "Installing Python packages…": "正在下載並安裝 Python 套件 (OpenCV, FastAPI)... 這可能需要幾分鐘",
+          "Failed to install requirements (see launcher.log).": "套件安裝失敗 (請看 log)",
+          "Python packages installed.": "套件安裝完成",
+          "Server already running.": "伺服器已在執行中",
+          "Starting server…": "正在啟動伺服器...",
+          "Server is ready.": "伺服器已就緒！",
+          "Server not reachable (see server.log).": "伺服器連線失敗",
+          "Unexpected error": "發生未預期的錯誤",
+          "Python 3.10+ is required": "需要 Python 3.10 以上版本"
+        }};
         let timer = null;
         const poll = async () => {{
           try {{
             const res = await fetch("/status", {{ cache: "no-store" }});
             const j = await res.json();
-            phaseEl.textContent = phaseMap[j.phase] || j.phase || "starting";
+            phaseEl.textContent = j.phase || "starting";
             const rawMsg = j.message || "";
             let displayMsg = rawMsg;
             // Simple substring matching for improved UX
@@ -367,63 +278,6 @@ def is_port_open(host: str, port: int, timeout: float = 0.25) -> bool:
             return True
     except OSError:
         return False
-
-
-def _pick_free_port() -> int:
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("127.0.0.1", 0))
-        return int(s.getsockname()[1])
-
-
-def _set_app_port(port: int) -> None:
-    global APP_PORT, APP_URL
-    APP_PORT = int(port)
-    APP_URL = f"http://{APP_HOST}:{APP_PORT}"
-    _PROGRESS_STATE["app_url"] = APP_URL
-    os.environ["ANSWER_SHEET_PORT"] = str(APP_PORT)
-    os.environ["PORT"] = str(APP_PORT)
-
-
-
-def _health_ok(timeout: float = 1.0) -> bool:
-    health_url = f"{APP_URL}/health"
-    try:
-        import urllib.request
-        req = urllib.request.Request(health_url, method="GET")
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            status = getattr(resp, "status", None) or resp.getcode()
-            if status != 200:
-                return False
-            body = resp.read(256).decode("utf-8", errors="ignore").strip().lower()
-            if not body:
-                return False
-            if body.startswith("ok"):
-                return True
-            if body.startswith("{"):
-                try:
-                    data = json.loads(body)
-                except Exception:
-                    return False
-                if isinstance(data, dict):
-                    status_val = str(data.get("status", "")).strip().lower()
-                    if status_val == "ok":
-                        return True
-                    ok_val = data.get("ok")
-                    if ok_val is True:
-                        return True
-            return False
-    except Exception:
-        return False
-
-
-def _wait_for_server(timeout_total: float, per_request_timeout: float = 1.0) -> bool:
-    deadline = time.monotonic() + timeout_total
-    while time.monotonic() < deadline:
-        if _health_ok(timeout=per_request_timeout):
-            return True
-        time.sleep(0.25)
-    return False
-
 
 
 def _sha256_file(path: Path) -> str:
@@ -515,18 +369,6 @@ def _run_logged(args: list[str]) -> int:
 
 import shutil
 
-def _python_meets_version(py: Path) -> bool:
-    probe = "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)"
-    try:
-        kwargs = {}
-        if os.name == "nt":
-            kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        rc = subprocess.run([str(py), "-c", probe], **kwargs).returncode
-        return rc == 0
-    except Exception:
-        return False
-
-
 def _resolve_best_python() -> Optional[Path]:
     """
     Attempts to find the best available Python executable for creating the venv.
@@ -590,17 +432,9 @@ def _resolve_best_python() -> Optional[Path]:
 def ensure_venv() -> Path:
     py = _venv_python()
     if py.exists():
-        if os.name != "nt" and not _python_meets_version(py):
-            _set_progress("venv", "Recreating virtual environment (old version).")
-            _log("Removing incompatible .venv ...")
-            try:
-                shutil.rmtree(_venv_dir(), ignore_errors=True)
-            except Exception:
-                pass
-        else:
-            _set_progress("venv", "Virtual environment already exists.")
-            _wizard_pause("Virtual environment is ready.")
-            return py
+        _set_progress("venv", "Virtual environment already exists.")
+        _wizard_pause("Virtual environment is ready.")
+        return py
 
     _set_progress("venv", "Creating virtual environment…")
     _log("Creating .venv ...")
@@ -652,23 +486,10 @@ def ensure_requirements(py: Path) -> None:
 
 
 def start_server(py: Path) -> None:
-    if os.name != "nt":
-        if _wait_for_server(5.0):
-            _log(f"Server already running at {APP_URL}")
-            _PROGRESS_STATE["app_up"] = True
-            _set_progress("done", "Server already running.")
-            _wizard_pause(f"Server is already running at {APP_URL}")
-            return
-        if is_port_open(APP_HOST, APP_PORT):
-            old_port = APP_PORT
-            new_port = _pick_free_port()
-            _set_app_port(new_port)
-            _log(f"Port {old_port} is in use. Switching to {new_port}.")
-
     if is_port_open(APP_HOST, APP_PORT):
         _log(f"Port {APP_PORT} is BUSY. Attempting to determine if it is our server...")
         # If it's busy, we might want to kill it if it was a previous instance of THIS app.
-        # On Windows, we can use `netstat -ano | findstr :8000` to find the PID.
+        # On Windows, we can use 'netstat -ano | findstr :8000' to find the PID.
         if os.name == "nt":
             try:
                 cmd = f'netstat -ano | findstr :{APP_PORT}'
@@ -684,7 +505,7 @@ def start_server(py: Path) -> None:
             except Exception as e:
                 _log(f"Failed to kill existing process: {e}")
 
-    if os.name == "nt" and is_port_open(APP_HOST, APP_PORT):
+    if is_port_open(APP_HOST, APP_PORT):
         _log(f"Server already running at {APP_URL}")
         _PROGRESS_STATE["app_up"] = True
         _set_progress("done", "Server already running.")
@@ -712,23 +533,21 @@ def start_server(py: Path) -> None:
 
         proc = subprocess.Popen([str(py), str(REPO_DIR / "run_app.py")], **kwargs)
 
+        import urllib.request
         for _ in range(80):  # ~40 seconds
             # Use /health endpoint to verify the app is really ready
-            if _health_ok(timeout=1.0):
-                _log(f"Server is healthy at {APP_URL}")
-                _PROGRESS_STATE["app_up"] = True
-                _set_progress("done", "Server is ready.")
-                _wizard_pause(f"Server is ready at {APP_URL}")
-                return
+            try:
+                with urllib.request.urlopen(f"{APP_URL}/health", timeout=1.0) as resp:
+                    if resp.status == 200:
+                        _log(f"Server is healthy at {APP_URL}")
+                        _PROGRESS_STATE["app_up"] = True
+                        _set_progress("done", "Server is ready.")
+                        _wizard_pause(f"Server is ready at {APP_URL}")
+                        return
+            except Exception:
+                pass
 
             if proc.poll() is not None:
-                log_tail = _tail_text(SERVER_LOG)
-                if "Address already in use" in log_tail or "EADDRINUSE" in log_tail:
-                    _set_progress(
-                        "error",
-                        f"Port {APP_PORT} is already in use. Set ANSWER_SHEET_PORT and retry.",
-                    )
-                    raise SystemExit(f"Port {APP_PORT} already in use. See {SERVER_LOG}")
                 _set_progress("error", f"Server exited (code {proc.returncode}). See server.log.")
                 raise SystemExit(f"Server exited (code {proc.returncode}). See {SERVER_LOG}")
             time.sleep(0.5)

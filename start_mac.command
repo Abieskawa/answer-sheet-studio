@@ -50,17 +50,31 @@ if [ "${ANSWER_SHEET_OPEN_BROWSER:-1}" != "0" ]; then
     out_dir="$(pwd)/outputs"
     url_path="${out_dir}/progress_url.txt"
     i=0
-    while [ $i -lt 50 ]; do # ~5s
+    found=0
+    while [ $i -lt 300 ]; do # ~30s
       if [ -f "$url_path" ]; then
         u="$(cat "$url_path" 2>/dev/null || true)"
         if [ -n "$u" ]; then
-          open "$u" >/dev/null 2>&1 || true
-          break
+          if command -v curl >/dev/null 2>&1; then
+            if ! curl -fsS --max-time 1 "${u}status" >/dev/null 2>&1; then
+              u=""
+            fi
+          fi
+          if [ -n "$u" ]; then
+            open -a "Safari" "$u" >/dev/null 2>&1 || open "$u" >/dev/null 2>&1 || true
+            found=1
+            break
+          fi
         fi
       fi
       sleep 0.1
       i=$((i+1))
     done
+    if [ "$found" -eq 0 ]; then
+      default_port="${ANSWER_SHEET_PORT:-8000}"
+      fallback_url="http://127.0.0.1:${default_port}"
+      open -a "Safari" "$fallback_url" >/dev/null 2>&1 || open "$fallback_url" >/dev/null 2>&1 || true
+    fi
   ) >/dev/null 2>&1 &
 fi
 

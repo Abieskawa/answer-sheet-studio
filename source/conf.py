@@ -23,8 +23,10 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 _rtd_language = os.environ.get('READTHEDOCS_LANGUAGE', '').strip().lower()
-if _rtd_language in {'zh-tw', 'zh_tw', 'zh-hant'} or _rtd_language.startswith('zh'):
+if _rtd_language in {'zh-tw', 'zh_tw', 'zh-hant'}:
     language = 'zh_TW'
+elif _rtd_language in {'zh-cn', 'zh_cn', 'zh-hans'}:
+    language = 'zh_CN'
 elif _rtd_language:
     language = _rtd_language.replace('-', '_')
 else:
@@ -52,7 +54,7 @@ html_static_path = ['_static']
 
 latex_engine = 'xelatex'
 
-_prefer_sc = False
+_prefer_sc = str(language).strip().lower().startswith("zh_cn")
 _cjk_first = "Noto Sans CJK SC" if _prefer_sc else "Noto Sans CJK TC"
 _cjk_second = "Noto Sans CJK TC" if _prefer_sc else "Noto Sans CJK SC"
 _pingfang = "PingFang SC" if _prefer_sc else "PingFang TC"

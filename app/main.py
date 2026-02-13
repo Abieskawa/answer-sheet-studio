@@ -720,6 +720,10 @@ def _analysis_file_links(job_id: str, t: dict) -> list[dict]:
                 continue
             if name == "analysis_item_plot.png":  # Hide item plot PNG (too large/redundant)
                 continue
+            if name == "analysis_showwrong.json":  # Hide internal chart JSON
+                continue
+            if name.startswith("analysis_report_chart_"):  # Hide per-class chart fragments
+                continue
             if not (name.startswith("analysis_") or name.startswith("試題")):
                 continue
             if path.is_dir():
@@ -1959,13 +1963,13 @@ def download_output(job_id: str, filename: str):
     elif filename == "analysis_item.csv":
         download_name = f"{upload_base_ascii}_{job_tag}_試題分析.csv"
     elif filename == "analysis_summary.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_analysis_summary.csv"
+        download_name = f"{upload_base_ascii}_{job_tag}_成績分布數據.csv"
     elif filename == "analysis_score_hist.png":
         download_name = f"{upload_base_ascii}_{job_tag}_成績分佈.png"
     elif filename == "analysis_item_plot.png":
         download_name = f"{upload_base_ascii}_{job_tag}_試題分析.png"
     elif filename == "analysis_showwrong.json":
-        download_name = f"{upload_base_ascii}_{job_tag}_analysis_showwrong.json"
+        download_name = f"{upload_base_ascii}_{job_tag}_試題分析互動資料.json"
     elif filename == "analysis_report.pdf":
         download_name = f"{upload_base_ascii}_{job_tag}_試題分析整合報表.pdf"
 
@@ -2018,4 +2022,3 @@ def run():
             "You can also choose another port by setting ANSWER_SHEET_PORT.\n"
         )
         raise exc
-

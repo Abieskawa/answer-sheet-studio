@@ -45,6 +45,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
   - Windows 會把虛擬環境放在 ``%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>``，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
   - macOS 會把虛擬環境放在 ``~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>``，即使重新下載/解壓縮專案也能重用，避免每次都重新安裝。
   - 如需自訂位置，可設定環境變數 ``ANSWER_SHEET_VENV_DIR`` （指向 venv 根目錄）。
+- 介面語言目前僅提供繁體中文與英文，不提供簡體中文版本。
 
 使用注意事項
 ~~~~~~~~~~~~
@@ -74,6 +75,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 ~~~~~~~~~~~~~~~~~
 
 - 開啟 ``/result/<job_id>/charts`` 可在同一頁查看互動式表格/圖表與「試題分析檔案」下載連結。
+- 「試題分析檔案」會顯示核心下載項目：``學生資訊``、``全部學生分數``、``各班分數``、``試題分析``、``分數統計``（若對應檔案存在）。
 - 互動功能：滑鼠移到表格/圖表可醒目提示題號，點一下可鎖定；支援學生篩選/排序、隱藏正確，以及鍵盤快捷鍵（←/→ 題號、↑/↓ 學生、Esc 清除、PgUp/PgDn 切換圖）。
 - 可用頁面上的「列印／存成 PDF」按鈕，透過瀏覽器列印功能輸出成可列印的 PDF。
 - 「試題分析數據（預覽）」為可展開表格（預設收合）；需要完整資料請下載 ``analysis_item.csv``。
@@ -166,7 +168,7 @@ Features
   - Windows reuses a stable venv at ``%LOCALAPPDATA%\\AnswerSheetStudio\\venvs\\<requirements-hash>``.
   - macOS reuses a stable venv at ``~/Library/Application Support/AnswerSheetStudio/venvs/<requirements-hash>``.
   - To override, set ``ANSWER_SHEET_VENV_DIR`` (points to the venv root dir).
-- The web UI supports **English** and **Traditional Chinese**.
+- The web UI supports **English** and **Traditional Chinese**. Simplified Chinese is not provided.
 
 Important Notes
 ~~~~~~~~~~~~~~~
@@ -196,6 +198,7 @@ Charts Page (/charts)
 ~~~~~~~~~~~~~~~~~~~~~
 
 - Open ``/result/<job_id>/charts`` to view the interactive table/charts and item-analysis downloads on one page.
+- The “Item analysis files” section includes these core downloads when available: ``Student info``, ``All student scores``, ``Class scores``, ``Item analysis``, ``Score statistics``.
 - Interactions: hover the table/charts to highlight a question, click to lock; filter/sort students, hide correct, and use keyboard shortcuts (←/→ question, ↑/↓ student, Esc clear, PgUp/PgDn switch chart).
 - Use the “Print / Save as PDF” button to export a printable PDF via your browser’s print dialog.
 - “Item analysis data (preview)” is a collapsible table (collapsed by default); download ``analysis_item.csv`` for full data.

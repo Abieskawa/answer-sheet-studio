@@ -1479,7 +1479,7 @@
           lockedStudent = null;
           applyHighlights();
           updateFocusPanel();
-          clearChartTooltip();
+          if (typeof clearChartTooltip === "function") clearChartTooltip();
           drawActiveChart();
         }
 
@@ -1584,7 +1584,7 @@
             if (row && row.dataset.student) setHighlightStudentId(row.dataset.student);
           });
           table.addEventListener("mouseleave", () => {
-            clearChartTooltip();
+            if (typeof clearChartTooltip === "function") clearChartTooltip();
             if (!lockedQno) highlightQno = null;
             if (!lockedStudent) highlightStudent = null;
             applyHighlights();
@@ -1619,11 +1619,11 @@
             if (lockedQno == null) setHighlightQuestion(qno);
           });
           canvas.addEventListener("mouseleave", () => {
-            clearChartTooltip();
+            if (typeof clearChartTooltip === "function") clearChartTooltip();
             if (lockedQno == null) setHighlightQuestion(null);
           });
           canvas.addEventListener("click", () => {
-            clearChartTooltip();
+            if (typeof clearChartTooltip === "function") clearChartTooltip();
             if (highlightQno) toggleLockQuestion(highlightQno);
           });
         }
@@ -1719,7 +1719,7 @@
             const q = String(qnos[nextIdx]);
             lockedQno = q;
             highlightQno = q;
-            clearChartTooltip();
+            if (typeof clearChartTooltip === "function") clearChartTooltip();
             applyHighlights();
             updateFocusPanel();
             drawActiveChart();

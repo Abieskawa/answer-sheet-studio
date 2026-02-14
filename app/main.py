@@ -159,11 +159,11 @@ I18N = {
         "result_item_table_title": "試題分析數據（預覽）",
         "result_item_table_hint": "此處僅顯示前 200 列；完整資料請下載 analysis_item.csv。",
         "result_item_table_truncated": "（共 {total_rows} 列，顯示前 {shown_rows} 列）",
-        "roster": "學生資訊",
-        "analysis_scores": "全部學生分數",
-        "analysis_item": "試題分析",
-        "analysis_scores_by_class": "各班分數",
-        "result_download_scores_by_class": "各班分數(excel)",
+        "roster": "名冊(csv)",
+        "analysis_scores": "成績分析表(csv)",
+        "analysis_item": "試題分析(csv)",
+        "analysis_scores_by_class": "分數統計(分班)(excel)",
+        "result_download_scores_by_class": "分數統計(分班)(excel)",
         "result_hint_unstable": "如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。",
         "result_debug_hint": "需要回報問題時，可到 Debug Mode 下載診斷檔案（輸入 Job ID）。",
         "result_debug_open": "開啟 Debug Mode",
@@ -186,7 +186,7 @@ I18N = {
         "analysis_note_discrimination_rule_50": "鑑別度：學生數 ≤ 30 時採前後 50%（高分組答對率 − 低分組答對率）。",
         "class_unknown": "未分班",
         "class_all": "全體",
-        "analysis_summary": "分數統計",
+        "analysis_summary": "成績分佈數據(csv)",
     },
     "en": {
         "lang_zh": "繁體中文",
@@ -692,12 +692,12 @@ def _analysis_file_links(job_id: str, t: dict) -> list[dict]:
     job_dir = OUTPUTS_DIR / job_id
     files: list[dict] = []
     label_by_name = {
-        "roster.csv": t.get("roster", "學生資訊"),
-        "analysis_scores.csv": t.get("analysis_scores", "全部學生分數"),
-        "analysis_scores_by_class.xlsx": t.get("analysis_scores_by_class", "各班分數"),
-        "analysis_item.csv": t.get("analysis_item", "試題分析"),
-        "analysis_score_hist.png": t.get("result_plot_score_hist", "成績分布圖.PNG"),
-        "analysis_summary.csv": t.get("analysis_summary", "分數統計"),
+        "roster.csv": t.get("roster", "名冊(csv)"),
+        "analysis_scores.csv": t.get("analysis_scores", "成績分析表(csv)"),
+        "analysis_scores_by_class.xlsx": t.get("result_download_scores_by_class", "分數統計(分班)(excel)"),
+        "analysis_item.csv": t.get("analysis_item", "試題分析(csv)"),
+        "analysis_score_hist.png": t.get("result_plot_score_hist", "成績分佈圖.PNG"),
+        "analysis_summary.csv": t.get("analysis_summary", "成績分佈數據(csv)"),
         "試題分析整合報表.pdf": t.get("result_download_integrated_p2", "試題分析整合報表.PDF"),
         "試題分析整合檔.xlsx": t.get("result_download_integrated_p1", "試題分析整合報表.XLSX"),
     }
@@ -1968,7 +1968,7 @@ def download_output(job_id: str, filename: str):
     elif filename == "analysis_item.csv":
         download_name = f"{upload_base_ascii}_{job_tag}_試題分析.csv"
     elif filename == "analysis_summary.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_成績分布數據.csv"
+        download_name = f"{upload_base_ascii}_{job_tag}_成績分佈數據.csv"
     elif filename == "analysis_score_hist.png":
         download_name = f"{upload_base_ascii}_{job_tag}_成績分佈.png"
     elif filename == "analysis_item_plot.png":

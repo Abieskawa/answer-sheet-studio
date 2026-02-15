@@ -162,7 +162,7 @@ I18N = {
         "roster": "名冊(csv)",
         "analysis_scores": "成績分析表(csv)",
         "analysis_item": "試題分析(csv)",
-        "analysis_scores_by_class": "分數統計(分班)(excel)",
+        "analysis_scores_by_class": "分數統計(csv)",
         "result_download_scores_by_class": "分數統計(分班)(excel)",
         "result_hint_unstable": "如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。",
         "result_debug_hint": "需要回報問題時，可到 Debug Mode 下載診斷檔案（輸入 Job ID）。",
@@ -186,7 +186,7 @@ I18N = {
         "analysis_note_discrimination_rule_50": "鑑別度：學生數 ≤ 30 時採前後 50%（高分組答對率 − 低分組答對率）。",
         "class_unknown": "未分班",
         "class_all": "全體",
-        "analysis_summary": "成績分佈數據(csv)",
+        "analysis_summary": "成績統計摘要",
     },
     "en": {
         "lang_zh": "繁體中文",
@@ -303,12 +303,7 @@ I18N = {
         "result_item_table_title": "Item analysis data (preview)",
         "result_item_table_hint": "Only the first 200 rows are shown here; download analysis_item.csv for the full data.",
         "result_item_table_truncated": "({total_rows} rows, showing first {shown_rows})",
-        "roster": "Student info",
-        "analysis_scores": "All student scores",
-        "analysis_item": "Item analysis",
-        "analysis_scores_by_class": "Class scores",
-        "analysis_summary": "Score statistics",
-        "result_download_scores_by_class": "Class scores (XLSX)",
+        "result_download_scores_by_class": "analysis_scores_by_class.xlsx (by class)",
         "result_hint_unstable": "If results are unstable, scans may be skewed or too light. Try 300dpi or a darker pen.",
         "result_debug_hint": "For reporting/debugging, open Debug Mode and enter the Job ID to download diagnostic files.",
         "result_debug_open": "Open Debug Mode",
@@ -693,11 +688,10 @@ def _analysis_file_links(job_id: str, t: dict) -> list[dict]:
     files: list[dict] = []
     label_by_name = {
         "roster.csv": t.get("roster", "名冊(csv)"),
-        "analysis_scores.csv": t.get("analysis_scores", "成績分析表(csv)"),
-        "analysis_scores_by_class.xlsx": t.get("result_download_scores_by_class", "分數統計(分班)(excel)"),
-        "analysis_item.csv": t.get("analysis_item", "試題分析(csv)"),
-        "analysis_score_hist.png": t.get("result_plot_score_hist", "成績分佈圖.PNG"),
-        "analysis_summary.csv": t.get("analysis_summary", "成績分佈數據(csv)"),
+        "analysis_scores.csv": t.get("analysis_scores", "成績明細.CSV"),
+        "analysis_item.csv": t.get("analysis_item", "試題分析.CSV"),
+        "analysis_score_hist.png": t.get("result_plot_score_hist", "成績分布圖.PNG"),
+        "analysis_summary.csv": "成績分布數據(csv)",
         "試題分析整合報表.pdf": t.get("result_download_integrated_p2", "試題分析整合報表.PDF"),
         "試題分析整合檔.xlsx": t.get("result_download_integrated_p1", "試題分析整合報表.XLSX"),
     }
@@ -734,6 +728,8 @@ def _analysis_file_links(job_id: str, t: dict) -> list[dict]:
             if not (name.startswith("analysis_") or name.startswith("試題")):
                 continue
             if path.is_dir():
+                continue
+            if name == "analysis_scores_by_class.xlsx":
                 continue
             if not any(name.lower().endswith(ext) for ext in (".csv", ".xlsx", ".png", ".pdf", ".log", ".txt")):
                 continue

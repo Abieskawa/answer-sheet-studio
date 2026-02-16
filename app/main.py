@@ -327,7 +327,6 @@ I18N = {
     },
 }
 
-
 def _normalize_i18n() -> None:
     base = I18N.get(DEFAULT_LANG) or {}
     all_keys: set[str] = set(base.keys())
@@ -721,17 +720,13 @@ def _analysis_file_links(job_id: str, t: dict) -> list[dict]:
                 continue
             if name == "analysis_item_plot.png":  # Hide item plot PNG (too large/redundant)
                 continue
-            if name == "analysis_showwrong.json":  # Hide internal chart JSON
-                continue
-            if name.startswith("analysis_report_chart_"):  # Hide per-class chart fragments
-                continue
             if not (name.startswith("analysis_") or name.startswith("試題")):
                 continue
             if path.is_dir():
                 continue
             if name == "analysis_scores_by_class.xlsx":
                 continue
-            if not any(name.lower().endswith(ext) for ext in (".csv", ".xlsx", ".png", ".pdf", ".log", ".txt")):
+            if not any(name.lower().endswith(ext) for ext in (".csv", ".xlsx", ".pdf", ".log", ".txt")):
                 continue
             add_if_exists(name)
     except Exception:
@@ -1943,36 +1938,39 @@ def download_output(job_id: str, filename: str):
     meta = _read_job_meta(job_dir)
     upload_base = _sanitize_download_component(str(meta.get("upload_base") or ""), "upload")
     upload_base_ascii = _sanitize_token(upload_base, "upload")
+    file_prefix = job_tag if upload_base_ascii.lower() == "upload" else f"{upload_base_ascii}_{job_tag}"
 
     download_name = filename
     if filename == "results.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_讀卡結果.csv"
+        download_name = f"{file_prefix}_讀卡結果.csv"
     elif filename == "ambiguity.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_ambiguity.csv"
+        download_name = f"{file_prefix}_ambiguity.csv"
     elif filename == "annotated.pdf":
-        download_name = f"{upload_base_ascii}_{job_tag}_標示圖案.pdf"
+        download_name = f"{file_prefix}_劃記檔案.pdf"
     elif filename == "input.pdf":
-        download_name = f"{upload_base_ascii}_{job_tag}_input.pdf"
+        download_name = f"{file_prefix}_input.pdf"
     elif filename == "answer_key.xlsx":
-        download_name = f"{upload_base_ascii}_{job_tag}_answer_key.xlsx"
+        download_name = f"{file_prefix}_answer_key.xlsx"
     elif filename == "showwrong.xlsx":
-        download_name = f"{upload_base_ascii}_{job_tag}_僅顯示錯題.xlsx"
+        download_name = f"{file_prefix}_僅顯示錯題.xlsx"
+    elif filename == "roster.csv":
+        download_name = f"{file_prefix}_名冊.csv"
     elif filename == "analysis_scores.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_分析總表.csv"
+        download_name = f"{file_prefix}_成績分析表.csv"
     elif filename == "analysis_scores_by_class.xlsx":
-        download_name = f"{upload_base_ascii}_{job_tag}_分數統計.xlsx"
+        download_name = f"{file_prefix}_分數統計.xlsx"
     elif filename == "analysis_item.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_試題分析.csv"
+        download_name = f"{file_prefix}_試題分析.csv"
     elif filename == "analysis_summary.csv":
-        download_name = f"{upload_base_ascii}_{job_tag}_成績分佈數據.csv"
+        download_name = f"{file_prefix}_成績分布數據.csv"
     elif filename == "analysis_score_hist.png":
-        download_name = f"{upload_base_ascii}_{job_tag}_成績分佈.png"
+        download_name = f"{file_prefix}_成績分佈.png"
     elif filename == "analysis_item_plot.png":
-        download_name = f"{upload_base_ascii}_{job_tag}_試題分析.png"
+        download_name = f"{file_prefix}_試題分析.png"
     elif filename == "analysis_showwrong.json":
-        download_name = f"{upload_base_ascii}_{job_tag}_試題分析互動資料.json"
+        download_name = f"{file_prefix}_試題分析互動資料.json"
     elif filename == "analysis_report.pdf":
-        download_name = f"{upload_base_ascii}_{job_tag}_試題分析整合報表.pdf"
+        download_name = f"{file_prefix}_試題分析整合報表.pdf"
 
     media = "application/octet-stream"
     if filename.lower().endswith(".pdf"):

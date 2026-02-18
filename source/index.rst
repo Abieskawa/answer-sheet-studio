@@ -69,13 +69,14 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 - ``analysis_scores_by_class.xlsx`` （按班級分表的成績表）
 - ``analysis_score_hist.png``、``analysis_item_plot.png``
 - ``analysis_showwrong.json`` （結果頁互動圖表用）
-- ``analysis_report.pdf`` （分析結果 PDF；每班一頁）
+- ``試題分析整合檔.xlsx``、``試題分析整合報表.pdf``
+- 若整合報表產生失敗，會回退輸出 ``analysis_report.pdf`` （舊版相容檔）
 
 圖表頁（/charts）
 ~~~~~~~~~~~~~~~~~
 
 - 開啟 ``/result/<job_id>/charts`` 可在同一頁查看互動式表格/圖表與「試題分析檔案」下載連結。
-- 「試題分析檔案」會顯示核心下載項目：``學生資訊``、``全部學生分數``、``各班分數``、``試題分析``、``分數統計``（若對應檔案存在）。
+- 「試題分析檔案」會顯示核心下載項目：``學生資訊``、``全部學生分數``、``各班分數``、``試題分析``、``分數統計``、``試題分析整合報表（XLSX/PDF）``（若對應檔案存在）。
 - 互動功能：滑鼠移到表格/圖表可醒目提示題號，點一下可鎖定；支援學生篩選/排序、隱藏正確，以及鍵盤快捷鍵（←/→ 題號、↑/↓ 學生、Esc 清除、PgUp/PgDn 切換圖）。
 - 可用頁面上的「列印／存成 PDF」按鈕，透過瀏覽器列印功能輸出成可列印的 PDF。
 - 「試題分析數據（預覽）」為可展開表格（預設收合）；需要完整資料請下載 ``analysis_item.csv``。
@@ -192,13 +193,14 @@ After recognition, files are written under ``outputs/<job_id>/``:
 - ``analysis_scores_by_class.xlsx`` (scores split by class)
 - ``analysis_score_hist.png``, ``analysis_item_plot.png``
 - ``analysis_showwrong.json`` (interactive report data)
-- ``analysis_report.pdf`` (analysis report PDF; one page per class)
+- ``試題分析整合檔.xlsx``, ``試題分析整合報表.pdf``
+- If integrated report generation fails, the app falls back to ``analysis_report.pdf`` (legacy compatibility output)
 
 Charts Page (/charts)
 ~~~~~~~~~~~~~~~~~~~~~
 
 - Open ``/result/<job_id>/charts`` to view the interactive table/charts and item-analysis downloads on one page.
-- The “Item analysis files” section includes these core downloads when available: ``Student info``, ``All student scores``, ``Class scores``, ``Item analysis``, ``Score statistics``.
+- The “Item analysis files” section includes these core downloads when available: ``Student info``, ``All student scores``, ``Class scores``, ``Item analysis``, ``Score statistics``, ``Integrated report (XLSX/PDF)``.
 - Interactions: hover the table/charts to highlight a question, click to lock; filter/sort students, hide correct, and use keyboard shortcuts (←/→ question, ↑/↓ student, Esc clear, PgUp/PgDn switch chart).
 - Use the “Print / Save as PDF” button to export a printable PDF via your browser’s print dialog.
 - “Item analysis data (preview)” is a collapsible table (collapsed by default); download ``analysis_item.csv`` for full data.

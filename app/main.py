@@ -163,7 +163,7 @@ I18N = {
         "analysis_scores": "作答狀況(xlsx)",
         "analysis_item": "試題分析(xlsx)",
         "analysis_scores_by_class": "分數統計(xlsx)",
-        "result_download_scores_by_class": "分數統計(分班)(excel)",
+        "result_download_scores_by_class": "分數統計(分班)(xlsx)",
         "result_hint_unstable": "如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。",
         "result_debug_hint": "需要回報問題時，可到 Debug Mode 下載診斷檔案（輸入 Job ID）。",
         "result_debug_open": "開啟 Debug Mode",

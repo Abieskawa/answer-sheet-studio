@@ -583,7 +583,7 @@
       }}<code>{{ job_id }}</code></p>
 
     <div class="toolbar">
-      <a class="btn" href="{{ csv_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_results }}</a>
+      <a class="btn" href="{{ results_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_results }}</a>
       <a class="btn" href="{{ pdf_url }}" target="_blank" rel="noopener noreferrer">{{ t.result_download_annotated
         }}</a>
       {% if analysis_report_url %}
@@ -611,7 +611,7 @@
     <p class="hint">{{ t[analysis_discrimination_note_key] }}</p>
     {% endif %}
 
-    {% if analysis_template_csv_url %}
+    {% if integrated_data_url %}
     <div class="card">
       <p class="hint">{{ t.result_integrated_title }}</p>
       <p class="hint">{{ t.result_integrated_hint }}</p>
@@ -732,12 +732,11 @@
     </footer>
   </div>
 
-  {% if analysis_template_csv_url %}
-  {% set tpl_url = analysis_template_csv_url | tojson %}
+  {% if integrated_data_url %}
+  {% set integrated_data_json_url = integrated_data_url | tojson %}
   <script>
     (function () {
-      const tplUrl = {{ tpl_url | safe}};
-    const rosterUrl = {{ (roster_csv_url or "") | tojson | safe }};
+      const integratedDataUrl = {{ integrated_data_json_url | safe}};
     const annotatedPdfUrl = {{ pdf_url | tojson | safe }};
 
     const tabsEl = document.getElementById("classTabs");
@@ -783,33 +782,7 @@
     };
 
 
-    function csvToRows(text) {
-      const lines = (text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter(Boolean);
-      if (!lines.length) return [];
 
-      function parseLine(line) {
-        const cols = [];
-        let cur = "", inQ = false;
-        for (let i = 0; i < line.length; i++) {
-          const ch = line[i];
-          if (ch === '"') { inQ = !inQ; continue; }
-          if (ch === "," && !inQ) { cols.push(cur); cur = ""; continue; }
-          cur += ch;
-        }
-        cols.push(cur);
-        return cols.map(c => String(c ?? "").replace(/^\uFEFF/, "").trim());
-      }
-
-      const header = parseLine(lines[0]);
-      const rows = [];
-      for (let i = 1; i < lines.length; i++) {
-        const cols = parseLine(lines[i]);
-        const obj = {};
-        for (let k = 0; k < header.length; k++) obj[header[k]] = (cols[k] ?? "").trim();
-        rows.push(obj);
-      }
-      return { header, rows };
-    }
 
     function normalizeAnswer(v) {
       const s = String(v ?? "").trim().toUpperCase();
@@ -1107,18 +1080,14 @@
         });
       }
 
-      Promise.all([
-        fetch(tplUrl).then(r => r.text()),
-        rosterUrl ? fetch(rosterUrl).then(r => r.text()).catch(() => "") : Promise.resolve(""),
-      ]).then(([templateText, rosterText]) => {
-        const parsed = csvToRows(templateText);
-        const header = parsed.header || [];
-        const rows = parsed.rows || [];
+      fetch(integratedDataUrl).then(r => r.json()).then((payload) => {
+        const header = Array.isArray(payload.template_header) ? payload.template_header : [];
+        const rows = Array.isArray(payload.template_rows) ? payload.template_rows : [];
 
-        if (header.length < 4 || !rows.length) throw new Error("analysis_template.csv is empty");
+        if (header.length < 4 || !rows.length) throw new Error("analysis_template.xlsx is empty");
 
         const studentCols = header.slice(3).filter(Boolean);
-        if (!studentCols.length) throw new Error("No students in analysis_template.csv");
+        if (!studentCols.length) throw new Error("No students in analysis_template.xlsx");
 
         const qnos = [];
         const corrects = [];
@@ -1147,18 +1116,15 @@
 
         // Roster (optional)
         const rosterByPerson = new Map();
-        if (rosterText) {
-          const rosterParsed = csvToRows(rosterText);
-          for (const r of (rosterParsed.rows || [])) {
-            const pid = String(r.person_id ?? "").trim();
-            if (!pid) continue;
-            rosterByPerson.set(pid, {
-              grade: String(r.grade ?? "").trim(),
-              class_no: String(r.class_no ?? "").trim(),
-              seat_no: String(r.seat_no ?? "").trim(),
-              page: String(r.page ?? "").trim(),
-            });
-          }
+        for (const r of (Array.isArray(payload.roster_rows) ? payload.roster_rows : [])) {
+          const pid = String(r.person_id ?? "").trim();
+          if (!pid) continue;
+          rosterByPerson.set(pid, {
+            grade: String(r.grade ?? "").trim(),
+            class_no: String(r.class_no ?? "").trim(),
+            seat_no: String(r.seat_no ?? "").trim(),
+            page: String(r.page ?? "").trim(),
+          });
         }
 
         const groupMap = new Map();

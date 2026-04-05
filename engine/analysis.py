@@ -11,7 +11,7 @@ import numpy as np
 from PIL import Image as PILImage, ImageDraw, ImageFont
 import os # Added for os.path.exists
 
-from .xlsx import write_simple_xlsx_multi
+from .xlsx import read_simple_xlsx_table, write_simple_xlsx, write_simple_xlsx_multi
 
 
 def _normalize_cell(value: Any) -> str:
@@ -19,11 +19,23 @@ def _normalize_cell(value: Any) -> str:
 
 
 def _write_excel_csv(path: Path, header: List[str], rows: List[List[Any]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f, lineterminator="\n")
-        writer.writerow(header)
-        writer.writerows(rows)
+    write_simple_xlsx(path, rows=[header, *rows], sheet_name=path.stem[:31] or "Sheet1")
+
+
+def _read_table_dicts(path: Path) -> Tuple[List[str], List[Dict[str, str]]]:
+    table = read_simple_xlsx_table(path)
+    if not table:
+        return [], []
+    header = [str(x or "").strip() for x in table[0]]
+    rows: List[Dict[str, str]] = []
+    for raw_row in table[1:]:
+        row: Dict[str, str] = {}
+        for idx, name in enumerate(header):
+            if not name:
+                continue
+            row[name] = str(raw_row[idx] if idx < len(raw_row) else "")
+        rows.append(row)
+    return header, rows
 
 
 def _score_histogram_png(scores: List[float], total_possible: float, out_path: Path, lang: str = "zh_TW") -> None:
@@ -398,19 +410,17 @@ def _item_plot_png(numbers: List[int], series: Dict[str, List[Optional[float]]],
 
 def _write_analysis_scores_by_class_xlsx(outdir: Path) -> None:
     """
-    Reads analysis_scores.csv and roster.csv (if available) to group scores by class.
+    Reads analysis_scores.xlsx and roster.xlsx (if available) to group scores by class.
     Writes analysis_scores_by_class.xlsx with one sheet per class.
     """
-    scores_path = outdir / "analysis_scores.csv"
-    roster_path = outdir / "roster.csv"
+    scores_path = outdir / "analysis_scores.xlsx"
+    roster_path = outdir / "roster.xlsx"
     if not scores_path.exists():
         return
 
     # Read scores
     try:
-        with open(scores_path, "r", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f)
-            score_rows = list(reader)
+        _, score_rows = _read_table_dicts(scores_path)
     except Exception:
         return
 
@@ -421,13 +431,12 @@ def _write_analysis_scores_by_class_xlsx(outdir: Path) -> None:
     class_map = {}
     if roster_path.exists():
         try:
-            with open(roster_path, "r", encoding="utf-8-sig") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    pid = (row.get("person_id") or "").strip()
-                    c = (row.get("class_no") or "").strip()
-                    if pid and c:
-                        class_map[pid] = c
+            _, roster_rows = _read_table_dicts(roster_path)
+            for row in roster_rows:
+                pid = (row.get("person_id") or "").strip()
+                c = (row.get("class_no") or "").strip()
+                if pid and c:
+                    class_map[pid] = c
         except Exception:
             pass
 
@@ -440,13 +449,13 @@ def _write_analysis_scores_by_class_xlsx(outdir: Path) -> None:
     header = ["座號/ID", "分數", "空白數", "總分", "百分比"]
 
     for row in score_rows:
-        pid = row.get("person_id", "")
+        pid = row.get("學號/ID", row.get("person_id", ""))
         cls = class_map.get(pid, "Unknown")
         
         # Prepare row data
         # roster: person_id, grade, class_no, seat_no, page
         # We might want "seat_no" as the first column if available, else pid.
-        # But analysis_scores.csv only has person_id.
+        # But analysis_scores.xlsx only has person_id.
         # Let's try to find seat_no from roster too.
         seat = pid
         # If we have roster data, maybe usage seat_no?
@@ -491,22 +500,18 @@ def run_analysis_template(template_csv_path: Path, outdir: Path, lang: str = "zh
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    with open(template_csv_path, "r", newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        if not reader.fieldnames:
-            raise ValueError("template.csv is empty")
-        fieldnames = [str(x) for x in reader.fieldnames]
+    fieldnames, rows = _read_table_dicts(template_csv_path)
+    if not fieldnames:
+        raise ValueError("template.xlsx is empty")
 
-        required = ["number", "correct", "points"]
-        for k in required:
-            if k not in fieldnames:
-                raise ValueError(f"Missing column: {k}")
+    required = ["number", "correct", "points"]
+    for k in required:
+        if k not in fieldnames:
+            raise ValueError(f"Missing column: {k}")
 
-        student_cols = [c for c in fieldnames if c not in required]
-        if not student_cols:
-            raise ValueError("No student columns found")
-
-        rows = list(reader)
+    student_cols = [c for c in fieldnames if c not in required]
+    if not student_cols:
+        raise ValueError("No student columns found")
 
     q_numbers: List[int] = []
     corrects: List[Optional[str]] = []
@@ -574,7 +579,7 @@ def run_analysis_template(template_csv_path: Path, outdir: Path, lang: str = "zh
 
     scores_rows.sort(key=lambda r: (-float(r[1]), str(r[0])))
     _write_excel_csv(
-        outdir / "analysis_scores.csv",
+        outdir / "analysis_scores.xlsx",
         ["學號/ID", "得分", "空白數", "滿分", "百分比"],
         scores_rows,
     )
@@ -645,7 +650,7 @@ def run_analysis_template(template_csv_path: Path, outdir: Path, lang: str = "zh
         )
 
     _write_excel_csv(
-        outdir / "analysis_item.csv",
+        outdir / "analysis_item.xlsx",
         ["題號", "正解", "配分", "正確率", "鑑別度", "空白率", "複選率", "其他錯誤率", "A百分比", "B百分比", "C百分比", "D百分比", "E百分比"],
         item_rows,
     )
@@ -656,7 +661,7 @@ def run_analysis_template(template_csv_path: Path, outdir: Path, lang: str = "zh
     q88, q75, q50, q25, q12 = np.quantile(all_scores, [0.88, 0.75, 0.5, 0.25, 0.12])
 
     _write_excel_csv(
-        outdir / "analysis_summary.csv",
+        outdir / "analysis_summary.xlsx",
         ["學生人數", "總題數", "滿分", "平均分", "標準差", "P88", "P75", "中位數", "P25", "P12"],
         [
             [
@@ -709,10 +714,10 @@ def generate_integrated_report(job_dir: Path, lang: str = "zh_TW") -> None:
     Students as rows, Questions as columns.
     Layout: [Student Answers] -> [Graphs] -> [Item Statistics]
     """
-    item_csv = job_dir / "analysis_item.csv"
-    scores_csv = job_dir / "analysis_scores.csv"
-    template_csv = job_dir / "analysis_template.csv"
-    roster_csv = job_dir / "roster.csv"
+    item_csv = job_dir / "analysis_item.xlsx"
+    scores_csv = job_dir / "analysis_scores.xlsx"
+    template_csv = job_dir / "analysis_template.xlsx"
+    roster_csv = job_dir / "roster.xlsx"
 
     if not (item_csv.exists() and scores_csv.exists() and template_csv.exists()):
         return
@@ -722,16 +727,11 @@ def generate_integrated_report(job_dir: Path, lang: str = "zh_TW") -> None:
 
     # 1. Read Data
     try:
-        with open(item_csv, "r", encoding="utf-8-sig") as f:
-            item_stats_list = list(csv.DictReader(f))
-        with open(scores_csv, "r", encoding="utf-8-sig") as f:
-            student_scores_list = list(csv.DictReader(f))
-        with open(template_csv, "r", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f)
-            matrix_rows = list(reader)
-            # Find student columns (anything after number, correct, points)
-            all_cols = reader.fieldnames or []
-            student_cols = [c for c in all_cols if c not in ("number", "correct", "points")]
+        _, item_stats_list = _read_table_dicts(item_csv)
+        score_headers, student_scores_list = _read_table_dicts(scores_csv)
+        template_headers, matrix_rows = _read_table_dicts(template_csv)
+        all_cols = template_headers or []
+        student_cols = [c for c in all_cols if c not in ("number", "correct", "points")]
     except Exception:
         return
 

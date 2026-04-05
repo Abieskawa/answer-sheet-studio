@@ -77,7 +77,7 @@ I18N = {
         "upload_open_result": "開啟結果頁（含圖表）",
         "upload_open_result_hint": "處理完成後請點上方按鈕開啟結果頁。",
         "upload_error_generic": "處理失敗，請查看 outputs/launcher.log 或 outputs/server.log。",
-        "upload_hint_output": "完成後會輸出 results.csv、annotated.pdf，以及答案分析報表/圖表。",
+        "upload_hint_output": "完成後會輸出 results.xlsx、annotated.pdf，以及答案分析報表/圖表。",
         "update_title": "更新",
         "update_hint": "下載最新 ZIP 後在此上傳套用更新。更新過程會短暫重新啟動。",
         "update_open_releases": "開啟下載頁（GitHub Releases）",
@@ -95,20 +95,20 @@ I18N = {
         "result_title": "讀取結果",
         "result_file": "檔案：",
         "result_job_id": "Job ID：",
-        "result_download_results": "下載讀卡結果(csv)",
+        "result_download_results": "下載讀卡結果(xlsx)",
         "result_download_annotated": "下載 劃記檔案 (pdf)",
         "result_download_analysis_pdf": "下載 (正確舊版本分析) (pdf)",
-        "result_download_showwrong": "下載 僅顯示錯題 (csv)",
-        "result_download_integrated_p1": "試題分析整合報表(csv)",
+        "result_download_showwrong": "下載 僅顯示錯題 (xlsx)",
+        "result_download_integrated_p1": "試題分析整合報表(xlsx)",
         "result_download_integrated_p2": "試題分析整合報表(pdf)",
         "result_print_pdf": "網頁列印",
         "result_print_pdf_hint": "用瀏覽器列印（⌘/Ctrl+P）：macOS 選「PDF → 另存為 PDF」；Windows 選「Microsoft Print to PDF」。",
         "result_back_to_downloads": "查看試題分析原始數據",
-        "result_view_item_analysis_data": "試題分析數據(csv)",
+        "result_view_item_analysis_data": "試題分析數據(xlsx)",
         "result_plots_title": "圖表",
         "result_plot_score_hist": "成績分佈(png)",
         "result_plot_score_hist_guides": "輔助線：實線＝平均（紅）/中位數（藍）；虛線＝百分位數（P12/P25/P75/P88）",
-        "result_plot_item_metrics": "試題分析(csv)",
+        "result_plot_item_metrics": "試題分析(xlsx)",
         "result_plot_item_metrics_guides": "輔助線：難度 0.25/0.50/0.75；鑑別度 0.00/0.20/0.40",
         "result_integrated_title": "整合圖表（可用滑鼠懸停查看題號，並與錯題表對照）",
         "result_integrated_hint": "滑鼠移到表格/圖表可同步醒目提示題號；點一下可鎖定，再點一次取消。",
@@ -155,15 +155,15 @@ I18N = {
         "col_wrong_short": "錯",
         "col_blank_short": "空",
         "result_analysis_files_title": "試題分析檔案",
-        "result_analysis_files_hint": "下載完整分析報表（CSV/XLSX/圖片/日誌）。",
+        "result_analysis_files_hint": "下載完整分析報表（XLSX/圖片/日誌）。",
         "result_item_table_title": "試題分析數據（預覽）",
-        "result_item_table_hint": "此處僅顯示前 200 列；完整資料請下載 analysis_item.csv。",
+        "result_item_table_hint": "此處僅顯示前 200 列；完整資料請下載 analysis_item.xlsx。",
         "result_item_table_truncated": "（共 {total_rows} 列，顯示前 {shown_rows} 列）",
-        "roster": "名冊(csv)",
-        "analysis_scores": "成績分析表(csv)",
-        "analysis_item": "試題分析(csv)",
-        "analysis_scores_by_class": "分數統計(csv)",
-        "result_download_scores_by_class": "分數統計(分班)(excel)",
+        "roster": "名冊(xlsx)",
+        "analysis_scores": "作答狀況(xlsx)",
+        "analysis_item": "試題分析(xlsx)",
+        "analysis_scores_by_class": "分數統計(xlsx)",
+        "result_download_scores_by_class": "分數統計(分班)(xlsx)",
         "result_hint_unstable": "如果結果不穩，通常是掃描歪斜或太淡；可以提高掃描解析度（建議 300dpi）或改用較深的筆。",
         "result_debug_hint": "需要回報問題時，可到 Debug Mode 下載診斷檔案（輸入 Job ID）。",
         "result_debug_open": "開啟 Debug Mode",
@@ -174,11 +174,11 @@ I18N = {
         "debug_btn_open": "開啟 Debug 下載",
         "debug_error_invalid_job_id": "Job ID 格式不正確。請貼上處理完成頁面顯示的 Job ID。",
         "debug_error_not_found": "找不到此 Job ID 的輸出資料夾。請確認 Job ID 是否正確。",
-        "debug_dl_results": "下載 results.csv",
-        "debug_dl_ambiguity": "下載 ambiguity.csv",
+        "debug_dl_results": "下載 results.xlsx",
+        "debug_dl_ambiguity": "下載 ambiguity.xlsx",
         "debug_dl_annotated": "下載 annotated.pdf",
         "debug_dl_input": "下載 input.pdf（原始上傳檔）",
-        "debug_report_hint": "回報時請提供：Job ID、results.csv、ambiguity.csv、annotated.pdf（必要時 input.pdf）。",
+        "debug_report_hint": "回報時請提供：Job ID、results.xlsx、ambiguity.xlsx、annotated.pdf（必要時 input.pdf）。",
         "analysis_error_builtin_failed": "內建分析失敗：",
         "analysis_message_done": "分析完成，可下載報表與圖表。",
         "analysis_message_done_fallback": "分析完成。",
@@ -221,7 +221,7 @@ I18N = {
         "upload_open_result": "Open result page (with plots)",
         "upload_open_result_hint": "When processing finishes, click the button above to open the result page.",
         "upload_error_generic": "Processing failed. See outputs/launcher.log or outputs/server.log.",
-        "upload_hint_output": "Outputs results.csv, annotated.pdf, and analysis reports/plots.",
+        "upload_hint_output": "Outputs results.xlsx, annotated.pdf, and analysis reports/plots.",
         "update_title": "Update",
         "update_hint": "Download the latest ZIP and upload it here. The app will restart briefly.",
         "update_open_releases": "Open download page (GitHub Releases)",
@@ -239,7 +239,7 @@ I18N = {
         "result_title": "Done",
         "result_file": "File:",
         "result_job_id": "Job ID:",
-        "result_download_results": "Download results.csv",
+        "result_download_results": "Download results.xlsx",
         "result_download_annotated": "Download annotated.pdf",
         "result_download_analysis_pdf": "試題分析整合報表",
         "result_download_showwrong": "Download showwrong.xlsx (wrong answers only)",
@@ -299,9 +299,9 @@ I18N = {
         "col_wrong_short": "Wrong",
         "col_blank_short": "Blank",
         "result_analysis_files_title": "Item analysis files",
-        "result_analysis_files_hint": "Download the full analysis reports (CSV/XLSX/images/logs).",
+        "result_analysis_files_hint": "Download the full analysis reports (XLSX/images/logs).",
         "result_item_table_title": "Item analysis data (preview)",
-        "result_item_table_hint": "Only the first 200 rows are shown here; download analysis_item.csv for the full data.",
+        "result_item_table_hint": "Only the first 200 rows are shown here; download analysis_item.xlsx for the full data.",
         "result_item_table_truncated": "({total_rows} rows, showing first {shown_rows})",
         "result_download_scores_by_class": "analysis_scores_by_class.xlsx (by class)",
         "result_hint_unstable": "If results are unstable, scans may be skewed or too light. Try 300dpi or a darker pen.",
@@ -314,11 +314,11 @@ I18N = {
         "debug_btn_open": "Open Debug Downloads",
         "debug_error_invalid_job_id": "Invalid Job ID. Please paste the Job ID shown on the result page.",
         "debug_error_not_found": "No output folder found for this Job ID. Please check the Job ID.",
-        "debug_dl_results": "Download results.csv",
-        "debug_dl_ambiguity": "Download ambiguity.csv",
+        "debug_dl_results": "Download results.xlsx",
+        "debug_dl_ambiguity": "Download ambiguity.xlsx",
         "debug_dl_annotated": "Download annotated.pdf",
         "debug_dl_input": "Download input.pdf (original upload)",
-        "debug_report_hint": "When reporting, include: Job ID, results.csv, ambiguity.csv, annotated.pdf (and input.pdf if needed).",
+        "debug_report_hint": "When reporting, include: Job ID, results.xlsx, ambiguity.xlsx, annotated.pdf (and input.pdf if needed).",
         "analysis_error_builtin_failed": "Built-in analysis failed:",
         "analysis_message_done": "Analysis complete. Download reports and plots below.",
         "analysis_message_done_fallback": "Analysis complete.",
@@ -557,7 +557,7 @@ def result_page(request: Request, job_id: str):
             "body_class": "theme-light",
             "job_id": job_id,
             "display_filename": display_filename,
-            "csv_url": f"/outputs/{job_id}/results.csv",
+            "results_url": f"/outputs/{job_id}/results.xlsx",
             "pdf_url": f"/outputs/{job_id}/annotated.pdf",
             "showwrong_url": (f"/outputs/{job_id}/showwrong.xlsx" if (job_dir / "showwrong.xlsx").exists() else None),
             "analysis_report_url": None, # 停用,
@@ -587,10 +587,10 @@ def result_charts_page(request: Request, job_id: str):
     score_hist = job_dir / "analysis_score_hist.png"
     item_plot = job_dir / "analysis_item_plot.png"
     scores_by_class = job_dir / "analysis_scores_by_class.xlsx"
-    template_csv = job_dir / "analysis_template.csv"
-    roster_csv = job_dir / "roster.csv"
-    item_csv = job_dir / "analysis_item.csv"
-    scores_csv = job_dir / "analysis_scores.csv"
+    template_xlsx = job_dir / "analysis_template.xlsx"
+    roster_xlsx = job_dir / "roster.xlsx"
+    item_xlsx = job_dir / "analysis_item.xlsx"
+    scores_xlsx = job_dir / "analysis_scores.xlsx"
     analysis_report_pdf = job_dir / "試題分析整合報表.pdf"
     item_table = _read_analysis_item_table(job_dir)
     discr_note_key = _discrimination_note_key(job_dir)
@@ -606,7 +606,7 @@ def result_charts_page(request: Request, job_id: str):
         {
             "job_id": job_id,
             "display_filename": display_filename,
-            "csv_url": f"/outputs/{job_id}/results.csv",
+            "results_url": f"/outputs/{job_id}/results.xlsx",
             "pdf_url": f"/outputs/{job_id}/annotated.pdf",
             "showwrong_url": (f"/outputs/{job_id}/showwrong.xlsx" if (job_dir / "showwrong.xlsx").exists() else None),
             "analysis_error": (str(meta.get("analysis_error") or "") or None),
@@ -615,10 +615,11 @@ def result_charts_page(request: Request, job_id: str):
             "analysis_score_hist_inline_url": (f"/outputs_inline/{job_id}/analysis_score_hist.png" if score_hist.exists() else None),
             "analysis_item_plot_inline_url": (f"/outputs_inline/{job_id}/analysis_item_plot.png" if item_plot.exists() else None),
             "analysis_scores_by_class_url": (f"/outputs/{job_id}/analysis_scores_by_class.xlsx" if scores_by_class.exists() else None),
-            "analysis_template_csv_url": (f"/outputs/{job_id}/analysis_template.csv" if template_csv.exists() else None),
-            "roster_csv_url": (f"/outputs/{job_id}/roster.csv" if roster_csv.exists() else None),
-            "analysis_item_csv_url": (f"/outputs/{job_id}/analysis_item.csv" if item_csv.exists() else None),
-            "analysis_scores_csv_url": (f"/outputs/{job_id}/analysis_scores.csv" if scores_csv.exists() else None),
+            "integrated_data_url": (f"/api/result/{job_id}/integrated-data" if template_xlsx.exists() else None),
+            "analysis_template_xlsx_url": (f"/outputs/{job_id}/analysis_template.xlsx" if template_xlsx.exists() else None),
+            "roster_xlsx_url": (f"/outputs/{job_id}/roster.xlsx" if roster_xlsx.exists() else None),
+            "analysis_item_xlsx_url": (f"/outputs/{job_id}/analysis_item.xlsx" if item_xlsx.exists() else None),
+            "analysis_scores_xlsx_url": (f"/outputs/{job_id}/analysis_scores.xlsx" if scores_xlsx.exists() else None),
             "analysis_report_url":None,#停用
             "analysis_item_table": item_table,
             "analysis_files": _analysis_file_links(job_id, t),
@@ -626,8 +627,41 @@ def result_charts_page(request: Request, job_id: str):
     )
 
 
+@app.get("/api/result/{job_id}/integrated-data")
+def result_integrated_data(job_id: str):
+    job_id = (job_id or "").strip()
+    if not _JOB_ID_RE.match(job_id):
+        return {"error": "invalid job id"}
+
+    job_dir = OUTPUTS_DIR / job_id
+    template_path = job_dir / "analysis_template.xlsx"
+    if not template_path.exists():
+        return {"error": "missing analysis_template.xlsx"}
+
+    try:
+        template_table = _read_table_rows(template_path)
+        roster_headers, roster_rows = _read_table_dicts(job_dir / "roster.xlsx")
+    except Exception as exc:
+        return {"error": str(exc)}
+
+    if not template_table:
+        return {"error": "empty analysis_template.xlsx"}
+
+    header = [str(x or "").strip() for x in template_table[0]]
+    rows = []
+    for raw_row in template_table[1:]:
+        rows.append({header[idx]: str(raw_row[idx] if idx < len(raw_row) else "") for idx in range(len(header)) if header[idx]})
+
+    return {
+        "template_header": header,
+        "template_rows": rows,
+        "roster_header": roster_headers,
+        "roster_rows": roster_rows,
+    }
+
+
 def _discrimination_note_key(job_dir: Path) -> Optional[str]:
-    path = Path(job_dir) / "analysis_summary.csv"
+    path = Path(job_dir) / "analysis_summary.xlsx"
     try:
         if not path.exists():
             return None
@@ -635,9 +669,7 @@ def _discrimination_note_key(job_dir: Path) -> Optional[str]:
         return None
 
     try:
-        with open(path, "r", newline="", encoding="utf-8-sig") as f:
-            reader = csv.reader(f)
-            rows = list(reader)
+        rows = _read_table_rows(path)
     except Exception:
         return None
 
@@ -645,9 +677,12 @@ def _discrimination_note_key(job_dir: Path) -> Optional[str]:
         return None
 
     header = [str(x or "").strip().lower() for x in rows[0]]
-    try:
-        idx = header.index("students")
-    except ValueError:
+    idx = -1
+    for key in ("students", "學生人數"):
+        if key in header:
+            idx = header.index(key)
+            break
+    if idx < 0:
         return None
 
     try:
@@ -659,7 +694,7 @@ def _discrimination_note_key(job_dir: Path) -> Optional[str]:
 
 
 def _read_analysis_item_table(job_dir: Path, max_rows: int = 200) -> Optional[dict]:
-    path = Path(job_dir) / "analysis_item.csv"
+    path = Path(job_dir) / "analysis_item.xlsx"
     try:
         if not path.exists():
             return None
@@ -667,9 +702,7 @@ def _read_analysis_item_table(job_dir: Path, max_rows: int = 200) -> Optional[di
         return None
 
     try:
-        with open(path, "r", newline="", encoding="utf-8-sig") as f:
-            reader = csv.reader(f)
-            rows = list(reader)
+        rows = _read_table_rows(path)
     except Exception:
         return None
 
@@ -686,11 +719,11 @@ def _analysis_file_links(job_id: str, t: dict) -> list[dict]:
     job_dir = OUTPUTS_DIR / job_id
     files: list[dict] = []
     label_by_name = {
-        "roster.csv": t.get("roster", "名冊(csv)"),
-        "analysis_scores.csv": t.get("analysis_scores", "成績明細.CSV"),
-        "analysis_item.csv": t.get("analysis_item", "試題分析.CSV"),
+        "roster.xlsx": t.get("roster", "名冊(xlsx)"),
+        "analysis_scores.xlsx": t.get("analysis_scores", "作答狀況(xlsx)"),
+        "analysis_item.xlsx": t.get("analysis_item", "試題分析(xlsx)"),
         "analysis_score_hist.png": t.get("result_plot_score_hist", "成績分布圖.PNG"),
-        "analysis_summary.csv": "成績分布數據(csv)",
+        "analysis_summary.xlsx": "成績分布數據(xlsx)",
         "試題分析整合報表.pdf": t.get("result_download_integrated_p2", "試題分析整合報表.PDF"),
         "試題分析整合檔.xlsx": t.get("result_download_integrated_p1", "試題分析整合報表.XLSX"),
     }
@@ -714,7 +747,7 @@ def _analysis_file_links(job_id: str, t: dict) -> list[dict]:
             name = path.name
             if name in label_by_name:
                 continue
-            if name == "analysis_template.csv":  # Explicitly hide this
+            if name == "analysis_template.xlsx":  # Explicitly hide this
                 continue
             if name == "analysis_report.pdf":  # Hide old-version report
                 continue
@@ -726,7 +759,7 @@ def _analysis_file_links(job_id: str, t: dict) -> list[dict]:
                 continue
             if name == "analysis_scores_by_class.xlsx":
                 continue
-            if not any(name.lower().endswith(ext) for ext in (".csv", ".xlsx", ".pdf", ".log", ".txt")):
+            if not any(name.lower().endswith(ext) for ext in (".xlsx", ".pdf", ".log", ".txt")):
                 continue
             add_if_exists(name)
     except Exception:
@@ -738,6 +771,31 @@ def _analysis_file_links(job_id: str, t: dict) -> list[dict]:
 def _normalize_answer_cell(value: object) -> str:
     s = ("" if value is None else str(value)).strip().upper()
     return s
+
+
+def _read_table_rows(path: Path) -> list[list[str]]:
+    path = Path(path)
+    if (path.suffix or "").lower() == ".xlsx":
+        return read_simple_xlsx_table(path)
+
+    with open(path, "r", newline="", encoding="utf-8-sig") as f:
+        return [[str(x or "") for x in row] for row in csv.reader(f)]
+
+
+def _read_table_dicts(path: Path) -> tuple[list[str], list[dict[str, str]]]:
+    table = _read_table_rows(path)
+    if not table:
+        return [], []
+    header = [str(x or "").strip() for x in table[0]]
+    rows: list[dict[str, str]] = []
+    for raw_row in table[1:]:
+        row: dict[str, str] = {}
+        for idx, name in enumerate(header):
+            if not name:
+                continue
+            row[name] = str(raw_row[idx] if idx < len(raw_row) else "")
+        rows.append(row)
+    return header, rows
 
 
 def _read_answer_key_csv(path: Path) -> dict[int, tuple[str, float]]:
@@ -859,40 +917,38 @@ def _write_analysis_template(
     out_csv_path: Path,
     default_points: float = 1.0,
 ) -> None:
-    with open(results_csv_path, "r", newline="", encoding="utf-8-sig") as f:
-        reader = csv.reader(f)
-        rows = list(reader)
+    rows = _read_table_rows(results_csv_path)
     if not rows:
-        raise ValueError("results.csv is empty")
+        raise ValueError("results.xlsx is empty")
 
     header = rows[0]
     if not header or header[0] != "number":
-        raise ValueError("unexpected results.csv header (expected first column: number)")
+        raise ValueError("unexpected results.xlsx header (expected first column: number)")
 
-    with open(out_csv_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f, lineterminator="\n")
-        writer.writerow(["number", "correct", "points", *header[1:]])
-        for row in rows[1:]:
-            if not row:
-                continue
-            raw_no = (row[0] or "").strip()
-            try:
-                qno = int(raw_no)
-            except ValueError:
-                qno = None
+    out_rows: list[list[object]] = [["number", "correct", "points", *header[1:]]]
+    for row in rows[1:]:
+        if not row:
+            continue
+        raw_no = (row[0] or "").strip()
+        try:
+            qno = int(raw_no)
+        except ValueError:
+            qno = None
 
-            correct = ""
-            points = float(default_points)
-            if qno is not None and qno in answer_key:
-                correct, points = answer_key[qno]
-                if correct is None:
-                    correct = ""
+        correct = ""
+        points = float(default_points)
+        if qno is not None and qno in answer_key:
+            correct, points = answer_key[qno]
+            if correct is None:
+                correct = ""
 
-            points_out: object = points
-            if isinstance(points, float) and abs(points - round(points)) < 1e-9:
-                points_out = int(round(points))
+        points_out: object = points
+        if isinstance(points, float) and abs(points - round(points)) < 1e-9:
+            points_out = int(round(points))
 
-            writer.writerow([row[0], _normalize_answer_cell(correct), points_out, *row[1:]])
+        out_rows.append([row[0], _normalize_answer_cell(correct), points_out, *row[1:]])
+
+    write_simple_xlsx(Path(out_csv_path), rows=out_rows, sheet_name="analysis_template")
 
 
 def _write_showwrong_xlsx(
@@ -901,19 +957,17 @@ def _write_showwrong_xlsx(
     out_xlsx_path: Path,
     blank_label: str = "空白",
 ) -> None:
-    with open(results_csv_path, "r", newline="", encoding="utf-8-sig") as f:
-        reader = csv.reader(f)
-        rows = list(reader)
+    rows = _read_table_rows(results_csv_path)
     if not rows:
-        raise ValueError("results.csv is empty")
+        raise ValueError("results.xlsx is empty")
 
     header = rows[0]
     if not header or header[0] != "number":
-        raise ValueError("unexpected results.csv header (expected first column: number)")
+        raise ValueError("unexpected results.xlsx header (expected first column: number)")
 
     student_cols = [str(x or "").strip() for x in header[1:] if str(x or "").strip()]
     if not student_cols:
-        raise ValueError("no students found in results.csv")
+        raise ValueError("no students found in results.xlsx")
 
     q_numbers: list[int] = []
     corrects: list[str] = []
@@ -975,22 +1029,21 @@ def _write_showwrong_xlsx(
 
     out_rows.append(["score", "", *[score_out(student_scores[s]) for s in student_cols]])
 
-    # If roster.csv exists, split into per-class worksheets (same class on same sheet).
-    roster_path = Path(results_csv_path).with_name("roster.csv")
+    # If roster.xlsx exists, split into per-class worksheets (same class on same sheet).
+    roster_path = Path(results_csv_path).with_name("roster.xlsx")
     roster_by_person: dict[str, dict[str, str]] = {}
     try:
         if roster_path.exists():
-            with open(roster_path, "r", newline="", encoding="utf-8-sig") as f:
-                reader = csv.DictReader(f)
-                for r in reader:
-                    pid = str((r.get("person_id") or "")).strip()
-                    if not pid:
-                        continue
-                    roster_by_person[pid] = {
-                        "grade": str(r.get("grade") or "").strip(),
-                        "class_no": str(r.get("class_no") or "").strip(),
-                        "seat_no": str(r.get("seat_no") or "").strip(),
-                    }
+            _, roster_rows = _read_table_dicts(roster_path)
+            for r in roster_rows:
+                pid = str((r.get("person_id") or "")).strip()
+                if not pid:
+                    continue
+                roster_by_person[pid] = {
+                    "grade": str(r.get("grade") or "").strip(),
+                    "class_no": str(r.get("class_no") or "").strip(),
+                    "seat_no": str(r.get("seat_no") or "").strip(),
+                }
     except Exception:
         roster_by_person = {}
 
@@ -1093,21 +1146,18 @@ def _write_showwrong_xlsx(
 def _write_analysis_report_pdf(job_dir: Path, lang: str) -> None:
     import math
 
-    template_csv = Path(job_dir) / "analysis_template.csv"
+    template_csv = Path(job_dir) / "analysis_template.xlsx"
     if not template_csv.exists():
         return
 
     t = I18N.get(lang, I18N[DEFAULT_LANG])
 
     try:
-        with open(template_csv, "r", newline="", encoding="utf-8-sig") as f:
-            reader = csv.DictReader(f)
-            fieldnames = [str(x or "").strip() for x in (reader.fieldnames or [])]
-            required = ("number", "correct", "points")
-            if not all(k in fieldnames for k in required):
-                return
-            student_cols = [c for c in fieldnames if c not in required and c]
-            template_rows = list(reader)
+        fieldnames, template_rows = _read_table_dicts(template_csv)
+        required = ("number", "correct", "points")
+        if not all(k in fieldnames for k in required):
+            return
+        student_cols = [c for c in fieldnames if c not in required and c]
     except Exception:
         return
 
@@ -1140,21 +1190,20 @@ def _write_analysis_report_pdf(job_dir: Path, lang: str) -> None:
         return
 
     # Roster (optional): used for class grouping & ordering.
-    roster_path = Path(job_dir) / "roster.csv"
+    roster_path = Path(job_dir) / "roster.xlsx"
     roster_by_person: dict[str, dict[str, str]] = {}
     try:
         if roster_path.exists():
-            with open(roster_path, "r", newline="", encoding="utf-8-sig") as f:
-                reader = csv.DictReader(f)
-                for r in reader:
-                    pid = str((r.get("person_id") or "")).strip()
-                    if not pid:
-                        continue
-                    roster_by_person[pid] = {
-                        "grade": str(r.get("grade") or "").strip(),
-                        "class_no": str(r.get("class_no") or "").strip(),
-                        "seat_no": str(r.get("seat_no") or "").strip(),
-                    }
+            _, roster_rows = _read_table_dicts(roster_path)
+            for r in roster_rows:
+                pid = str((r.get("person_id") or "")).strip()
+                if not pid:
+                    continue
+                roster_by_person[pid] = {
+                    "grade": str(r.get("grade") or "").strip(),
+                    "class_no": str(r.get("class_no") or "").strip(),
+                    "seat_no": str(r.get("seat_no") or "").strip(),
+                }
     except Exception:
         roster_by_person = {}
 
@@ -1680,8 +1729,8 @@ async def api_process(
         },
     )
 
-    csv_path = job_dir / "results.csv"
-    ambiguity_csv_path = job_dir / "ambiguity.csv"
+    csv_path = job_dir / "results.xlsx"
+    ambiguity_csv_path = job_dir / "ambiguity.xlsx"
     annotated_pdf_path = job_dir / "annotated.pdf"
 
     # Main processing
@@ -1701,7 +1750,7 @@ async def api_process(
     analysis_error: Optional[str] = None
     analysis_message: Optional[str] = None
 
-    template_path = job_dir / "analysis_template.csv"
+    template_path = job_dir / "analysis_template.xlsx"
     try:
         key_map = _read_answer_key_file(answer_key_upload_path)
     except Exception as exc:
@@ -1914,8 +1963,8 @@ def debug_page(request: Request, job_id: str = ""):
         return f"/outputs/{job_id}/{filename}" if p.exists() else None
 
     ctx["files"] = {
-        "results": url_if_exists("results.csv"),
-        "ambiguity": url_if_exists("ambiguity.csv"),
+        "results": url_if_exists("results.xlsx"),
+        "ambiguity": url_if_exists("ambiguity.xlsx"),
         "annotated": url_if_exists("annotated.pdf"),
         "input": url_if_exists("input.pdf"),
     }
@@ -1941,10 +1990,10 @@ def download_output(job_id: str, filename: str):
     file_prefix = job_tag if upload_base_ascii.lower() == "upload" else f"{upload_base_ascii}_{job_tag}"
 
     download_name = filename
-    if filename == "results.csv":
-        download_name = f"{file_prefix}_讀卡結果.csv"
-    elif filename == "ambiguity.csv":
-        download_name = f"{file_prefix}_ambiguity.csv"
+    if filename == "results.xlsx":
+        download_name = f"{file_prefix}_讀卡結果.xlsx"
+    elif filename == "ambiguity.xlsx":
+        download_name = f"{file_prefix}_ambiguity.xlsx"
     elif filename == "annotated.pdf":
         download_name = f"{file_prefix}_劃記檔案.pdf"
     elif filename == "input.pdf":
@@ -1953,16 +2002,16 @@ def download_output(job_id: str, filename: str):
         download_name = f"{file_prefix}_answer_key.xlsx"
     elif filename == "showwrong.xlsx":
         download_name = f"{file_prefix}_僅顯示錯題.xlsx"
-    elif filename == "roster.csv":
-        download_name = f"{file_prefix}_名冊.csv"
-    elif filename == "analysis_scores.csv":
-        download_name = f"{file_prefix}_成績分析表.csv"
+    elif filename == "roster.xlsx":
+        download_name = f"{file_prefix}_名冊.xlsx"
+    elif filename == "analysis_scores.xlsx":
+        download_name = f"{file_prefix}_作答狀況.xlsx"
     elif filename == "analysis_scores_by_class.xlsx":
         download_name = f"{file_prefix}_分數統計.xlsx"
-    elif filename == "analysis_item.csv":
-        download_name = f"{file_prefix}_試題分析.csv"
-    elif filename == "analysis_summary.csv":
-        download_name = f"{file_prefix}_成績分布數據.csv"
+    elif filename == "analysis_item.xlsx":
+        download_name = f"{file_prefix}_試題分析.xlsx"
+    elif filename == "analysis_summary.xlsx":
+        download_name = f"{file_prefix}_成績分布數據.xlsx"
     elif filename == "analysis_score_hist.png":
         download_name = f"{file_prefix}_成績分佈.png"
     elif filename == "analysis_item_plot.png":

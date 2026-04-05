@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import csv
 import os
 from pathlib import Path
 from typing import List, Tuple, Dict, Optional, Any
@@ -19,6 +18,7 @@ from .config import (
     BUBBLE_RADIUS, COL_COUNT,
     compute_answer_layout,
 )
+from .xlsx import write_simple_xlsx
 
 
 def _env_float(name: str, default: float) -> float:
@@ -676,8 +676,8 @@ def process_pdf_to_csv_and_annotated_pdf(
 ):
     num_questions = max(1, min(MAX_QUESTIONS, int(num_questions)))
     choices_count = max(3, min(5, int(choices_count)))
-    out_ambiguity_csv_path = out_ambiguity_csv_path or str(Path(out_csv_path).with_name("ambiguity.csv"))
-    out_roster_csv_path = out_roster_csv_path or str(Path(out_csv_path).with_name("roster.csv"))
+    out_ambiguity_csv_path = out_ambiguity_csv_path or str(Path(out_csv_path).with_name("ambiguity.xlsx"))
+    out_roster_csv_path = out_roster_csv_path or str(Path(out_csv_path).with_name("roster.xlsx"))
 
     doc = fitz.open(input_pdf_path)
     people: List[Dict[str, Any]] = []
@@ -770,32 +770,27 @@ def process_pdf_to_csv_and_annotated_pdf(
     person_ids = [str(row.get("person_id", "")) for row in people_sorted]
 
     # Roster (per-student metadata used for grouping/reporting).
-    roster_fields = ["person_id", "grade", "class_no", "seat_no", "page"]
-    with open(out_roster_csv_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=roster_fields)
-        writer.writeheader()
-        for row in people_sorted:
-            writer.writerow(
-                {
-                    "person_id": str(row.get("person_id", "") or ""),
-                    "grade": str(row.get("grade", "") or ""),
-                    "class_no": str(row.get("class_no", "") or ""),
-                    "seat_no": str(row.get("seat_no", "") or ""),
-                    "page": str(row.get("page", "") or ""),
-                }
-            )
+    roster_rows: List[List[Any]] = [["person_id", "grade", "class_no", "seat_no", "page"]]
+    for row in people_sorted:
+        roster_rows.append(
+            [
+                str(row.get("person_id", "") or ""),
+                str(row.get("grade", "") or ""),
+                str(row.get("class_no", "") or ""),
+                str(row.get("seat_no", "") or ""),
+                str(row.get("page", "") or ""),
+            ]
+        )
+    write_simple_xlsx(Path(out_roster_csv_path), rows=roster_rows, sheet_name="roster")
 
     # Transposed output: columns=people, rows=questions
-    results_fields = ["number", *person_ids]
-    with open(out_csv_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=results_fields)
-        writer.writeheader()
-        for q in range(1, num_questions + 1):
-            out_row: Dict[str, Any] = {"number": q}
-            for person in people_sorted:
-                pid = str(person.get("person_id", ""))
-                out_row[pid] = person.get(f"Q{q}", "") or ""
-            writer.writerow(out_row)
+    results_rows: List[List[Any]] = [["number", *person_ids]]
+    for q in range(1, num_questions + 1):
+        row_out: List[Any] = [q]
+        for person in people_sorted:
+            row_out.append(person.get(f"Q{q}", "") or "")
+        results_rows.append(row_out)
+    write_simple_xlsx(Path(out_csv_path), rows=results_rows, sheet_name="results")
 
     # Ambiguity/blank report
     people_by_page = {int(row["page"]): row for row in people if "page" in row}
@@ -811,26 +806,25 @@ def process_pdf_to_csv_and_annotated_pdf(
         "best_label",
         "second_label",
     ]
-    with open(out_ambiguity_csv_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.DictWriter(f, fieldnames=amb_fields)
-        writer.writeheader()
-        for flag in flags:
-            page_no = int(flag.get("page", 0) or 0)
-            person = people_by_page.get(page_no, {})
-            writer.writerow(
-                {
-                    "page": page_no or "",
-                    "person_id": person.get("person_id", ""),
-                    "seat_no": person.get("seat_no", "") or "",
-                    "grade": person.get("grade", "") or "",
-                    "class_no": person.get("class_no", "") or "",
-                    "field": flag.get("field", ""),
-                    "question": flag.get("question", ""),
-                    "status": flag.get("status", ""),
-                    "best_label": flag.get("best_label", ""),
-                    "second_label": flag.get("second_label", ""),
-                }
-            )
+    ambiguity_rows: List[List[Any]] = [amb_fields]
+    for flag in flags:
+        page_no = int(flag.get("page", 0) or 0)
+        person = people_by_page.get(page_no, {})
+        ambiguity_rows.append(
+            [
+                page_no or "",
+                person.get("person_id", ""),
+                person.get("seat_no", "") or "",
+                person.get("grade", "") or "",
+                person.get("class_no", "") or "",
+                flag.get("field", ""),
+                flag.get("question", ""),
+                flag.get("status", ""),
+                flag.get("best_label", ""),
+                flag.get("second_label", ""),
+            ]
+        )
+    write_simple_xlsx(Path(out_ambiguity_csv_path), rows=ambiguity_rows, sheet_name="ambiguity")
 
     images_to_pdf(annotated_images, out_annotated_pdf_path, dpi=dpi)
     doc.close()

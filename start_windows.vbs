@@ -119,7 +119,7 @@ If IsPortOpen(8000) Then
 End If
 
 ' 2. Find a suitable Python and launch
-probe = " -c " & q & "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" & q
+probe = " -c " & q & "import sys; raise SystemExit(0 if (3, 10) <= sys.version_info[:2] <= (3, 11) else 1)" & q
 
 ' Priority 1: Generic pythonw (often the most direct path)
 If CanRun("pythonw" & probe) Then
@@ -140,7 +140,7 @@ If CanRun("py -3w" & probe) Then
 End If
 
 ' Priority 4: Specific versions
-pyVers = Array("3.11", "3.10", "3.12")
+pyVers = Array("3.11", "3.10")
 For Each v In pyVers
     cmd = "pyw -" & v
     If CanRun(cmd & probe) Then
@@ -150,7 +150,7 @@ For Each v In pyVers
 Next
 
 ' Fallback: Tell the user to install Python
-LogLine "No suitable Python 3.10+ found."
-WshShell.Popup "Python 3.10+ was not found. Please install Python 3.11 or later from python.org.", 0, "Answer Sheet Studio", 48
-WshShell.Run "https://www.python.org/downloads/windows/", 1, False
+LogLine "No suitable Python 3.10 or 3.11 found."
+WshShell.Popup "Python 3.10 or 3.11 was not found. Python 3.12 or newer is not supported. The official Python 3.11.8 installer download will open next. After installing Python, run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 48
+WshShell.Run "https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe", 1, False
 WScript.Quit 1

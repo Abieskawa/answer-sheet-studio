@@ -3,9 +3,9 @@ cd "$(dirname "$0")"
 
 pick_python() {
   local candidate
-  for candidate in python3.10 python3.11 python3.12 python3.13 python3; do
+  for candidate in python3.11 python3.10 python3; do
     if command -v "$candidate" >/dev/null 2>&1; then
-      if "$candidate" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
+      if "$candidate" -c 'import sys; raise SystemExit(0 if (3, 10) <= sys.version_info[:2] <= (3, 11) else 1)' >/dev/null 2>&1; then
         echo "$candidate"
         return 0
       fi
@@ -17,7 +17,7 @@ pick_python() {
 PYTHON_BIN="$(pick_python || true)"
 if [ -z "$PYTHON_BIN" ]; then
   RECOMMENDED_PYTHON_VERSION="${ANSWER_SHEET_PYTHON_VERSION:-3.11.8}"
-  CHOICE="$(osascript -e 'button returned of (display dialog "Python 3.10+ was not found.\n\nDownload and open the Python installer now? (Recommended: Python 3.11)\n\nSource: python.org" buttons {"Cancel","Download"} default button "Download" with icon caution)' 2>/dev/null || true)"
+  CHOICE="$(osascript -e 'button returned of (display dialog "Python 3.10 or 3.11 was not found.\n\nDownload and open the Python 3.11.8 installer now?" buttons {"Cancel","Download"} default button "Download" with icon caution)' 2>/dev/null || true)"
 
   if [ "$CHOICE" = "Download" ]; then
     PKG_URL="https://www.python.org/ftp/python/${RECOMMENDED_PYTHON_VERSION}/python-${RECOMMENDED_PYTHON_VERSION}-macos11.pkg"
@@ -27,15 +27,13 @@ if [ -z "$PYTHON_BIN" ]; then
         open "$PKG_PATH" >/dev/null 2>&1 || open "$PKG_URL" >/dev/null 2>&1 || true
         osascript -e 'display dialog "Python installer opened.\n\nAfter installation finishes, run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
       else
-        osascript -e 'display dialog "Downloaded installer signature could not be verified.\n\nWe will open python.org instead." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
-        open "https://www.python.org/downloads/" >/dev/null 2>&1 || true
+        osascript -e 'display dialog "Downloaded installer signature could not be verified.\n\nPlease use the Python 3.11.8 link in README.md." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
       fi
     else
-      osascript -e 'display dialog "Failed to download the Python installer.\n\nWe will open python.org instead." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
-      open "https://www.python.org/downloads/" >/dev/null 2>&1 || true
+      osascript -e 'display dialog "Failed to download the Python installer.\n\nPlease use the Python 3.11.8 link in README.md." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
     fi
   else
-    open "https://www.python.org/downloads/" >/dev/null 2>&1 || true
+    osascript -e 'display dialog "Please install Python 3.11.8 from the link in README.md, then run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
   fi
   exit 1
 fi

@@ -186,7 +186,7 @@ class _ProgressHandler(BaseHTTPRequestHandler):
           "Server is ready.": "伺服器已就緒！",
           "Server not reachable (see server.log).": "伺服器連線失敗",
           "Unexpected error": "發生未預期的錯誤",
-          "Python 3.10+ is required": "需要 Python 3.10 以上版本"
+          "Python 3.10 or 3.11 is required": "需要 Python 3.10 或 3.11"
         }};
         let timer = null;
         const poll = async () => {{
@@ -374,14 +374,14 @@ def _resolve_best_python() -> Optional[Path]:
     Attempts to find the best available Python executable for creating the venv.
     
     On Windows:
-      1. Tries to use the `py` launcher to find Python 3.11, 3.12, 3.13, or 3.10.
+      1. Tries to use the `py` launcher to find Python 3.11 or 3.10.
     
     On macOS/Linux:
-      1. Tries to find `python3.11`, `python3.12`, `python3.13`, or `python3.10` in PATH.
+      1. Tries to find `python3.11` or `python3.10` in PATH.
       
     Returns the absolute path to the executable if found, otherwise None.
     """
-    preferred_versions = ["3.11", "3.12", "3.13", "3.10"]
+    preferred_versions = ["3.11", "3.10"]
     
     if os.name == "nt":
         # Windows: Use `py` launcher if available
@@ -391,7 +391,7 @@ def _resolve_best_python() -> Optional[Path]:
         for ver in preferred_versions:
             try:
                 # Ask `py` for the executable path of a specific version
-                # -3.11, -3.12, etc.
+                # -3.11, -3.10, etc.
                 cmd = ["py", f"-{ver}", "-c", "import sys; print(sys.executable)"]
                 # We use subprocess directly here (not _run_logged) to just query quietly
                 # Prevent window popup with creationflags if possible, though 'py' usually handles it.
@@ -570,12 +570,12 @@ def main() -> None:
         pass
 
     try:
-        if sys.version_info < (3, 10):
-            _log("ERROR: Python 3.10+ is required to run the app.")
-            _set_progress("error", "Python 3.10+ is required. Please install Python 3.11 (recommended).")
+        if not ((3, 10) <= sys.version_info[:2] <= (3, 11)):
+            _log("ERROR: Python 3.10 or 3.11 is required to run the app.")
+            _set_progress("error", "Python 3.10 or 3.11 is required. Please install Python 3.11.8 (recommended).")
             if not CLI_PROGRESS:
                 time.sleep(8)
-            raise SystemExit("Answer Sheet Studio requires Python 3.10+.")
+            raise SystemExit("Answer Sheet Studio requires Python 3.10 or 3.11.")
         py = ensure_venv()
         ensure_requirements(py)
         start_server(py)

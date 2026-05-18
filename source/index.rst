@@ -23,7 +23,7 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 
 #. 下載 ZIP 並解壓縮。
 #. macOS：雙擊 ``start_mac.command``；Windows：雙擊 ``start_windows.vbs``。
-#. 若尚未安裝 Python，啟動器會提示下載/安裝官方 Python（依照畫面一路按確認即可）。
+#. 若尚未安裝 Python，啟動器會提示下載/安裝固定版本 Python 3.11.8。
 #. 安裝完成後再執行一次啟動器；瀏覽器會自動開啟 ``http://127.0.0.1:8000``。
 #. 在網頁裡先下載並列印「答案卡 PDF」（給學生填答）；需要批改/分析時再下載 ``answer_key.xlsx`` （老師答案檔）填入 ``correct/points``，到「上傳處理」上傳掃描 PDF + ``answer_key.xlsx``。
 
@@ -31,7 +31,10 @@ Answer Sheet Studio 讓老師可以產生可列印的答案卡，並在本機進
 ~~~~~~~~
 
 - macOS 13+ 或 Windows 11
-- Python 3.10+（建議 3.11；支援 3.10–3.13）。若尚未安裝 Python，啟動器可協助下載官方安裝程式。
+- Python 3.10 或 3.11（建議使用固定版本 3.11.8；不支援 3.12 以上）。若尚未安裝 Python，可直接下載官方 Python 3.11.8 安裝檔：
+  - macOS：`python-3.11.8-macos11.pkg <https://www.python.org/ftp/python/3.11.8/python-3.11.8-macos11.pkg>`_
+  - Windows 11：`python-3.11.8-amd64.exe <https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe>`_
+  - 上方連結會直接下載安裝檔，不需要進入英文版 Python 下載頁。
 - Windows 安裝 Python 時請勾選「Add python.exe to PATH」（並保留 ``py`` launcher）
 - 第一次安裝需要網路下載 Python 套件（FastAPI、PyMuPDF、OpenCV、NumPy 等）
 
@@ -99,7 +102,7 @@ Debug Mode（回報問題用）
 ~~~~~~~~
 
 - 若看到 ``ERR_CONNECTION_REFUSED`` /「127.0.0.1 拒絕連線」，請再雙擊啟動器（ ``start_mac.command`` / ``start_windows.vbs`` ）重新啟動。
-- **pip install failed** – 檢查 launcher log，確認有網路、Python 版本為 3.10+；若你是 Python 3.14，建議改用 3.10–3.13。
+- **pip install failed** – 檢查 launcher log，確認有網路、Python 版本為 3.10 或 3.11；若你是 Python 3.12 以上，請改用 Python 3.11.8。
 - **Port already in use / permission denied** – 啟動器會檢查 port；若 macOS 防火牆阻擋 Python，請到 System Settings > Network > Firewall 放行。
 - **Server not opening** – 先看 launcher log 找出錯誤；也可以在終端機執行 ``python run_app.py`` （需先在同一環境安裝 requirements）方便除錯。
 
@@ -128,7 +131,7 @@ Getting Started (recommended)
 
 #. Download and unzip the ZIP.
 #. macOS: double-click ``start_mac.command``; Windows: double-click ``start_windows.vbs``.
-#. If Python isn't installed yet, the launcher will guide you to download/install the official Python installer.
+#. If Python isn't installed yet, the launcher will guide you to download/install the fixed Python 3.11.8 installer.
 #. After installation finishes, run the launcher again; your browser opens ``http://127.0.0.1:8000``.
 #. In the web UI: download/print the answer sheet PDF first; when grading, download ``answer_key.xlsx`` (teacher answer key), fill ``correct/points``, then upload the scanned PDF + ``answer_key.xlsx`` on the Upload page.
 
@@ -136,7 +139,10 @@ Requirements
 ~~~~~~~~~~~~
 
 - macOS ≥ 13 or Windows 11
-- Python **3.10+** (3.11 recommended; 3.10–3.13 supported). If Python isn’t installed yet, the launcher can help download the official installer.
+- Python **3.10 or 3.11** (fixed version 3.11.8 recommended; 3.12+ is not supported). If Python isn’t installed yet, download the official Python 3.11.8 installer directly:
+  - macOS: `python-3.11.8-macos11.pkg <https://www.python.org/ftp/python/3.11.8/python-3.11.8-macos11.pkg>`_
+  - Windows 11: `python-3.11.8-amd64.exe <https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe>`_
+  - These links download the installer directly, without going through the Python downloads page.
 - On Windows, ensure “Add python.exe to PATH” during installation (and keep the ``py`` launcher enabled if offered).
 - Internet access the first time to download Python packages (FastAPI, PyMuPDF, OpenCV, NumPy, etc.).
 
@@ -147,14 +153,14 @@ macOS
 ^^^^^
 
 #. Double-click ``start_mac.command`` (or run ``chmod +x start_mac.command`` once if prompted).
-#. If Python isn’t installed, the launcher offers to download and open the installer (from python.org). After installation finishes, run ``start_mac.command`` again.
+#. If Python isn’t installed, the launcher offers to download and open the Python 3.11.8 installer. After installation finishes, run ``start_mac.command`` again.
 #. First run creates a virtual env and installs requirements; later runs reuse the existing env (unless requirements changed).
 #. Your browser opens ``http://127.0.0.1:8000``. Close the browser when you’re done; the server auto-exits after a period of inactivity.
 
 Windows 11
 ^^^^^^^^^^
 
-#. Double-click ``start_windows.vbs``. If Python isn’t installed, it will offer to download/install Python 3.11 automatically (recommended).
+#. Double-click ``start_windows.vbs``. If Python isn’t installed, it opens the direct Python 3.11.8 installer download link.
    - For a traditional “Next/Next/Finish” installer wizard (Setup.exe), see ``installer/windows/README.md``.
 #. If you install Python manually, check “Add python.exe to PATH” during installation (and keep the ``py`` launcher enabled if offered).
 #. First run installs requirements; later runs reuse the existing environment (unless requirements changed). If Windows Defender prompts for network access, allow it so the server can bind to localhost.
@@ -220,7 +226,7 @@ Troubleshooting
 ~~~~~~~~~~~~~~~
 
 - **ERR_CONNECTION_REFUSED / “127.0.0.1 refused to connect”** – Rerun the launcher (`start_mac.command` / `start_windows.vbs`) to start the local server again.
-- **pip install failed** – Check the launcher log; ensure network access and Python 3.10+. If you’re on Python 3.14, try Python 3.10–3.13.
+- **pip install failed** – Check the launcher log; ensure network access and Python 3.10 or 3.11. If you’re on Python 3.12+, use Python 3.11.8 instead.
 - **Port already in use / permission denied** – The launcher checks port availability.
 - **Server not opening** – Use the launcher log or run ``python run_app.py`` after installing requirements in the same environment for debugging.
 

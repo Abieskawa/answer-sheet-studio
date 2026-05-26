@@ -151,6 +151,33 @@ Next
 
 ' Fallback: Tell the user to install Python
 LogLine "No suitable Python 3.10 or 3.11 found."
-WshShell.Popup "Python 3.10 or 3.11 was not found. Python 3.12 or newer is not supported. The official Python 3.11.8 installer download will open next. After installing Python, run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 48
-WshShell.Run "https://www.python.org/ftp/python/3.11.8/python-3.11.8-amd64.exe", 1, False
+Dim recommendedPythonVersion
+recommendedPythonVersion = "3.11.8"
+Dim dlChoice
+dlChoice = WshShell.Popup("Python 3.10 or 3.11 was not found." & vbCrLf & vbCrLf & "Download and open the Python 3.11.8 installer now?", 0, "Answer Sheet Studio", 52)
+
+If dlChoice = 6 Then
+    Dim pkgUrl, pkgPath, dlResult
+    pkgUrl = "https://www.python.org/ftp/python/" & recommendedPythonVersion & "/python-" & recommendedPythonVersion & "-amd64.exe"
+    pkgPath = WshShell.ExpandEnvironmentStrings("%USERPROFILE%") & "\Downloads\answer_sheet_studio_python_" & recommendedPythonVersion & ".exe"
+    LogLine "Downloading Python installer to: " & pkgPath
+    dlResult = WshShell.Run("powershell -NoProfile -ExecutionPolicy Bypass -Command " & q & "try { (New-Object System.Net.WebClient).DownloadFile('" & pkgUrl & "', '" & pkgPath & "'); exit 0 } catch { exit 1 }" & q, 0, True)
+    If dlResult = 0 And fso.FileExists(pkgPath) Then
+        Dim sigResult
+        sigResult = WshShell.Run("powershell -NoProfile -ExecutionPolicy Bypass -Command " & q & "$s = Get-AuthenticodeSignature '" & pkgPath & "'; if ($s.Status -eq 'Valid' -and $s.SignerCertificate.Subject -like '*Python*') { exit 0 } else { exit 1 }" & q, 0, True)
+        If sigResult = 0 Then
+            LogLine "Signature verified. Opening installer."
+            WshShell.Run q & pkgPath & q, 1, False
+            WshShell.Popup "Python installer opened." & vbCrLf & vbCrLf & "After installation finishes, run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
+        Else
+            LogLine "Signature verification failed."
+            WshShell.Popup "Downloaded installer signature could not be verified." & vbCrLf & vbCrLf & "Please use the Python 3.11.8 link in README.md.", 0, "Answer Sheet Studio", 16
+        End If
+    Else
+        LogLine "Download failed (result=" & dlResult & ")."
+        WshShell.Popup "Failed to download the Python installer." & vbCrLf & vbCrLf & "Please use the Python 3.11.8 link in README.md.", 0, "Answer Sheet Studio", 16
+    End If
+Else
+    WshShell.Popup "Please install Python 3.11.8 from the link in README.md, then run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
+End If
 WScript.Quit 1

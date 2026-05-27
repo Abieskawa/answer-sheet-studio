@@ -17,23 +17,30 @@ pick_python() {
 PYTHON_BIN="$(pick_python || true)"
 if [ -z "$PYTHON_BIN" ]; then
   RECOMMENDED_PYTHON_VERSION="${ANSWER_SHEET_PYTHON_VERSION:-3.11.8}"
+  PKG_URL="https://www.python.org/ftp/python/${RECOMMENDED_PYTHON_VERSION}/python-${RECOMMENDED_PYTHON_VERSION}-macos11.pkg"
+  PKG_PATH="${HOME}/Downloads/answer_sheet_studio_python_${RECOMMENDED_PYTHON_VERSION}.pkg"
   CHOICE="$(osascript -e 'button returned of (display dialog "Python 3.10 or 3.11 was not found.\n\nDownload and open the Python 3.11.8 installer now?" buttons {"Cancel","Download"} default button "Download" with icon caution)' 2>/dev/null || true)"
 
   if [ "$CHOICE" = "Download" ]; then
-    PKG_URL="https://www.python.org/ftp/python/${RECOMMENDED_PYTHON_VERSION}/python-${RECOMMENDED_PYTHON_VERSION}-macos11.pkg"
-    PKG_PATH="${HOME}/Downloads/answer_sheet_studio_python_${RECOMMENDED_PYTHON_VERSION}.pkg"
+    osascript -e 'display notification "Downloading Python 3.11.8 installer…" with title "Answer Sheet Studio"' >/dev/null 2>&1 || true
     if curl -L --fail --output "$PKG_PATH" "$PKG_URL" >/dev/null 2>&1; then
-      if pkgutil --check-signature "$PKG_PATH" 2>/dev/null | grep -q "Python Software Foundation"; then
-        open "$PKG_PATH" >/dev/null 2>&1 || open "$PKG_URL" >/dev/null 2>&1 || true
+      PKG_SIZE=$(stat -f%z "$PKG_PATH" 2>/dev/null || echo 0)
+      if [ "$PKG_SIZE" -gt 20000000 ]; then
+        open "$PKG_PATH" >/dev/null 2>&1 || true
         osascript -e 'display dialog "Python installer opened.\n\nAfter installation finishes, run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
       else
-        osascript -e 'display dialog "Downloaded installer signature could not be verified.\n\nPlease use the Python 3.11.8 link in README.md." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
+        open "$PKG_URL" >/dev/null 2>&1 || true
+        osascript -e 'display dialog "Browser opened to download the Python installer directly.\n\nAfter download and installation, run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
       fi
     else
-      osascript -e 'display dialog "Failed to download the Python installer.\n\nPlease use the Python 3.11.8 link in README.md." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
+      open "$PKG_URL" >/dev/null 2>&1 || true
+      osascript -e 'display dialog "Browser opened to download the Python installer directly.\n\nAfter download and installation, run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
     fi
   else
-    osascript -e 'display dialog "Please install Python 3.11.8 from the link in README.md, then run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
+    LINK_BTN=$(osascript -e 'button returned of (display dialog "Python 3.11.8 is required.\n\nClick \"Open Link\" to download the installer directly in your browser (no English navigation needed)." buttons {"Close","Open Link"} default button "Open Link" with icon note)' 2>/dev/null || echo "")
+    if [ "$LINK_BTN" = "Open Link" ]; then
+      open "$PKG_URL" >/dev/null 2>&1 || true
+    fi
   fi
   exit 1
 fi

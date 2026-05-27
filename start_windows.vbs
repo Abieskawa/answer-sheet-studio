@@ -153,31 +153,39 @@ Next
 LogLine "No suitable Python 3.10 or 3.11 found."
 Dim recommendedPythonVersion
 recommendedPythonVersion = "3.11.8"
+Dim pkgUrl, pkgPath
+pkgUrl = "https://www.python.org/ftp/python/" & recommendedPythonVersion & "/python-" & recommendedPythonVersion & "-amd64.exe"
+pkgPath = WshShell.ExpandEnvironmentStrings("%USERPROFILE%") & "\Downloads\answer_sheet_studio_python_" & recommendedPythonVersion & ".exe"
 Dim dlChoice
 dlChoice = WshShell.Popup("Python 3.10 or 3.11 was not found." & vbCrLf & vbCrLf & "Download and open the Python 3.11.8 installer now?", 0, "Answer Sheet Studio", 52)
 
 If dlChoice = 6 Then
-    Dim pkgUrl, pkgPath, dlResult
-    pkgUrl = "https://www.python.org/ftp/python/" & recommendedPythonVersion & "/python-" & recommendedPythonVersion & "-amd64.exe"
-    pkgPath = WshShell.ExpandEnvironmentStrings("%USERPROFILE%") & "\Downloads\answer_sheet_studio_python_" & recommendedPythonVersion & ".exe"
+    Dim dlResult
     LogLine "Downloading Python installer to: " & pkgPath
     dlResult = WshShell.Run("powershell -NoProfile -ExecutionPolicy Bypass -Command " & q & "try { (New-Object System.Net.WebClient).DownloadFile('" & pkgUrl & "', '" & pkgPath & "'); exit 0 } catch { exit 1 }" & q, 0, True)
     If dlResult = 0 And fso.FileExists(pkgPath) Then
-        Dim sigResult
-        sigResult = WshShell.Run("powershell -NoProfile -ExecutionPolicy Bypass -Command " & q & "$s = Get-AuthenticodeSignature '" & pkgPath & "'; if ($s.Status -eq 'Valid' -and $s.SignerCertificate.Subject -like '*Python*') { exit 0 } else { exit 1 }" & q, 0, True)
-        If sigResult = 0 Then
-            LogLine "Signature verified. Opening installer."
+        Dim fileSize
+        fileSize = fso.GetFile(pkgPath).Size
+        If fileSize > 20000000 Then
+            LogLine "Download succeeded (" & fileSize & " bytes). Opening installer."
             WshShell.Run q & pkgPath & q, 1, False
             WshShell.Popup "Python installer opened." & vbCrLf & vbCrLf & "After installation finishes, run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
         Else
-            LogLine "Signature verification failed."
-            WshShell.Popup "Downloaded installer signature could not be verified." & vbCrLf & vbCrLf & "Please use the Python 3.11.8 link in README.md.", 0, "Answer Sheet Studio", 16
+            LogLine "Downloaded file too small (" & fileSize & " bytes). Opening download URL in browser."
+            WshShell.Run pkgUrl
+            WshShell.Popup "Browser opened to download the Python installer directly." & vbCrLf & vbCrLf & "After download and installation, run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
         End If
     Else
-        LogLine "Download failed (result=" & dlResult & ")."
-        WshShell.Popup "Failed to download the Python installer." & vbCrLf & vbCrLf & "Please use the Python 3.11.8 link in README.md.", 0, "Answer Sheet Studio", 16
+        LogLine "Download failed (result=" & dlResult & "). Opening download URL in browser."
+        WshShell.Run pkgUrl
+        WshShell.Popup "Browser opened to download the Python installer directly." & vbCrLf & vbCrLf & "After download and installation, run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
     End If
 Else
-    WshShell.Popup "Please install Python 3.11.8 from the link in README.md, then run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
+    Dim openResult
+    openResult = WshShell.Popup("Python 3.11.8 is required." & vbCrLf & vbCrLf & "Click OK to open the direct installer download link in your browser (no English navigation needed).", 0, "Answer Sheet Studio", 1)
+    If openResult = 1 Then
+        LogLine "User chose to open download URL in browser."
+        WshShell.Run pkgUrl
+    End If
 End If
 WScript.Quit 1

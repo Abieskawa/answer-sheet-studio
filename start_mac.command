@@ -19,26 +19,26 @@ if [ -z "$PYTHON_BIN" ]; then
   RECOMMENDED_PYTHON_VERSION="${ANSWER_SHEET_PYTHON_VERSION:-3.11.8}"
   PKG_URL="https://www.python.org/ftp/python/${RECOMMENDED_PYTHON_VERSION}/python-${RECOMMENDED_PYTHON_VERSION}-macos11.pkg"
   PKG_PATH="${HOME}/Downloads/answer_sheet_studio_python_${RECOMMENDED_PYTHON_VERSION}.pkg"
-  CHOICE="$(osascript -e 'button returned of (display dialog "Python 3.10 or 3.11 was not found.\n\nDownload and open the Python 3.11.8 installer now?" buttons {"Cancel","Download"} default button "Download" with icon caution)' 2>/dev/null || true)"
+  CHOICE="$(osascript -e 'button returned of (display dialog "未偵測到系統安裝 Python 3.10 或 3.11。\n\n是否立即下載並開啟 Python 3.11.8 安裝程式？" buttons {"取消","下載"} default button "下載" with icon caution)' 2>/dev/null || true)"
 
-  if [ "$CHOICE" = "Download" ]; then
-    osascript -e 'display notification "Downloading Python 3.11.8 installer…" with title "Answer Sheet Studio"' >/dev/null 2>&1 || true
+  if [ "$CHOICE" = "下載" ]; then
+    osascript -e 'display notification "正在下載 Python 3.11.8 安裝程式…" with title "Answer Sheet Studio"' >/dev/null 2>&1 || true
     if curl -L --fail --output "$PKG_PATH" "$PKG_URL" >/dev/null 2>&1; then
       PKG_SIZE=$(stat -f%z "$PKG_PATH" 2>/dev/null || echo 0)
       if [ "$PKG_SIZE" -gt 20000000 ]; then
         open "$PKG_PATH" >/dev/null 2>&1 || true
-        osascript -e 'display dialog "Python installer opened.\n\nAfter installation finishes, run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
+        osascript -e 'display dialog "Python 安裝程式已下載並開啟。\n\n請於安裝完成後，再次執行 Answer Sheet Studio。" buttons {"確定"} with icon note' >/dev/null 2>&1 || true
       else
         open "$PKG_URL" >/dev/null 2>&1 || true
-        osascript -e 'display dialog "Browser opened to download the Python installer directly.\n\nAfter download and installation, run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
+        osascript -e 'display dialog "已開啟瀏覽器直接進行 Python 安裝檔下載。\n\n請於下載並安裝完成後，再次執行 Answer Sheet Studio。" buttons {"確定"} with icon note' >/dev/null 2>&1 || true
       fi
     else
       open "$PKG_URL" >/dev/null 2>&1 || true
-      osascript -e 'display dialog "Browser opened to download the Python installer directly.\n\nAfter download and installation, run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
+      osascript -e 'display dialog "已開啟瀏覽器直接進行 Python 安裝檔下載。\n\n請於下載並安裝完成後，再次執行 Answer Sheet Studio。" buttons {"確定"} with icon note' >/dev/null 2>&1 || true
     fi
   else
-    LINK_BTN=$(osascript -e 'button returned of (display dialog "Python 3.11.8 is required.\n\nClick \"Open Link\" to download the installer directly in your browser (no English navigation needed)." buttons {"Close","Open Link"} default button "Open Link" with icon note)' 2>/dev/null || echo "")
-    if [ "$LINK_BTN" = "Open Link" ]; then
+    LINK_BTN=$(osascript -e 'button returned of (display dialog "此程式需要安裝 Python 3.11.8 才能執行。\n\n點擊「開啟連結」可直接在瀏覽器下載安裝檔（無需閱讀英文官方網頁）。" buttons {"關閉","開啟連結"} default button "開啟連結" with icon note)' 2>/dev/null || echo "")
+    if [ "$LINK_BTN" = "開啟連結" ]; then
       open "$PKG_URL" >/dev/null 2>&1 || true
     fi
   fi

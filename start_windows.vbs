@@ -157,7 +157,7 @@ Dim pkgUrl, pkgPath
 pkgUrl = "https://www.python.org/ftp/python/" & recommendedPythonVersion & "/python-" & recommendedPythonVersion & "-amd64.exe"
 pkgPath = WshShell.ExpandEnvironmentStrings("%USERPROFILE%") & "\Downloads\answer_sheet_studio_python_" & recommendedPythonVersion & ".exe"
 Dim dlChoice
-dlChoice = WshShell.Popup("Python 3.10 or 3.11 was not found." & vbCrLf & vbCrLf & "Download and open the Python 3.11.8 installer now?", 0, "Answer Sheet Studio", 52)
+dlChoice = WshShell.Popup("未偵測到系統安裝 Python 3.10 或 3.11。" & vbCrLf & vbCrLf & "是否立即下載並開啟 Python 3.11.8 安裝程式？", 0, "Answer Sheet Studio", 52)
 
 If dlChoice = 6 Then
     Dim dlResult
@@ -169,20 +169,20 @@ If dlChoice = 6 Then
         If fileSize > 20000000 Then
             LogLine "Download succeeded (" & fileSize & " bytes). Opening installer."
             WshShell.Run q & pkgPath & q, 1, False
-            WshShell.Popup "Python installer opened." & vbCrLf & vbCrLf & "After installation finishes, run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
+            WshShell.Popup "Python 安裝程式已下載並開啟。" & vbCrLf & vbCrLf & "請於安裝完成後，再次執行 Answer Sheet Studio。", 0, "Answer Sheet Studio", 64
         Else
             LogLine "Downloaded file too small (" & fileSize & " bytes). Opening download URL in browser."
             WshShell.Run pkgUrl
-            WshShell.Popup "Browser opened to download the Python installer directly." & vbCrLf & vbCrLf & "After download and installation, run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
+            WshShell.Popup "已開啟瀏覽器直接進行 Python 安裝檔下載。" & vbCrLf & vbCrLf & "請於下載並安裝完成後，再次執行 Answer Sheet Studio。", 0, "Answer Sheet Studio", 64
         End If
     Else
         LogLine "Download failed (result=" & dlResult & "). Opening download URL in browser."
         WshShell.Run pkgUrl
-        WshShell.Popup "Browser opened to download the Python installer directly." & vbCrLf & vbCrLf & "After download and installation, run Answer Sheet Studio again.", 0, "Answer Sheet Studio", 64
+        WshShell.Popup "已開啟瀏覽器直接進行 Python 安裝檔下載。" & vbCrLf & vbCrLf & "請於下載並安裝完成後，再次執行 Answer Sheet Studio。", 0, "Answer Sheet Studio", 64
     End If
 Else
     Dim openResult
-    openResult = WshShell.Popup("Python 3.11.8 is required." & vbCrLf & vbCrLf & "Click OK to open the direct installer download link in your browser (no English navigation needed).", 0, "Answer Sheet Studio", 1)
+    openResult = WshShell.Popup("此程式需要安裝 Python 3.11.8 才能執行。" & vbCrLf & vbCrLf & "點擊「確定」可直接在瀏覽器下載安裝檔（無需閱讀英文官方網頁）。", 0, "Answer Sheet Studio", 1)
     If openResult = 1 Then
         LogLine "User chose to open download URL in browser."
         WshShell.Run pkgUrl

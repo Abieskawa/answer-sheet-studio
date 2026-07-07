@@ -313,7 +313,9 @@ def _venv_dir() -> Path:
         req_sha = _sha256_file(REQ_PATH) if REQ_PATH.exists() else "default"
     except Exception:
         req_sha = "default"
-    return root / req_sha[:12]
+    # Include Python major/minor version to isolate venvs of different Python versions
+    py_ver = f"py{sys.version_info.major}{sys.version_info.minor}"
+    return root / f"{py_ver}_{req_sha[:12]}"
 
 
 def _marker_path() -> Path:
@@ -429,12 +431,40 @@ def _resolve_best_python() -> Optional[Path]:
     return None
 
 
+def is_python_runnable(py_path: Path) -> bool:
+    if not py_path.exists():
+        return False
+    try:
+        kwargs = {}
+        if os.name == "nt":
+            # Prevent command window flashing on Windows
+            kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        res = subprocess.run(
+            [str(py_path), "-c", "import sys; sys.exit(0)"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            **kwargs
+        )
+        return res.returncode == 0
+    except Exception:
+        return False
+
+
 def ensure_venv() -> Path:
     py = _venv_python()
     if py.exists():
-        _set_progress("venv", "Virtual environment already exists.")
-        _wizard_pause("Virtual environment is ready.")
-        return py
+        if is_python_runnable(py):
+            _set_progress("venv", "Virtual environment already exists.")
+            _wizard_pause("Virtual environment is ready.")
+            return py
+        else:
+            _log("Virtual environment exists but Python executable is not runnable (possibly due to missing base Python). Recreating...")
+            try:
+                import shutil
+                shutil.rmtree(_venv_dir(), ignore_errors=True)
+            except Exception as e:
+                _log(f"Failed to delete broken venv directory: {e}")
 
     _set_progress("venv", "Creating virtual environment…")
     _log("Creating .venv ...")
@@ -453,7 +483,7 @@ def ensure_venv() -> Path:
         _log(f"Using current python for venv creation: {creator_python}")
 
     rc = _run_logged([str(creator_python), "-m", "venv", str(venv_dir)])
-    if rc != 0 or not py.exists():
+    if rc != 0 or not py.exists() or not is_python_runnable(py):
         _set_progress("error", "Failed to create venv (see launcher.log).")
         raise SystemExit(f"Failed to create venv. See {LAUNCHER_LOG}")
     _wizard_pause("Virtual environment created.")

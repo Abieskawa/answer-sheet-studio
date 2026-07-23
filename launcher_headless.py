@@ -186,7 +186,7 @@ class _ProgressHandler(BaseHTTPRequestHandler):
           "Server is ready.": "伺服器已就緒！",
           "Server not reachable (see server.log).": "伺服器連線失敗",
           "Unexpected error": "發生未預期的錯誤",
-          "Python 3.10+ is required": "需要 Python 3.10 以上版本"
+          "Python 3.10 or 3.11 is required": "需要 Python 3.10 或 3.11"
         }};
         let timer = null;
         const poll = async () => {{
@@ -313,7 +313,9 @@ def _venv_dir() -> Path:
         req_sha = _sha256_file(REQ_PATH) if REQ_PATH.exists() else "default"
     except Exception:
         req_sha = "default"
-    return root / req_sha[:12]
+    # Include Python major/minor version to isolate venvs of different Python versions
+    py_ver = f"py{sys.version_info.major}{sys.version_info.minor}"
+    return root / f"{py_ver}_{req_sha[:12]}"
 
 
 def _marker_path() -> Path:
@@ -374,14 +376,14 @@ def _resolve_best_python() -> Optional[Path]:
     Attempts to find the best available Python executable for creating the venv.
     
     On Windows:
-      1. Tries to use the `py` launcher to find Python 3.11, 3.12, 3.13, or 3.10.
+      1. Tries to use the `py` launcher to find Python 3.11 or 3.10.
     
     On macOS/Linux:
-      1. Tries to find `python3.11`, `python3.12`, `python3.13`, or `python3.10` in PATH.
+      1. Tries to find `python3.11` or `python3.10` in PATH.
       
     Returns the absolute path to the executable if found, otherwise None.
     """
-    preferred_versions = ["3.11", "3.12", "3.13", "3.10"]
+    preferred_versions = ["3.11", "3.10"]
     
     if os.name == "nt":
         # Windows: Use `py` launcher if available
@@ -391,7 +393,7 @@ def _resolve_best_python() -> Optional[Path]:
         for ver in preferred_versions:
             try:
                 # Ask `py` for the executable path of a specific version
-                # -3.11, -3.12, etc.
+                # -3.11, -3.10, etc.
                 cmd = ["py", f"-{ver}", "-c", "import sys; print(sys.executable)"]
                 # We use subprocess directly here (not _run_logged) to just query quietly
                 # Prevent window popup with creationflags if possible, though 'py' usually handles it.
@@ -429,12 +431,40 @@ def _resolve_best_python() -> Optional[Path]:
     return None
 
 
+def is_python_runnable(py_path: Path) -> bool:
+    if not py_path.exists():
+        return False
+    try:
+        kwargs = {}
+        if os.name == "nt":
+            # Prevent command window flashing on Windows
+            kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        res = subprocess.run(
+            [str(py_path), "-c", "import sys; sys.exit(0)"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            **kwargs
+        )
+        return res.returncode == 0
+    except Exception:
+        return False
+
+
 def ensure_venv() -> Path:
     py = _venv_python()
     if py.exists():
-        _set_progress("venv", "Virtual environment already exists.")
-        _wizard_pause("Virtual environment is ready.")
-        return py
+        if is_python_runnable(py):
+            _set_progress("venv", "Virtual environment already exists.")
+            _wizard_pause("Virtual environment is ready.")
+            return py
+        else:
+            _log("Virtual environment exists but Python executable is not runnable (possibly due to missing base Python). Recreating...")
+            try:
+                import shutil
+                shutil.rmtree(_venv_dir(), ignore_errors=True)
+            except Exception as e:
+                _log(f"Failed to delete broken venv directory: {e}")
 
     _set_progress("venv", "Creating virtual environment…")
     _log("Creating .venv ...")
@@ -453,7 +483,7 @@ def ensure_venv() -> Path:
         _log(f"Using current python for venv creation: {creator_python}")
 
     rc = _run_logged([str(creator_python), "-m", "venv", str(venv_dir)])
-    if rc != 0 or not py.exists():
+    if rc != 0 or not py.exists() or not is_python_runnable(py):
         _set_progress("error", "Failed to create venv (see launcher.log).")
         raise SystemExit(f"Failed to create venv. See {LAUNCHER_LOG}")
     _wizard_pause("Virtual environment created.")
@@ -570,12 +600,12 @@ def main() -> None:
         pass
 
     try:
-        if sys.version_info < (3, 10):
-            _log("ERROR: Python 3.10+ is required to run the app.")
-            _set_progress("error", "Python 3.10+ is required. Please install Python 3.11 (recommended).")
+        if not ((3, 10) <= sys.version_info[:2] <= (3, 11)):
+            _log("ERROR: Python 3.10 or 3.11 is required to run the app.")
+            _set_progress("error", "Python 3.10 or 3.11 is required. Please install Python 3.11.8 (recommended).")
             if not CLI_PROGRESS:
                 time.sleep(8)
-            raise SystemExit("Answer Sheet Studio requires Python 3.10+.")
+            raise SystemExit("Answer Sheet Studio requires Python 3.10 or 3.11.")
         py = ensure_venv()
         ensure_requirements(py)
         start_server(py)

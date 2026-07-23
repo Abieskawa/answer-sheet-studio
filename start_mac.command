@@ -3,9 +3,9 @@ cd "$(dirname "$0")"
 
 pick_python() {
   local candidate
-  for candidate in python3.10 python3.11 python3.12 python3.13 python3; do
+  for candidate in python3.11 python3.10 python3; do
     if command -v "$candidate" >/dev/null 2>&1; then
-      if "$candidate" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
+      if "$candidate" -c 'import sys; raise SystemExit(0 if (3, 10) <= sys.version_info[:2] <= (3, 11) else 1)' >/dev/null 2>&1; then
         echo "$candidate"
         return 0
       fi
@@ -17,25 +17,30 @@ pick_python() {
 PYTHON_BIN="$(pick_python || true)"
 if [ -z "$PYTHON_BIN" ]; then
   RECOMMENDED_PYTHON_VERSION="${ANSWER_SHEET_PYTHON_VERSION:-3.11.8}"
-  CHOICE="$(osascript -e 'button returned of (display dialog "Python 3.10+ was not found.\n\nDownload and open the Python installer now? (Recommended: Python 3.11)\n\nSource: python.org" buttons {"Cancel","Download"} default button "Download" with icon caution)' 2>/dev/null || true)"
+  PKG_URL="https://www.python.org/ftp/python/${RECOMMENDED_PYTHON_VERSION}/python-${RECOMMENDED_PYTHON_VERSION}-macos11.pkg"
+  PKG_PATH="${HOME}/Downloads/answer_sheet_studio_python_${RECOMMENDED_PYTHON_VERSION}.pkg"
+  CHOICE="$(osascript -e 'button returned of (display dialog "未偵測到系統安裝 Python 3.10 或 3.11。\n\n是否立即下載並開啟 Python 3.11.8 安裝程式？" buttons {"取消","下載"} default button "下載" with icon caution)' 2>/dev/null || true)"
 
-  if [ "$CHOICE" = "Download" ]; then
-    PKG_URL="https://www.python.org/ftp/python/${RECOMMENDED_PYTHON_VERSION}/python-${RECOMMENDED_PYTHON_VERSION}-macos11.pkg"
-    PKG_PATH="${HOME}/Downloads/answer_sheet_studio_python_${RECOMMENDED_PYTHON_VERSION}.pkg"
+  if [ "$CHOICE" = "下載" ]; then
+    osascript -e 'display notification "正在下載 Python 3.11.8 安裝程式…" with title "Answer Sheet Studio"' >/dev/null 2>&1 || true
     if curl -L --fail --output "$PKG_PATH" "$PKG_URL" >/dev/null 2>&1; then
-      if pkgutil --check-signature "$PKG_PATH" 2>/dev/null | grep -q "Python Software Foundation"; then
-        open "$PKG_PATH" >/dev/null 2>&1 || open "$PKG_URL" >/dev/null 2>&1 || true
-        osascript -e 'display dialog "Python installer opened.\n\nAfter installation finishes, run Answer Sheet Studio again." buttons {"OK"} with icon note' >/dev/null 2>&1 || true
+      PKG_SIZE=$(stat -f%z "$PKG_PATH" 2>/dev/null || echo 0)
+      if [ "$PKG_SIZE" -gt 20000000 ]; then
+        open "$PKG_PATH" >/dev/null 2>&1 || true
+        osascript -e 'display dialog "Python 安裝程式已下載並開啟。\n\n請於安裝完成後，再次執行 Answer Sheet Studio。" buttons {"確定"} with icon note' >/dev/null 2>&1 || true
       else
-        osascript -e 'display dialog "Downloaded installer signature could not be verified.\n\nWe will open python.org instead." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
-        open "https://www.python.org/downloads/" >/dev/null 2>&1 || true
+        open "$PKG_URL" >/dev/null 2>&1 || true
+        osascript -e 'display dialog "已開啟瀏覽器直接進行 Python 安裝檔下載。\n\n請於下載並安裝完成後，再次執行 Answer Sheet Studio。" buttons {"確定"} with icon note' >/dev/null 2>&1 || true
       fi
     else
-      osascript -e 'display dialog "Failed to download the Python installer.\n\nWe will open python.org instead." buttons {"OK"} with icon stop' >/dev/null 2>&1 || true
-      open "https://www.python.org/downloads/" >/dev/null 2>&1 || true
+      open "$PKG_URL" >/dev/null 2>&1 || true
+      osascript -e 'display dialog "已開啟瀏覽器直接進行 Python 安裝檔下載。\n\n請於下載並安裝完成後，再次執行 Answer Sheet Studio。" buttons {"確定"} with icon note' >/dev/null 2>&1 || true
     fi
   else
-    open "https://www.python.org/downloads/" >/dev/null 2>&1 || true
+    LINK_BTN=$(osascript -e 'button returned of (display dialog "此程式需要安裝 Python 3.11.8 才能執行。\n\n點擊「開啟連結」可直接在瀏覽器下載安裝檔（無需閱讀英文官方網頁）。" buttons {"關閉","開啟連結"} default button "開啟連結" with icon note)' 2>/dev/null || echo "")
+    if [ "$LINK_BTN" = "開啟連結" ]; then
+      open "$PKG_URL" >/dev/null 2>&1 || true
+    fi
   fi
   exit 1
 fi

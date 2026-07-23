@@ -25,4 +25,4 @@ Name: "{commondesktop}\Answer Sheet Studio"; Filename: "{app}\start_windows.vbs"
 Name: "desktopicon"; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:"; Flags: unchecked
 
 [Run]
-Filename: "{app}\start_windows.vbs"; Description: "Launch Answer Sheet Studio"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\start_windows.vbs"; Description: "Launch Answer Sheet Studio"; Flags: shellexec nowait postinstall skipifsilent

@@ -32,6 +32,16 @@ Function ReadTextFile(path)
     ReadTextFile = Trim(CStr(t))
 End Function
 
+Function U(h)
+    Dim i, s, val
+    s = ""
+    For i = 1 To Len(h) Step 4
+        val = CLng("&H" & Mid(h, i, 4))
+        s = s & ChrW(val)
+    Next
+    U = s
+End Function
+
 Function IsPortOpen(port)
     On Error Resume Next
     Dim result
@@ -119,7 +129,7 @@ If IsPortOpen(8000) Then
 End If
 
 ' 2. Find a suitable Python and launch
-probe = " -c " & q & "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" & q
+probe = " -c " & q & "import sys; raise SystemExit(0 if (3, 10) <= sys.version_info[:2] <= (3, 11) else 1)" & q
 
 ' Priority 1: Generic pythonw (often the most direct path)
 If CanRun("pythonw" & probe) Then
@@ -140,7 +150,7 @@ If CanRun("py -3w" & probe) Then
 End If
 
 ' Priority 4: Specific versions
-pyVers = Array("3.11", "3.10", "3.12")
+pyVers = Array("3.11", "3.10")
 For Each v In pyVers
     cmd = "pyw -" & v
     If CanRun(cmd & probe) Then
@@ -150,7 +160,42 @@ For Each v In pyVers
 Next
 
 ' Fallback: Tell the user to install Python
-LogLine "No suitable Python 3.10+ found."
-WshShell.Popup "Python 3.10+ was not found. Please install Python 3.11 or later from python.org.", 0, "Answer Sheet Studio", 48
-WshShell.Run "https://www.python.org/downloads/windows/", 1, False
+LogLine "No suitable Python 3.10 or 3.11 found."
+Dim recommendedPythonVersion
+recommendedPythonVersion = "3.11.8"
+Dim pkgUrl, pkgPath
+pkgUrl = "https://www.python.org/ftp/python/" & recommendedPythonVersion & "/python-" & recommendedPythonVersion & "-amd64.exe"
+pkgPath = WshShell.ExpandEnvironmentStrings("%USERPROFILE%") & "\Downloads\answer_sheet_studio_python_" & recommendedPythonVersion & ".exe"
+Dim dlChoice
+dlChoice = WshShell.Popup(U("672A50756E2C52307CFB7D715B8988DD00200050007900740068006F006E00200033002E003100300020621600200033002E003100313002") & vbCrLf & vbCrLf & U("662F54267ACB53734E0B8F094E26958B555F00200050007900740068006F006E00200033002E00310031002E003800205B8988DD7A0B5F0FFF1F"), 0, "Answer Sheet Studio", 52)
+
+If dlChoice = 6 Then
+    Dim dlResult
+    LogLine "Downloading Python installer to: " & pkgPath
+    dlResult = WshShell.Run("powershell -NoProfile -ExecutionPolicy Bypass -Command " & q & "try { (New-Object System.Net.WebClient).DownloadFile('" & pkgUrl & "', '" & pkgPath & "'); exit 0 } catch { exit 1 }" & q, 0, True)
+    If dlResult = 0 And fso.FileExists(pkgPath) Then
+        Dim fileSize
+        fileSize = fso.GetFile(pkgPath).Size
+        If fileSize > 20000000 Then
+            LogLine "Download succeeded (" & fileSize & " bytes). Opening installer."
+            WshShell.Run q & pkgPath & q, 1, False
+            WshShell.Popup U("0050007900740068006F006E00205B8988DD7A0B5F0F5DF24E0B8F094E26958B555F3002") & vbCrLf & vbCrLf & U("8ACB65BC5B8988DD5B8C62105F8CFF0C518D6B2157F7884C00200041006E0073007700650072002000530068006500650074002000530074007500640069006F3002"), 0, "Answer Sheet Studio", 64
+        Else
+            LogLine "Downloaded file too small (" & fileSize & " bytes). Opening download URL in browser."
+            WshShell.Run pkgUrl
+            WshShell.Popup U("5DF2958B555F700F89BD566876F463A59032884C00200050007900740068006F006E00205B8988DD6A944E0B8F093002") & vbCrLf & vbCrLf & U("8ACB65BC5B8988DD5B8C62105F8CFF0C518D6B2157F7884C00200041006E0073007700650072002000530068006500650074002000530074007500640069006F3002"), 0, "Answer Sheet Studio", 64
+        End If
+    Else
+        LogLine "Download failed (result=" & dlResult & "). Opening download URL in browser."
+        WshShell.Run pkgUrl
+        WshShell.Popup U("5DF2958B555F700F89BD566876F463A59032884C00200050007900740068006F006E00205B8988DD6A944E0B8F093002") & vbCrLf & vbCrLf & U("8ACB65BC5B8988DD5B8C62105F8CFF0C518D6B2157F7884C00200041006E0073007700650072002000530068006500650074002000530074007500640069006F3002"), 0, "Answer Sheet Studio", 64
+    End If
+Else
+    Dim openResult
+    openResult = WshShell.Popup(U("6B647A0B5F0F970089815B8988DD00200050007900740068006F006E00200033002E00310031002E00380020624D80FD57F7884C3002") & vbCrLf & vbCrLf & U("9EDE64CA300C78BA5B9A300D53EF76F463A55728700F89BD56684E0B8F095B8988DD6A94FF087121970095B18B8082F165875B9865B97DB29801FF093002"), 0, "Answer Sheet Studio", 1)
+    If openResult = 1 Then
+        LogLine "User chose to open download URL in browser."
+        WshShell.Run pkgUrl
+    End If
+End If
 WScript.Quit 1

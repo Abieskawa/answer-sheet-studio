@@ -1,0 +1,2596 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Answer Sheet Studio - 試題分析與圖表結果</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script async src="https://docs.opencv.org/4.8.0/opencv.js"></script>
+  <script src="./app/static/js/omr_engine.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+    }
+
+    body {
+      margin: 0;
+      background: #fff;
+      color: #111827;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px 18px 40px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      font-weight: 700;
+      letter-spacing: 0.4px;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav a {
+      color: #6b7280;
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    .nav a:hover {
+      color: #111827;
+      text-decoration: underline;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+
+    .meta {
+      margin: 0 0 18px;
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    .meta code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 12px 0 18px;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      text-decoration: none;
+      color: #111827;
+      background: #fff;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .btn:hover {
+      background: #f9fafb;
+    }
+
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+      margin-bottom: 14px;
+    }
+
+    .hint {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .class-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 8px 0 10px;
+    }
+
+    .tab {
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .tab[aria-selected="true"] {
+      border-color: #0ea5e9;
+      background: #eff6ff;
+      font-weight: 600;
+      color: #0284c7;
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin: 10px 0;
+    }
+
+    .ctrl {
+      padding: 7px 10px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      font-size: 13px;
+      color: #111827;
+    }
+
+    .ctrl:focus {
+      outline: 2px solid #93c5fd;
+      outline-offset: 1px;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      font-size: 13px;
+      color: #374151;
+      user-select: none;
+      cursor: pointer;
+    }
+
+    .toggle input {
+      accent-color: #0ea5e9;
+    }
+
+    .controls .spacer {
+      flex: 1;
+    }
+
+    .focus-panel {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 10px;
+      background: #f9fafb;
+      display: grid;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .focus-line {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      font-size: 13px;
+      color: #374151;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      font-weight: 600;
+    }
+
+    .kv {
+      display: inline-flex;
+      gap: 6px;
+      align-items: baseline;
+    }
+
+    .k {
+      color: #6b7280;
+    }
+
+    .v {
+      color: #111827;
+      font-weight: 600;
+    }
+
+    .status {
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      font-weight: 700;
+    }
+
+    .status.correct {
+      background: #dcfce7;
+      border-color: #bbf7d0;
+      color: #166534;
+    }
+
+    .status.partial {
+      background: #fef3c7;
+      border-color: #fde68a;
+      color: #b45309;
+    }
+
+    .status.wrong {
+      background: #fee2e2;
+      border-color: #fecaca;
+      color: #991b1b;
+    }
+
+    .status.blank {
+      background: #f3f4f6;
+      border-color: #e5e7eb;
+      color: #6b7280;
+    }
+
+    .grid-wrap {
+      overflow: auto;
+      max-height: 520px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+    }
+
+    table.matrix {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    table.matrix th,
+    table.matrix td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #eef2f7;
+      border-right: 1px solid #eef2f7;
+      text-align: center;
+    }
+
+    table.matrix th.sticky-left,
+    table.matrix td.sticky-left {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background: #fff;
+      text-align: left;
+    }
+
+    table.matrix thead th {
+      background: #f9fafb;
+      position: sticky;
+      z-index: 2;
+    }
+
+    table.matrix thead tr:nth-child(1) th {
+      top: 0;
+    }
+
+    table.matrix thead tr:nth-child(2) th {
+      top: 30px;
+    }
+
+    table.matrix thead th.sticky-left {
+      z-index: 5;
+    }
+
+    table.matrix td.wrong {
+      background: #fee2e2;
+      color: #991b1b;
+      font-weight: 600;
+    }
+
+    table.matrix td.partial {
+      background: #fef3c7;
+      color: #b45309;
+      font-weight: 600;
+    }
+
+    table.matrix td.correct {
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 600;
+    }
+
+    table.matrix td.correct.hidden-correct {
+      background: #f9fafb;
+      color: #9ca3af;
+      font-weight: 400;
+    }
+
+    table.matrix td.blank {
+      background: #f3f4f6;
+      color: #6b7280;
+      font-weight: 600;
+    }
+
+    table.matrix .col-highlight {
+      outline: 2px solid #f59e0b;
+      outline-offset: -2px;
+    }
+
+    table.matrix tr.row-highlight td,
+    table.matrix tr.row-highlight th {
+      background: #eff6ff !important;
+    }
+
+    .chart-tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 12px 0 8px;
+      align-items: center;
+    }
+
+    .chart-btn {
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      color: #374151;
+    }
+
+    .chart-btn[aria-selected="true"] {
+      border-color: #0ea5e9;
+      background: #eff6ff;
+      font-weight: 600;
+      color: #0284c7;
+    }
+
+    .chart-tabs .spacer {
+      flex: 1;
+    }
+
+    .chart-nav {
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      color: #111827;
+    }
+
+    .chart-nav:hover {
+      background: #f9fafb;
+    }
+
+    .chart-wrap {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+      position: relative;
+      margin-top: 6px;
+    }
+
+    canvas.chart {
+      width: 100%;
+      height: 360px;
+      display: block;
+    }
+
+    canvas.chart[hidden] {
+      display: none;
+    }
+
+    .chart-tooltip {
+      position: absolute;
+      background: rgba(17, 24, 39, 0.94);
+      color: #fff;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      pointer-events: none;
+      max-width: 80%;
+      line-height: 1.4;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      z-index: 10;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: #f9fafb;
+      z-index: 1;
+      border-bottom: 1px solid #d1d5db;
+    }
+
+    .plots {
+      display: grid;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .footer {
+      margin-top: 24px;
+      color: #6b7280;
+      font-size: 12px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header class="header">
+      <div class="brand">Answer Sheet Studio</div>
+      <nav class="nav">
+        <div class="nav-links">
+          <a href="./雙擊開啟_免安裝掃描讀卡程式.html">下載答案卡</a>
+          <a href="./雙擊開啟_免安裝掃描讀卡程式.html">上傳處理</a>
+        </div>
+      </nav>
+    </header>
+    <h1>圖表</h1>
+    <p class="meta">檔案：<code id="display-filename">input.pdf</code> · Job ID：<code id="display-job-id">local-job</code>
+    </p>
+
+    <!-- 100% 完整原版頂部工具列下載按鈕 -->
+    <div class="toolbar">
+      <button type="button" class="btn" id="btn-dl-results">下載讀卡結果(xlsx)</button>
+      <button type="button" class="btn" id="btn-dl-annotated">下載 劃記檔案 (pdf)</button>
+      <button type="button" class="btn" id="btn-dl-analysis-pdf">試題分析整合報表(pdf)</button>
+      <button type="button" class="btn" id="btn-dl-showwrong">下載 僅顯示錯題 (xlsx)</button>
+      <button type="button" class="btn" id="btn-dl-summary-top">成績分布數據(xlsx)</button>
+      <button type="button" class="btn" id="btn-dl-scores-class">分數統計(分班)(xlsx)</button>
+    </div>
+
+    <!-- 100% 複製原版 Card 1: 整合圖表與作答矩陣區塊 -->
+    <div class="card">
+      <p class="hint">整合圖表（可用滑鼠懸停查看題號，並與錯題表對照）</p>
+      <p class="hint">滑鼠移到表格/圖表可同步醒目提示題號；點一下可鎖定，再點一次取消。</p>
+
+      <div id="classTabs" class="class-tabs" aria-label="Classes"></div>
+
+      <div class="controls" aria-label="Controls">
+        <input id="studentFilter" class="ctrl" type="search" placeholder="搜尋座號或 ID" />
+        <select id="studentSort" class="ctrl">
+          <option value="seat">座號</option>
+          <option value="score_desc">分數（高→低）</option>
+          <option value="blank_asc">空白（少→多）</option>
+          <option value="id">ID</option>
+        </select>
+        <label class="toggle" title="隱藏正確">
+          <input id="hideCorrect" type="checkbox" />
+          <span>隱藏正確</span>
+        </label>
+        <label class="toggle" title="圖表跟著篩選">
+          <input id="chartsFollowFilter" type="checkbox" />
+          <span>圖表跟著篩選</span>
+        </label>
+        <span class="spacer"></span>
+        <input id="jumpQuestion" class="ctrl" type="number" min="1" step="1" placeholder="題號" style="width:110px" />
+        <button id="jumpGo" type="button" class="chart-nav">前往</button>
+        <button id="clearHighlight" type="button" class="chart-nav">清除醒目/鎖定</button>
+      </div>
+
+      <div id="focusPanel" class="focus-panel">
+        <div class="focus-line"><span>把滑鼠移到表格/圖表可查看</span></div>
+      </div>
+
+      <div id="integratedTable" class="grid-wrap"></div>
+
+      <div class="chart-tabs">
+        <button type="button" class="chart-btn" data-chart="difficulty" aria-selected="true">難度</button>
+        <button type="button" class="chart-btn" data-chart="discrimination" aria-selected="false">鑑別度</button>
+        <button type="button" class="chart-btn" data-chart="blank" aria-selected="false">空白率</button>
+        <span class="spacer"></span>
+        <button type="button" class="chart-nav" data-nav="prev">上一張</button>
+        <button type="button" class="chart-nav" data-nav="next">下一張</button>
+      </div>
+
+      <div class="chart-wrap">
+        <div id="chartTooltip" class="chart-tooltip" hidden></div>
+        <canvas id="chartDifficulty" class="chart"></canvas>
+        <canvas id="chartDiscrimination" class="chart" hidden></canvas>
+        <canvas id="chartBlankRate" class="chart" hidden></canvas>
+      </div>
+    </div>
+
+    <!-- 100% 複製原版 Card 2: 成績分佈圖 plots 區塊 (附下載圖片功能) -->
+    <div class="plots">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <p class="hint" style="margin:0;font-weight:600;">成績分佈(png)</p>
+          <button type="button" class="btn" id="btn-dl-score-hist-img"
+            style="padding:4px 8px;font-size:12px;">下載成績分布圖(png)</button>
+        </div>
+        <p class="hint">輔助線：實線＝平均（紅）/中位數（藍）；虛線＝百分位數（P12/P25/P75/P88）</p>
+        <canvas id="canvasScoreHist" style="width:100%;height:240px;background:#f9fafb;border-radius:8px;"></canvas>
+      </div>
+    </div>
+
+    <!-- 100% 複製原版 Card 3: 試題分析檔案下載區塊 (完全還原原版分布) -->
+    <div class="card" style="margin-top:14px">
+      <p class="hint" style="font-weight:600;">試題分析檔案</p>
+      <p class="hint">下載完整分析報表（XLSX/PDF/圖片/日誌）。</p>
+      <div class="toolbar" style="margin:0">
+        <button type="button" class="btn" id="btn-dl-integrated-xlsx">試題分析整合檔(xlsx)</button>
+        <button type="button" class="btn" id="btn-dl-score-hist-img-card">成績分布圖(png)</button>
+        <button type="button" class="btn" id="btn-dl-scores">作答狀況(xlsx)</button>
+        <button type="button" class="btn" id="btn-dl-analysis-item">試題分析(xlsx)</button>
+      </div>
+    </div>
+
+    <!-- 100% 複製原版 Card 4: 試題分析數據（預覽） details 表格區塊 -->
+    <div class="card" style="margin-top:14px">
+      <details open>
+        <summary class="hint" style="cursor:pointer;font-weight:bold;font-size:14px;color:#111827;">試題分析數據（預覽）</summary>
+        <p class="hint">此處僅顯示前 200 列；完整資料請下載 analysis_item.xlsx。</p>
+        <div class="table-wrap">
+          <table id="itemAnalysisTable">
+            <thead>
+              <tr>
+                <th>題號</th>
+                <th>正確答案</th>
+                <th>難度（正答率）</th>
+                <th>鑑別度</th>
+                <th>錯誤人數</th>
+                <th>空白人數</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+    </div>
+
+    <footer class="footer">
+      <div>本機純網頁運行 · 不上傳到雲端 · <a href="https://answer-sheet-studio.readthedocs.io/zh-tw/latest/"
+          target="_blank">說明文件</a></div>
+    </footer>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+    (function () {
+      const rawData = localStorage.getItem("answer_sheet_omr_results");
+      if (!rawData) {
+        document.getElementById("integratedTable").innerHTML = "<p class='hint' style='color:#b91c1c;padding:20px;'>無作答資料，請回到上傳頁面重新辦理讀卡辨識。</p>";
+        return;
+      }
+
+      const payload = JSON.parse(rawData);
+      const results = payload.results || [];
+      const answerKeyMap = payload.answerKeyMap || {};
+      const pointsMap = payload.pointsMap || {};
+      const numQuestions = payload.numQuestions || 50;
+      const choicesCount = payload.choicesCount || 4;
+
+      // 高中多選題與單選題倒扣計分函式（自動依據正解字元長度判定單選/多選）
+      function calcQuestionScore(studentAns, correctAns, pts = 1, choicesCount = 4) {
+        if (!studentAns || !correctAns) return 0;
+        studentAns = String(studentAns).trim().toUpperCase();
+        correctAns = String(correctAns).trim().toUpperCase();
+        pts = Number(pts) || 1;
+
+        // 單選題（正解只有一個選項）
+        if (correctAns.length <= 1) {
+          return studentAns === correctAns ? pts : 0;
+        }
+
+        // 多選題（正解大於一個選項）：台灣高中學測/分科測驗標準倒扣公式
+        const setCorrect = new Set(correctAns.split(""));
+        const setStudent = new Set(studentAns.split(""));
+
+        let wrongCount = 0;
+        const maxChar = Math.max(
+          ...Array.from(setCorrect).map(c => c.charCodeAt(0)),
+          ...Array.from(setStudent).map(c => c.charCodeAt(0)),
+          64 + (choicesCount || 4)
+        );
+        const N = Math.max(4, maxChar - 64);
+
+        for (let i = 0; i < N; i++) {
+          const ch = String.fromCharCode(65 + i);
+          const inCorrect = setCorrect.has(ch);
+          const inStudent = setStudent.has(ch);
+          if (inCorrect !== inStudent) {
+            wrongCount++;
+          }
+        }
+
+        if (wrongCount === 0) return pts;
+
+        // 錯一個選項扣 2/N 題分，扣到 0 分為止
+        const ratio = (N - 2 * wrongCount) / N;
+        if (ratio <= 0) return 0;
+        const score = pts * ratio;
+        return Number.isInteger(score) ? score : Math.round(score * 100) / 100;
+      }
+
+      document.getElementById("display-filename").textContent = payload.filename || "input.pdf";
+      document.getElementById("display-job-id").textContent = payload.jobId || "local-job";
+
+      const tableHost = document.getElementById("integratedTable");
+      const focusPanelEl = document.getElementById("focusPanel");
+      const filterEl = document.getElementById("studentFilter");
+      const sortEl = document.getElementById("studentSort");
+      const hideCorrectEl = document.getElementById("hideCorrect");
+      const chartsFollowFilterEl = document.getElementById("chartsFollowFilter");
+      const jumpEl = document.getElementById("jumpQuestion");
+      const jumpBtn = document.getElementById("jumpGo");
+      const clearBtn = document.getElementById("clearHighlight");
+      const tabsEl = document.getElementById("classTabs");
+      const chartTooltipEl = document.getElementById("chartTooltip");
+
+      const canvasDiff = document.getElementById("chartDifficulty");
+      const canvasDisc = document.getElementById("chartDiscrimination");
+      const canvasBlank = document.getElementById("chartBlankRate");
+
+      let currentView = results.slice();
+      let lockedQno = null;
+      let lockedStudentIndex = null;
+      let hoverQno = null;
+      let hoverStudentIndex = null;
+      let activeChart = "difficulty";
+      let activeClassKey = "all";
+
+      // 安全的工作表名稱過濾函式（Excel 嚴格禁止 : \ / ? * [ ]，否則直接引發下載崩潰）
+      function sanitizeSheetName(name, defaultName = "Sheet") {
+        let clean = String(name || "").replace(/[:\\/?*\[\]]/g, "_").trim();
+        if (!clean) clean = defaultName;
+        return clean.substring(0, 31);
+      }
+
+      // 下載防護函式：支援 XLSX.writeFile，並包含 Blob 萬用降級相容機制
+      function saveWorkbook(wb, filename) {
+        try {
+          XLSX.writeFile(wb, filename);
+        } catch (err) {
+          console.warn("writeFile 降級使用 Blob 下載：", err);
+          const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+          const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 150);
+        }
+      }
+
+      // 1. Group students by class (避開 ? 等非法字元)
+      const classMap = new Map();
+      results.forEach(r => {
+        const g = String(r["年級"] || "").trim();
+        const c = String(r["班級"] || "").trim();
+        let clsKey = "未分班";
+        if (g && c) clsKey = `${g}-${c}`;
+        else if (g) clsKey = `${g}`;
+        else if (c) clsKey = `${c}`;
+
+        if (!classMap.has(clsKey)) classMap.set(clsKey, []);
+        classMap.get(clsKey).push(r);
+      });
+
+      // Build Class Tabs if more than 1 class
+      function buildClassTabs() {
+        if (!tabsEl) return;
+        tabsEl.innerHTML = "";
+        if (classMap.size <= 1) return;
+
+        const allBtn = document.createElement("button");
+        allBtn.type = "button";
+        allBtn.className = "tab";
+        allBtn.textContent = "全部班級";
+        allBtn.setAttribute("aria-selected", activeClassKey === "all" ? "true" : "false");
+        allBtn.addEventListener("click", () => {
+          activeClassKey = "all";
+          buildClassTabs();
+          renderTable();
+        });
+        tabsEl.appendChild(allBtn);
+
+        Array.from(classMap.keys()).sort().forEach(clsKey => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "tab";
+          btn.textContent = `班級 ${clsKey}`;
+          btn.setAttribute("aria-selected", activeClassKey === clsKey ? "true" : "false");
+          btn.addEventListener("click", () => {
+            activeClassKey = clsKey;
+            buildClassTabs();
+            renderTable();
+          });
+          tabsEl.appendChild(btn);
+        });
+      }
+      buildClassTabs();
+
+      function getStudentId(r) {
+        const g = String(r["年級"] || "").trim();
+        const c = String(r["班級"] || "").trim();
+        const s = String(r["座號"] || "").trim();
+        if (g && c && s) return `${g}-${c}-${s.length === 1 ? '0' + s : s}`;
+        if (s) return s.length === 1 ? '0' + s : s;
+        return `page_${r["頁數"] || 1}`;
+      }
+
+      function renderTable() {
+        const hideCorrect = hideCorrectEl.checked;
+        const q = (filterEl.value || "").trim().toLowerCase();
+
+        let baseList = activeClassKey === "all" ? results : (classMap.get(activeClassKey) || results);
+
+        let filtered = baseList.filter(r => {
+          const seatStr = getStudentId(r).toLowerCase();
+          return !q || seatStr.includes(q);
+        });
+
+        const sortMode = sortEl.value;
+        if (sortMode === "score_desc") {
+          filtered.sort((a, b) => (b["總分"] || 0) - (a["總分"] || 0));
+        } else if (sortMode === "blank_asc") {
+          const countBlank = (row) => {
+            let b = 0;
+            for (let i = 1; i <= numQuestions; i++) if (!row[`Q${i}`]) b++;
+            return b;
+          };
+          filtered.sort((a, b) => countBlank(a) - countBlank(b));
+        } else if (sortMode === "id") {
+          filtered.sort((a, b) => getStudentId(a).localeCompare(getStudentId(b)));
+        } else {
+          filtered.sort((a, b) => {
+            const sa = parseInt(a["座號"] || "999", 10);
+            const sb = parseInt(b["座號"] || "999", 10);
+            return sa - sb;
+          });
+        }
+
+        currentView = filtered;
+
+        // 原版矩陣雙層標題（Row 1: 題號, Row 2: 正確答案）
+        let html = '<table class="matrix"><thead>';
+        html += '<tr><th class="sticky-left">題號</th><th>總分</th>';
+        for (let i = 1; i <= numQuestions; i++) {
+          html += `<th data-qno="${i}">Q${i}</th>`;
+        }
+        html += '</tr>';
+        html += '<tr><th class="sticky-left">正確答案</th><th>-</th>';
+        for (let i = 1; i <= numQuestions; i++) {
+          html += `<th data-qno="${i}">${answerKeyMap[i] || '-'}</th>`;
+        }
+        html += '</tr></thead><tbody>';
+
+        currentView.forEach((row, idx) => {
+          const seatLabel = getStudentId(row);
+          html += `<tr data-student-idx="${idx}"><td class="sticky-left">${seatLabel}</td>`;
+          html += `<td><strong>${row["總分"]}</strong></td>`;
+
+          for (let i = 1; i <= numQuestions; i++) {
+            const ans = (row[`Q${i}`] || '').trim().toUpperCase();
+            const correctAns = (answerKeyMap[i] || '').trim().toUpperCase();
+            const pts = (pointsMap && pointsMap[i] !== undefined) ? pointsMap[i] : 1;
+            const qScore = calcQuestionScore(ans, correctAns, pts, choicesCount);
+
+            if (!ans) {
+              html += `<td data-qno="${i}" data-student-idx="${idx}" class="blank">-</td>`;
+            } else if (qScore === pts) {
+              html += `<td data-qno="${i}" data-student-idx="${idx}" class="correct ${hideCorrect ? 'hidden-correct' : ''}">${hideCorrect ? '' : ans}</td>`;
+            } else if (qScore > 0) {
+              html += `<td data-qno="${i}" data-student-idx="${idx}" class="partial" title="作答:${ans} 正解:${correctAns} (+${qScore}分)">${ans} <span style="font-size:10px; opacity:0.85;">(+${qScore})</span></td>`;
+            } else {
+              html += `<td data-qno="${i}" data-student-idx="${idx}" class="wrong" title="作答:${ans} 正解:${correctAns} (0分)">${ans}</td>`;
+            }
+          }
+          html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        tableHost.innerHTML = html;
+
+        attachEvents();
+        applyHighlights();
+        drawCharts();
+        renderItemAnalysisTable();
+        drawScoreHistogram();
+      }
+
+      function attachEvents() {
+        const table = tableHost.querySelector("table");
+        if (!table) return;
+
+        table.addEventListener("mousemove", (ev) => {
+          const cell = ev.target.closest("[data-qno]");
+          if (cell && cell.dataset.qno) {
+            hoverQno = parseInt(cell.dataset.qno, 10);
+          }
+          const row = ev.target.closest("tr[data-student-idx]");
+          if (row && row.dataset.studentIdx !== undefined) {
+            hoverStudentIndex = parseInt(row.dataset.studentIdx, 10);
+          }
+          applyHighlights();
+          updateFocusPanel();
+          drawCharts();
+        });
+
+        table.addEventListener("mouseleave", () => {
+          if (!lockedQno) hoverQno = null;
+          if (!lockedStudentIndex) hoverStudentIndex = null;
+          applyHighlights();
+          updateFocusPanel();
+          drawCharts();
+        });
+
+        table.addEventListener("click", (ev) => {
+          const cell = ev.target.closest("[data-qno]");
+          if (cell && cell.dataset.qno) {
+            const q = parseInt(cell.dataset.qno, 10);
+            lockedQno = (lockedQno === q) ? null : q;
+            hoverQno = lockedQno;
+          }
+          const row = ev.target.closest("tr[data-student-idx]");
+          if (row && row.dataset.studentIdx !== undefined) {
+            const s = parseInt(row.dataset.studentIdx, 10);
+            lockedStudentIndex = (lockedStudentIndex === s) ? null : s;
+            hoverStudentIndex = lockedStudentIndex;
+          }
+          applyHighlights();
+          updateFocusPanel();
+          drawCharts();
+        });
+      }
+
+      function applyHighlights() {
+        const activeQ = lockedQno || hoverQno;
+        const activeS = lockedStudentIndex !== null ? lockedStudentIndex : hoverStudentIndex;
+
+        tableHost.querySelectorAll("th, td").forEach(el => el.classList.remove("col-highlight"));
+        tableHost.querySelectorAll("tr").forEach(el => el.classList.remove("row-highlight"));
+
+        if (activeQ) {
+          tableHost.querySelectorAll(`[data-qno="${activeQ}"]`).forEach(el => el.classList.add("col-highlight"));
+        }
+        if (activeS !== null && activeS !== undefined) {
+          const tr = tableHost.querySelector(`tr[data-student-idx="${activeS}"]`);
+          if (tr) tr.classList.add("row-highlight");
+        }
+      }
+
+      function updateFocusPanel() {
+        const activeQ = lockedQno || hoverQno;
+        const activeS = lockedStudentIndex !== null ? lockedStudentIndex : hoverStudentIndex;
+
+        let html = '<div class="focus-line">';
+        if (activeQ) {
+          html += `<span class="badge">題號 Q${activeQ}${lockedQno ? ' (已鎖定)' : ''}</span>`;
+          html += `<span class="kv"><span class="k">正確答案:</span><span class="v">${answerKeyMap[activeQ] || '-'}</span></span>`;
+          const pts = (pointsMap && pointsMap[activeQ] !== undefined) ? pointsMap[activeQ] : 1;
+          html += `<span class="kv"><span class="k">配分:</span><span class="v">${pts}</span></span>`;
+        } else {
+          html += `<span class="badge">將滑鼠移至表格/圖表可檢視作答與試題詳情</span>`;
+        }
+        html += '</div>';
+
+        if (activeS !== null && currentView[activeS]) {
+          const r = currentView[activeS];
+          const seatLabel = getStudentId(r);
+          html += `<div class="focus-line">`;
+          html += `<span class="badge">學生: ${seatLabel}${lockedStudentIndex !== null ? ' (已鎖定)' : ''}</span>`;
+          html += `<span class="kv"><span class="k">總分:</span><span class="v">${r["總分"]}</span></span>`;
+
+          if (activeQ) {
+            const studentAns = (r[`Q${activeQ}`] || '').trim().toUpperCase();
+            const correctAns = (answerKeyMap[activeQ] || '').trim().toUpperCase();
+            const pts = (pointsMap && pointsMap[activeQ] !== undefined) ? pointsMap[activeQ] : 1;
+            const qScore = calcQuestionScore(studentAns, correctAns, pts, choicesCount);
+            let stClass = "blank", stText = "空白";
+            if (studentAns) {
+              if (qScore === pts) {
+                stClass = "correct";
+                stText = `完全正確 (${studentAns}) [得滿分 ${pts} 分]`;
+              } else if (qScore > 0) {
+                stClass = "partial";
+                stText = `部分得分 (${studentAns}) [得 ${qScore} 分 / 滿分 ${pts} 分] (正解: ${correctAns})`;
+              } else {
+                stClass = "wrong";
+                stText = `錯誤 (${studentAns}) [得 0 分 / 滿分 ${pts} 分] (正解: ${correctAns})`;
+              }
+            }
+            html += `<span class="kv"><span class="k">學生作答:</span><span class="status ${stClass}">${stText}</span></span>`;
+          }
+          html += `</div>`;
+        }
+
+        focusPanelEl.innerHTML = html;
+      }
+
+      let currentMetrics = { diffs: [], discs: [], blanks: [], wrongCounts: [], blankCounts: [] };
+
+      function computeMetrics() {
+        const students = chartsFollowFilterEl.checked ? currentView : (activeClassKey === "all" ? results : (classMap.get(activeClassKey) || results));
+        const n = students.length;
+        const diffs = [], discs = [], blanks = [], wrongCounts = [], blankCounts = [];
+
+        for (let q = 1; q <= numQuestions; q++) {
+          const correct = (answerKeyMap[q] || '').trim().toUpperCase();
+          if (!correct) {
+            diffs.push(0); discs.push(0); blanks.push(0);
+            wrongCounts.push(0); blankCounts.push(0);
+            continue;
+          }
+
+          let scoreSum = 0, blank = 0, fullyWrong = 0;
+          const pts = (pointsMap && pointsMap[q] !== undefined) ? pointsMap[q] : 1;
+          students.forEach(r => {
+            const a = (r[`Q${q}`] || '').trim().toUpperCase();
+            if (!a) {
+              blank++;
+            } else {
+              const sc = calcQuestionScore(a, correct, pts, choicesCount);
+              scoreSum += sc;
+              if (sc === 0) fullyWrong++;
+            }
+          });
+
+          const maxPossible = n * pts;
+          diffs.push(maxPossible > 0 ? (scoreSum / maxPossible) : 0);
+          blanks.push(n > 0 ? blank / n : 0);
+          blankCounts.push(blank);
+          wrongCounts.push(fullyWrong);
+        }
+
+        const groupN = n > 30 ? Math.floor(n * 0.27) : Math.floor(n / 2);
+        if (groupN > 0) {
+          const sortedStudents = students.slice().sort((a, b) => (a["總分"] || 0) - (b["總分"] || 0));
+          const lowGroup = sortedStudents.slice(0, groupN);
+          const highGroup = sortedStudents.slice(n - groupN);
+
+          for (let q = 1; q <= numQuestions; q++) {
+            const correct = (answerKeyMap[q] || '').trim().toUpperCase();
+            if (!correct) { discs.push(0); continue; }
+            const pts = (pointsMap && pointsMap[q] !== undefined) ? pointsMap[q] : 1;
+
+            let lowScoreSum = 0, highScoreSum = 0;
+            lowGroup.forEach(r => {
+              const a = (r[`Q${q}`] || '').trim().toUpperCase();
+              lowScoreSum += calcQuestionScore(a, correct, pts, choicesCount);
+            });
+            highGroup.forEach(r => {
+              const a = (r[`Q${q}`] || '').trim().toUpperCase();
+              highScoreSum += calcQuestionScore(a, correct, pts, choicesCount);
+            });
+
+            const maxGroupScore = groupN * pts;
+            discs.push(maxGroupScore > 0 ? ((highScoreSum - lowScoreSum) / maxGroupScore) : 0);
+          }
+        } else {
+          for (let q = 1; q <= numQuestions; q++) discs.push(0);
+        }
+
+        currentMetrics = { diffs, discs, blanks, wrongCounts, blankCounts };
+      }
+
+      function drawLineChart(canvas, xs, ys, opts) {
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const ratio = window.devicePixelRatio || 1;
+        const w = rect.width || canvas.parentElement.clientWidth || 800;
+        const h = 360;
+        canvas.width = Math.max(1, Math.floor(w * ratio));
+        canvas.height = Math.max(1, Math.floor(h * ratio));
+        const ctx = canvas.getContext("2d");
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+
+        const padL = 58, padR = 24, padT = 30, padB = 42;
+        const pw = Math.max(1, w - padL - padR);
+        const ph = Math.max(1, h - padT - padB);
+
+        const xMin = xs[0] ?? 1;
+        const xMax = xs[xs.length - 1] ?? numQuestions;
+        const yMin = opts.yMin ?? 0;
+        const yMax = opts.yMax ?? 1;
+
+        function xToPx(x) {
+          if (xMax === xMin) return padL;
+          return padL + ((x - xMin) / (xMax - xMin)) * pw;
+        }
+        function yToPx(y) {
+          if (yMax === yMin) return padT + ph;
+          return padT + (1 - ((y - yMin) / (yMax - yMin))) * ph;
+        }
+
+        // 座標軸線
+        ctx.strokeStyle = "#9ca3af";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT);
+        ctx.lineTo(padL, padT + ph);
+        ctx.lineTo(padL + pw, padT + ph);
+        ctx.stroke();
+
+        // 虛線網格
+        for (const y of (opts.refLines || [])) {
+          if (y < yMin || y > yMax) continue;
+          const py = yToPx(y);
+          ctx.strokeStyle = "#e5e7eb";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(padL, py);
+          ctx.lineTo(padL + pw, py);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // Y 軸標籤與刻度
+        ctx.fillStyle = "#4b5563";
+        ctx.font = "11px system-ui, -apple-system, sans-serif";
+        ctx.textAlign = "right";
+        ctx.strokeStyle = "#9ca3af";
+        ctx.lineWidth = 1;
+
+        const yTicks = opts.yTicks || [0, 0.25, 0.5, 0.75, 1.0];
+        yTicks.forEach(tick => {
+          if (tick < yMin - 1e-4 || tick > yMax + 1e-4) return;
+          const py = yToPx(tick);
+          const label = opts.isPercent ? `${Math.round(tick * 100)}%` : tick.toFixed(2);
+          ctx.fillText(label, padL - 8, py + 4);
+
+          ctx.beginPath();
+          ctx.moveTo(padL - 4, py);
+          ctx.lineTo(padL, py);
+          ctx.stroke();
+        });
+
+        // X 軸題號標籤與刻度
+        ctx.fillStyle = "#4b5563";
+        ctx.font = "11px system-ui, -apple-system, sans-serif";
+        ctx.textAlign = "center";
+
+        const qCount = xs.length;
+        const xStep = qCount > 60 ? 10 : (qCount > 30 ? 5 : (qCount > 15 ? 2 : 1));
+
+        xs.forEach((q, idx) => {
+          if (idx === 0 || idx === qCount - 1 || q % xStep === 0) {
+            const px = xToPx(q);
+            ctx.beginPath();
+            ctx.moveTo(px, padT + ph);
+            ctx.lineTo(px, padT + ph + 5);
+            ctx.stroke();
+            ctx.fillText(String(q), px, padT + ph + 18);
+          }
+        });
+
+        ctx.font = "12px system-ui, -apple-system, sans-serif";
+        ctx.fillStyle = "#374151";
+        ctx.fillText("題號", padL + pw / 2, h - 6);
+
+        ctx.textAlign = "left";
+        ctx.font = "bold 13px system-ui, -apple-system, sans-serif";
+        ctx.fillStyle = "#1f2937";
+        ctx.fillText(opts.title || "", padL, padT - 10);
+
+        // 折線
+        ctx.strokeStyle = opts.color || "#0ea5e9";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        let started = false;
+        for (let i = 0; i < xs.length; i++) {
+          const y = ys[i];
+          if (y == null || !Number.isFinite(y)) continue;
+          const px = xToPx(xs[i]);
+          const py = yToPx(y);
+          if (!started) { ctx.moveTo(px, py); started = true; }
+          else { ctx.lineTo(px, py); }
+        }
+        ctx.stroke();
+
+        // 節點
+        ctx.fillStyle = opts.color || "#0ea5e9";
+        for (let i = 0; i < xs.length; i++) {
+          const y = ys[i];
+          if (y == null || !Number.isFinite(y)) continue;
+          const px = xToPx(xs[i]);
+          const py = yToPx(y);
+          ctx.beginPath();
+          ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // 題號焦點高亮
+        if (opts.highlightX != null) {
+          const hIdx = xs.indexOf(Number(opts.highlightX));
+          if (hIdx >= 0) {
+            const px = xToPx(xs[hIdx]);
+            const y = ys[hIdx];
+
+            ctx.strokeStyle = "#f59e0b";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(px, padT);
+            ctx.lineTo(px, padT + ph);
+            ctx.stroke();
+
+            if (y != null && Number.isFinite(y)) {
+              const py = yToPx(y);
+              ctx.fillStyle = "#f59e0b";
+              ctx.beginPath();
+              ctx.arc(px, py, 6.0, 0, Math.PI * 2);
+              ctx.fill();
+              ctx.strokeStyle = "#ffffff";
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+            }
+          }
+        }
+      }
+
+      function drawCharts() {
+        computeMetrics();
+
+        const xs = [];
+        for (let q = 1; q <= numQuestions; q++) xs.push(q);
+        const qHighlight = lockedQno || hoverQno;
+
+        if (activeChart === "difficulty") {
+          drawLineChart(canvasDiff, xs, currentMetrics.diffs, {
+            title: "難度（正答率）",
+            yMin: 0,
+            yMax: 1,
+            yTicks: [0, 0.25, 0.5, 0.75, 1.0],
+            refLines: [0.25, 0.5, 0.75],
+            isPercent: true,
+            color: "#16a34a",
+            highlightX: qHighlight
+          });
+        } else if (activeChart === "discrimination") {
+          const discVals = currentMetrics.discs.filter(v => Number.isFinite(v));
+          let dMin = -0.2, dMax = 0.8;
+          if (discVals.length) {
+            dMin = Math.min(-0.2, ...discVals);
+            dMax = Math.max(0.8, ...discVals);
+            const pad = Math.max(0.1, (dMax - dMin) * 0.1);
+            dMin = Math.floor((dMin - pad) * 5) / 5;
+            dMax = Math.ceil((dMax + pad) * 5) / 5;
+          }
+          drawLineChart(canvasDisc, xs, currentMetrics.discs, {
+            title: "鑑別度",
+            yMin: dMin,
+            yMax: dMax,
+            yTicks: [-0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+            refLines: [0.0, 0.2, 0.4],
+            isPercent: false,
+            color: "#2563eb",
+            highlightX: qHighlight
+          });
+        } else {
+          drawLineChart(canvasBlank, xs, currentMetrics.blanks, {
+            title: "空白率",
+            yMin: 0,
+            yMax: 1,
+            yTicks: [0, 0.1, 0.2, 0.3, 0.5, 1.0],
+            refLines: [0.1, 0.2, 0.3],
+            isPercent: true,
+            color: "#6b7280",
+            highlightX: qHighlight
+          });
+        }
+      }
+
+      function attachChartHover(canvas, kind) {
+        canvas.addEventListener("mousemove", (ev) => {
+          const rect = canvas.getBoundingClientRect();
+          const x = ev.clientX - rect.left;
+          const padL = 58, padR = 24;
+          const pw = Math.max(1, rect.width - padL - padR);
+          if (x < padL || x > padL + pw) return;
+          const tpos = (x - padL) / pw;
+          const qIdx = Math.round(tpos * (numQuestions - 1));
+          const qno = qIdx + 1;
+
+          let val = 0;
+          let labelName = "";
+          if (kind === "difficulty") {
+            val = currentMetrics.diffs[qIdx] ?? 0;
+            labelName = "難度（正答率）";
+          } else if (kind === "discrimination") {
+            val = currentMetrics.discs[qIdx] ?? 0;
+            labelName = "鑑別度";
+          } else {
+            val = currentMetrics.blanks[qIdx] ?? 0;
+            labelName = "空白率";
+          }
+
+          showChartTooltip(canvas, qno, labelName, val, ev);
+          if (lockedQno == null) {
+            hoverQno = qno;
+            applyHighlights();
+            updateFocusPanel();
+            drawCharts();
+          }
+        });
+
+        canvas.addEventListener("mouseleave", () => {
+          hideChartTooltip();
+          if (lockedQno == null) {
+            hoverQno = null;
+            applyHighlights();
+            updateFocusPanel();
+            drawCharts();
+          }
+        });
+
+        canvas.addEventListener("click", (ev) => {
+          const rect = canvas.getBoundingClientRect();
+          const x = ev.clientX - rect.left;
+          const padL = 58, padR = 24;
+          const pw = Math.max(1, rect.width - padL - padR);
+          if (x < padL || x > padL + pw) return;
+          const tpos = (x - padL) / pw;
+          const qIdx = Math.round(tpos * (numQuestions - 1));
+          const qno = qIdx + 1;
+          lockedQno = (lockedQno === qno) ? null : qno;
+          hoverQno = lockedQno;
+          applyHighlights();
+          updateFocusPanel();
+          drawCharts();
+        });
+      }
+
+      function showChartTooltip(canvas, qno, title, val, ev) {
+        if (!chartTooltipEl) return;
+        const rect = canvas.getBoundingClientRect();
+        const correct = answerKeyMap[qno] || "-";
+        const valStr = typeof val === "number" ? (title.includes("鑑別度") ? val.toFixed(2) : `${(val * 100).toFixed(1)}% (${val.toFixed(2)})`) : "-";
+
+        chartTooltipEl.innerHTML = `<strong>題號 Q${qno}</strong> · 正確答案: <strong>${correct}</strong><br>${title}: <strong>${valStr}</strong>`;
+        chartTooltipEl.hidden = false;
+
+        const tx = Math.min(rect.width - 190, Math.max(10, ev.clientX - rect.left + 15));
+        const ty = Math.max(10, ev.clientY - rect.top - 44);
+        chartTooltipEl.style.left = `${tx}px`;
+        chartTooltipEl.style.top = `${ty}px`;
+      }
+
+      function hideChartTooltip() {
+        if (chartTooltipEl) chartTooltipEl.hidden = true;
+      }
+
+      attachChartHover(canvasDiff, "difficulty");
+      attachChartHover(canvasDisc, "discrimination");
+      attachChartHover(canvasBlank, "blank");
+
+      // 試題分析數據（預覽）表格
+      function renderItemAnalysisTable() {
+        const tbody = document.querySelector("#itemAnalysisTable tbody");
+        if (!tbody) return;
+
+        let html = "";
+        for (let i = 1; i <= Math.min(200, numQuestions); i++) {
+          const correct = answerKeyMap[i] || "-";
+          const diff = currentMetrics.diffs[i - 1] !== undefined ? currentMetrics.diffs[i - 1].toFixed(2) : "-";
+          const disc = currentMetrics.discs[i - 1] !== undefined ? currentMetrics.discs[i - 1].toFixed(2) : "-";
+          const wrong = currentMetrics.wrongCounts[i - 1] ?? "-";
+          const blank = currentMetrics.blankCounts[i - 1] ?? "-";
+
+          html += `<tr><td>Q${i}</td><td>${correct}</td><td>${diff}</td><td>${disc}</td><td>${wrong}</td><td>${blank}</td></tr>`;
+        }
+        tbody.innerHTML = html;
+      }
+
+      // 成績分佈圖（含平均/中位數實線與百分位數虛線）
+      function drawScoreHistogram() {
+        const canvas = document.getElementById("canvasScoreHist");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        const w = canvas.parentElement.clientWidth || 800;
+        const h = 240;
+        canvas.width = w;
+        canvas.height = h;
+
+        const scores = results.map(r => r["總分"] || 0).sort((a, b) => a - b);
+        if (!scores.length) return;
+
+        const n = scores.length;
+        const maxScore = Math.max(...scores, 100);
+        const bins = new Array(10).fill(0);
+        scores.forEach(s => {
+          const idx = Math.min(9, Math.floor((s / maxScore) * 10));
+          bins[idx]++;
+        });
+
+        const maxBin = Math.max(...bins, 1);
+        ctx.clearRect(0, 0, w, h);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+
+        const padL = 50, padR = 20, padT = 20, padB = 35;
+        const pw = w - padL - padR, ph = h - padT - padB;
+
+        const barW = pw / 10;
+        bins.forEach((cnt, i) => {
+          const bH = (cnt / maxBin) * (ph - 20);
+          const x = padL + i * barW;
+          const y = padT + ph - bH;
+
+          ctx.fillStyle = "#3b82f6";
+          ctx.fillRect(x + 4, y, barW - 8, bH);
+
+          ctx.fillStyle = "#4b5563";
+          ctx.font = "11px sans-serif";
+          ctx.textAlign = "center";
+          if (cnt > 0) ctx.fillText(String(cnt), x + barW / 2, y - 5);
+          ctx.fillText(`${Math.round((i / 10) * maxScore)}`, x + barW / 2, h - 14);
+        });
+
+        const sum = scores.reduce((acc, v) => acc + v, 0);
+        const mean = sum / n;
+        const median = scores[Math.floor(n / 2)];
+
+        function scoreToX(s) {
+          return padL + (s / maxScore) * pw;
+        }
+
+        function percentile(p) {
+          const idx = (n - 1) * p;
+          const lower = Math.floor(idx);
+          const upper = Math.ceil(idx);
+          const weight = idx - lower;
+          return scores[lower] * (1 - weight) + scores[upper] * weight;
+        }
+
+        [0.12, 0.25, 0.75, 0.88].forEach(p => {
+          const val = percentile(p);
+          const px = scoreToX(val);
+          ctx.strokeStyle = "#9ca3af";
+          ctx.lineWidth = 1.2;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(px, padT);
+          ctx.lineTo(px, padT + ph);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        });
+
+        const meanX = scoreToX(mean);
+        ctx.strokeStyle = "#dc2626";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(meanX, padT);
+        ctx.lineTo(meanX, padT + ph);
+        ctx.stroke();
+
+        const medX = scoreToX(median);
+        ctx.strokeStyle = "#2563eb";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(medX, padT);
+        ctx.lineTo(medX, padT + ph);
+        ctx.stroke();
+
+        ctx.fillStyle = "#374151";
+        ctx.font = "11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`平均:${mean.toFixed(1)}`, meanX, padT - 5);
+      }
+
+      // 下載成績分布圖 PNG
+      function downloadScoreHistImage() {
+        const canvas = document.getElementById("canvasScoreHist");
+        if (!canvas) return;
+        const a = document.createElement("a");
+        a.download = "analysis_score_hist.png";
+        a.href = canvas.toDataURL("image/png");
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 150);
+      }
+
+      document.getElementById("btn-dl-score-hist-img").addEventListener("click", downloadScoreHistImage);
+      document.getElementById("btn-dl-score-hist-img-card").addEventListener("click", downloadScoreHistImage);
+
+      // Chart Tabs 切換
+      const chartBtns = document.querySelectorAll(".chart-btn");
+      const chartOrder = ["difficulty", "discrimination", "blank"];
+
+      function setActiveChart(target) {
+        activeChart = target;
+        chartBtns.forEach(b => b.setAttribute("aria-selected", b.dataset.chart === target ? "true" : "false"));
+        canvasDiff.hidden = target !== "difficulty";
+        canvasDisc.hidden = target !== "discrimination";
+        canvasBlank.hidden = target !== "blank";
+        hideChartTooltip();
+        drawCharts();
+      }
+
+      chartBtns.forEach(btn => {
+        btn.addEventListener("click", () => setActiveChart(btn.dataset.chart));
+      });
+
+      document.querySelectorAll(".chart-nav").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const dir = btn.dataset.nav;
+          if (dir === "prev" || dir === "next") {
+            const idx = chartOrder.indexOf(activeChart);
+            const nextIdx = dir === "prev" ? (idx - 1 + chartOrder.length) % chartOrder.length : (idx + 1) % chartOrder.length;
+            setActiveChart(chartOrder[nextIdx]);
+          }
+        });
+      });
+
+      // Controls 連動
+      filterEl.addEventListener("input", renderTable);
+      sortEl.addEventListener("change", renderTable);
+      hideCorrectEl.addEventListener("change", renderTable);
+      chartsFollowFilterEl.addEventListener("change", () => { drawCharts(); });
+
+      clearBtn.addEventListener("click", () => {
+        lockedQno = null; lockedStudentIndex = null; hoverQno = null; hoverStudentIndex = null;
+        applyHighlights(); updateFocusPanel(); drawCharts();
+      });
+
+      jumpBtn.addEventListener("click", () => {
+        const raw = String(jumpEl.value || "").trim();
+        const q = parseInt(raw, 10);
+        if (q >= 1 && q <= numQuestions) {
+          lockedQno = q;
+          hoverQno = q;
+          applyHighlights();
+          updateFocusPanel();
+          drawCharts();
+
+          const targetHeader = tableHost.querySelector(`th[data-qno="${q}"]`);
+          if (targetHeader) {
+            targetHeader.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+          }
+        }
+      });
+      jumpEl.addEventListener("keydown", (e) => { if (e.key === "Enter") jumpBtn.click(); });
+
+      // ==========================================
+      // 下載功能 (100% 複製 Python 原版格式與行為)
+      // ==========================================
+
+      // 1. 下載讀卡結果(xlsx)
+      document.getElementById("btn-dl-results").addEventListener("click", () => {
+        const outSheet = XLSX.utils.json_to_sheet(results);
+        const outWB = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(outWB, outSheet, "讀卡結果");
+        saveWorkbook(outWB, "results.xlsx");
+      });
+
+      // 2. 下載 僅顯示錯題 (xlsx) - 100% 完全遵循 Python 原版 _write_showwrong_xlsx
+      // 題號為列 (Rows)、學生為欄 (Columns)；答對為空白，答錯填入作答字母；最後一列為每位學生總分
+      document.getElementById("btn-dl-showwrong").addEventListener("click", () => {
+        try {
+          exportShowwrongXlsx();
+        } catch (err) {
+          console.error("下載僅顯示錯題失敗:", err);
+          alert("下載僅顯示錯題失敗：" + err.message);
+        }
+      });
+
+      function exportShowwrongXlsx() {
+        if (!results || !results.length) {
+          alert("目前無讀卡資料可供匯出。");
+          return;
+        }
+
+        function buildSheetRows(studentRows) {
+          const studentCols = studentRows.map(r => getStudentId(r));
+          const outRows = [["number", "correct", ...studentCols]];
+          const studentScores = new Array(studentRows.length).fill(0);
+
+          for (let q = 1; q <= numQuestions; q++) {
+            const correctAns = answerKeyMap[q] || "";
+            const pts = (pointsMap && pointsMap[q] !== undefined) ? pointsMap[q] : 1;
+            const rowOut = [q, correctAns];
+
+            studentRows.forEach((r, sIdx) => {
+              const studentAns = (r[`Q${q}`] || "").trim().toUpperCase();
+              if (!correctAns) {
+                rowOut.push("");
+              } else {
+                const qScore = calcQuestionScore(studentAns, correctAns, pts, choicesCount);
+                if (qScore === pts) {
+                  studentScores[sIdx] += pts;
+                  rowOut.push(""); // 答對留空！完全符合原版規格
+                } else if (qScore > 0) {
+                  studentScores[sIdx] += qScore;
+                  rowOut.push(`${studentAns} (+${qScore})`);
+                } else {
+                  rowOut.push(studentAns === "" ? "空白" : studentAns);
+                }
+              }
+            });
+
+            outRows.push(rowOut);
+          }
+
+          const scoreRow = ["score", ""];
+          studentScores.forEach(sc => {
+            scoreRow.push(Number.isInteger(sc) ? sc : Math.round(sc * 100) / 100);
+          });
+          outRows.push(scoreRow);
+
+          return outRows;
+        }
+
+        const wb = XLSX.utils.book_new();
+
+        if (classMap.size > 1) {
+          Array.from(classMap.keys()).sort().forEach(clsKey => {
+            const studentsInClass = classMap.get(clsKey).slice();
+            studentsInClass.sort((a, b) => {
+              const sa = parseInt(a["座號"] || "999", 10);
+              const sb = parseInt(b["座號"] || "999", 10);
+              return sa - sb;
+            });
+            const sheetRows = buildSheetRows(studentsInClass);
+            const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+            XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(`Class ${clsKey}`, "Class"));
+          });
+          const allRows = buildSheetRows(results);
+          const wsAll = XLSX.utils.aoa_to_sheet(allRows);
+          XLSX.utils.book_append_sheet(wb, wsAll, "全部學生");
+        } else {
+          const sheetRows = buildSheetRows(results);
+          const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+          XLSX.utils.book_append_sheet(wb, ws, "全部學生");
+        }
+
+        saveWorkbook(wb, "showwrong.xlsx");
+      }
+
+      // 下載 分數統計(分班)(xlsx)
+      function exportScoresByClassXlsx() {
+        const byClass = {};
+        const header = ["座號/ID", "分數", "空白數", "總分", "百分比"];
+
+        let totalPossible = 0;
+        for (let q = 1; q <= numQuestions; q++) {
+          if (answerKeyMap[q]) {
+            totalPossible += ((pointsMap && pointsMap[q] !== undefined) ? pointsMap[q] : 1);
+          }
+        }
+        if (totalPossible <= 0) totalPossible = numQuestions;
+
+        results.forEach((r, idx) => {
+          const cls = String(r["班級"] ?? "").trim() || "未分班";
+          const pid = r["座號"] ? String(r["座號"]).padStart(2, "0") : (r["學號/ID"] || `Page_${idx + 1}`);
+          const score = r["總分"] || 0;
+          let blanks = 0;
+          for (let q = 1; q <= numQuestions; q++) {
+            if (!r[`Q${q}`]) blanks++;
+          }
+          const pct = totalPossible > 0 ? (Math.round((score / totalPossible) * 10000) / 100) + "%" : "0%";
+
+          if (!byClass[cls]) {
+            byClass[cls] = [];
+          }
+          byClass[cls].push({
+            pid,
+            score,
+            blanks,
+            totalPossible,
+            pct,
+            seatRaw: r["座號"]
+          });
+        });
+
+        const wb = XLSX.utils.book_new();
+        const sortedClasses = Object.keys(byClass).sort((a, b) => {
+          const na = parseInt(a, 10), nb = parseInt(b, 10);
+          if (!isNaN(na) && !isNaN(nb)) return na - nb;
+          return a.localeCompare(b);
+        });
+
+        sortedClasses.forEach(cls => {
+          const students = byClass[cls];
+          students.sort((a, b) => {
+            const sa = parseInt(a.seatRaw ?? "999", 10);
+            const sb = parseInt(b.seatRaw ?? "999", 10);
+            if (!isNaN(sa) && !isNaN(sb)) return sa - sb;
+            return String(a.pid).localeCompare(String(b.pid));
+          });
+
+          const sheetRows = [header];
+          students.forEach(st => {
+            sheetRows.push([st.pid, st.score, st.blanks, st.totalPossible, st.pct]);
+          });
+
+          const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+          XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(`Class ${cls}`, "Class"));
+        });
+
+        saveWorkbook(wb, "analysis_scores_by_class.xlsx");
+      }
+
+      const btnScoresClass = document.getElementById("btn-dl-scores-class");
+      if (btnScoresClass) {
+        btnScoresClass.addEventListener("click", exportScoresByClassXlsx);
+      }
+
+      // PDF 生成狀態提示浮窗
+      function showPdfLoading(message = "檔案正在產生中，請稍候...") {
+        let toast = document.getElementById("pdf-loading-toast");
+        if (!toast) {
+          toast = document.createElement("div");
+          toast.id = "pdf-loading-toast";
+          toast.style.cssText = "position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.95);color:#ffffff;padding:12px 24px;border-radius:10px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.15);z-index:999999;display:flex;align-items:center;gap:12px;font-size:14px;font-weight:600;font-family:system-ui,-apple-system,sans-serif;pointer-events:none;backdrop-filter:blur(6px);";
+          toast.innerHTML = `
+            <svg style="width:20px;height:20px;animation:pdf-loading-spin 0.8s linear infinite;flex-shrink:0;" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" stroke-width="3"></circle>
+              <path d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" fill="#38bdf8"></path>
+            </svg>
+            <span id="pdf-loading-toast-text">${message}</span>
+            <style>@keyframes pdf-loading-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>
+          `;
+          document.body.appendChild(toast);
+        } else {
+          const textEl = document.getElementById("pdf-loading-toast-text");
+          if (textEl) textEl.textContent = message;
+          toast.style.display = "flex";
+        }
+      }
+
+      function hidePdfLoading() {
+        const toast = document.getElementById("pdf-loading-toast");
+        if (toast) toast.style.display = "none";
+      }
+
+      // 4. 試題分析整合報表 (PDF) - 100% 依據 engine/analysis.py 精密垂直對齊 A3 橫向報表
+      async function generateIntegratedReportPdf() {
+        if (!results || !results.length) {
+          alert("目前無讀卡資料可供產生試題分析整合報表。");
+          return;
+        }
+
+        const btnTop = document.getElementById("btn-dl-analysis-pdf");
+        const btnCard = document.getElementById("btn-dl-analysis-pdf-card");
+        const origTopText = btnTop ? btnTop.textContent : "";
+        const origCardText = btnCard ? btnCard.textContent : "";
+
+        try {
+          if (btnTop) { btnTop.disabled = true; btnTop.textContent = "檔案正在產生中..."; }
+          if (btnCard) { btnCard.disabled = true; btnCard.textContent = "檔案正在產生中..."; }
+          showPdfLoading("試題分析整合報表 (PDF) 正在產生中，請稍候...");
+          await new Promise(r => setTimeout(r, 60));
+
+          const { PDFDocument } = PDFLib;
+          const pdfDoc = await PDFDocument.create();
+
+          // A3 Landscape = 1190.55 x 841.89 pt
+          const PAGE_W = 1191;
+          const PAGE_H = 842;
+          const scale = 2.0;
+
+          const sortedStudents = results.slice().sort((a, b) => {
+            const sa = parseInt(a["座號"] || "999", 10);
+            const sb = parseInt(b["座號"] || "999", 10);
+            return sa - sb;
+          });
+          const nStudents = sortedStudents.length;
+
+          // Compute metrics
+          computeMetrics();
+
+          // Layout parameters
+          const marginX = 35;
+          const marginTop = 30;
+          const availW = PAGE_W - marginX * 2; // 1121 pt
+
+          const col0W = 75; // 學號/ID
+          const col1W = 45; // 總分
+          const qW = (availW - col0W - col1W) / numQuestions;
+
+          // Helper to create high-res canvas page
+          function createReportCanvas() {
+            const canvas = document.createElement("canvas");
+            canvas.width = PAGE_W * scale;
+            canvas.height = PAGE_H * scale;
+            const ctx = canvas.getContext("2d");
+            ctx.scale(scale, scale);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, PAGE_W, PAGE_H);
+            return { canvas, ctx };
+          }
+
+          // Header drawing function
+          function drawPageHeader(ctx) {
+            ctx.fillStyle = "#111827";
+            ctx.font = "bold 18px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("試題分析整合報表 (Integrated Analysis Report)", PAGE_W / 2, marginTop + 12);
+
+            ctx.fillStyle = "#6b7280";
+            ctx.font = "9px system-ui, sans-serif";
+            ctx.fillText("※ 趨勢圖中的垂直格線已精確對齊上方學生的作答欄位與下方的試題分析指標。", PAGE_W / 2, marginTop + 28);
+          }
+
+          // Helper to draw horizontal line
+          function drawHLine(ctx, x1, x2, y, color = "#9ca3af", width = 0.5) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(x1, y);
+            ctx.lineTo(x2, y);
+            ctx.stroke();
+          }
+
+          // Helper to draw vertical line
+          function drawVLine(ctx, x, y1, y2, color = "#9ca3af", width = 0.5) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(x, y1);
+            ctx.lineTo(x, y2);
+            ctx.stroke();
+          }
+
+          // Helper to draw table row
+          function drawTableRow(ctx, y, rowHeight, col0Text, col1Text, qValues, opts = {}) {
+            const bg = opts.bg || null;
+            if (bg) {
+              ctx.fillStyle = bg;
+              ctx.fillRect(marginX, y, availW, rowHeight);
+            }
+
+            // Cell borders
+            drawHLine(ctx, marginX, marginX + availW, y, opts.borderColor || "#9ca3af", 0.5);
+            drawHLine(ctx, marginX, marginX + availW, y + rowHeight, opts.borderColor || "#9ca3af", 0.5);
+
+            // Vertical borders
+            drawVLine(ctx, marginX, y, y + rowHeight, opts.borderColor || "#9ca3af", 0.5);
+            drawVLine(ctx, marginX + col0W, y, y + rowHeight, opts.borderColor || "#9ca3af", 0.5);
+            drawVLine(ctx, marginX + col0W + col1W, y, y + rowHeight, opts.borderColor || "#9ca3af", 0.5);
+            for (let q = 1; q <= numQuestions; q++) {
+              drawVLine(ctx, marginX + col0W + col1W + q * qW, y, y + rowHeight, opts.borderColor || "#9ca3af", 0.5);
+            }
+
+            // Texts
+            ctx.font = opts.font || (numQuestions > 50 ? "7px sans-serif" : "8px sans-serif");
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            const centerY = y + rowHeight / 2;
+
+            // Col 0
+            ctx.fillStyle = opts.col0Color || "#111827";
+            ctx.fillText(String(col0Text ?? ""), marginX + col0W / 2, centerY);
+
+            // Col 1
+            ctx.fillStyle = opts.col1Color || "#111827";
+            ctx.fillText(String(col1Text ?? ""), marginX + col0W + col1W / 2, centerY);
+
+            // Questions
+            for (let q = 1; q <= numQuestions; q++) {
+              const val = qValues[q - 1];
+              const valStr = String(val ?? "");
+              const correctAns = (answerKeyMap[q] || "").trim().toUpperCase();
+              const pts = (pointsMap && pointsMap[q] !== undefined) ? pointsMap[q] : 1;
+
+              let isBold = opts.font && opts.font.includes("bold");
+
+              if (opts.isAnswerRow) {
+                if (!valStr) {
+                  ctx.fillStyle = opts.qColor || "#111827";
+                } else {
+                  const qScore = calcQuestionScore(valStr, correctAns, pts, choicesCount);
+                  if (qScore === pts) {
+                    ctx.fillStyle = opts.qColor || "#111827";
+                  } else if (qScore > 0) {
+                    ctx.fillStyle = "#d97706"; // 部分得分標記橘黃色
+                    isBold = true;
+                  } else {
+                    ctx.fillStyle = "#dc2626"; // 全錯標記紅字
+                    isBold = true;
+                  }
+                }
+              } else {
+                ctx.fillStyle = opts.qColor || "#111827";
+              }
+
+              // Dynamic font scaling for multi-character choices (e.g., ABCD, ABCDE)
+              const maxCellW = Math.max(1, qW - 1.5);
+              const baseSize = numQuestions > 50 ? 7 : 8;
+              let fontSize = baseSize;
+              if (valStr.length > 2) {
+                const approxCharW = baseSize * 0.65;
+                const totalW = valStr.length * approxCharW;
+                if (totalW > maxCellW) {
+                  fontSize = Math.max(4.2, Math.floor((maxCellW / totalW) * baseSize * 10) / 10);
+                }
+              }
+              ctx.font = `${isBold ? "bold " : ""}${fontSize}px sans-serif`;
+
+              const cellCenterX = marginX + col0W + col1W + (q - 0.5) * qW;
+              ctx.fillText(valStr, cellCenterX, centerY, maxCellW);
+            }
+          }
+
+          const rowH = 15;
+          const chartH = nStudents > 25 ? 280 : 180;
+          const metricRowH = 16;
+
+          if (nStudents <= 25) {
+            // MODE A: SINGLE PAGE DASHBOARD
+            const { canvas, ctx } = createReportCanvas();
+            drawPageHeader(ctx);
+
+            let curY = marginTop + 45;
+
+            // Section Title 1
+            ctx.fillStyle = "#1f2937";
+            ctx.font = "bold 11px system-ui, sans-serif";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "alphabetic";
+            ctx.fillText("一、試題分析整合報表 (Integrated Analysis Dashboard)", marginX, curY);
+            curY += 8;
+
+            // 1. Student Table Header
+            const qHeaders = [];
+            for (let q = 1; q <= numQuestions; q++) qHeaders.push(String(q));
+            drawTableRow(ctx, curY, rowH, "學號/ID", "總分", qHeaders, {
+              bg: "#dbeafe",
+              font: `bold ${numQuestions > 50 ? "7px" : "8px"} sans-serif`
+            });
+            curY += rowH;
+
+            // 2. Student Data Rows
+            sortedStudents.forEach(r => {
+              const pid = getStudentId(r);
+              const score = r["總分"] || 0;
+              const ansList = [];
+              for (let q = 1; q <= numQuestions; q++) {
+                ansList.push((r[`Q${q}`] || "").trim().toUpperCase());
+              }
+              drawTableRow(ctx, curY, rowH, pid, score, ansList, { isAnswerRow: true });
+              curY += rowH;
+            });
+
+            // 3. PrecisionGridChart (答對率趨勢線)
+            const chartTopY = curY;
+            const chartBottomY = curY + chartH;
+
+            // Outer chart borders
+            drawHLine(ctx, marginX, marginX + availW, chartTopY, "#9ca3af", 0.5);
+            drawHLine(ctx, marginX, marginX + availW, chartBottomY, "#9ca3af", 0.5);
+            drawVLine(ctx, marginX, chartTopY, chartBottomY, "#9ca3af", 0.5);
+            drawVLine(ctx, marginX + col0W + col1W, chartTopY, chartBottomY, "#9ca3af", 0.5);
+            drawVLine(ctx, marginX + availW, chartTopY, chartBottomY, "#9ca3af", 0.5);
+
+            // Chart label in col 0-1
+            ctx.fillStyle = "#374151";
+            ctx.font = "bold 9px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("答對率趨勢線", marginX + (col0W + col1W) / 2, chartTopY + chartH / 2);
+
+            // Chart area vertical grid lines (aligned with question columns)
+            const qAreaStartX = marginX + col0W + col1W;
+            const qAreaW = availW - col0W - col1W;
+            for (let q = 1; q < numQuestions; q++) {
+              drawVLine(ctx, qAreaStartX + q * qW, chartTopY, chartBottomY, "#e5e7eb", 0.3);
+            }
+
+            // Horizontal reference lines and Y-axis tick labels
+            const levels = [0.0, 0.25, 0.50, 0.75, 1.00];
+            const padY = 12;
+            const plotH = chartH - padY * 2;
+
+            function levelToY(lvl) {
+              return chartBottomY - padY - lvl * plotH;
+            }
+
+            ctx.font = "7px sans-serif";
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+
+            levels.forEach(lvl => {
+              const py = levelToY(lvl);
+              drawHLine(ctx, qAreaStartX, qAreaStartX + qAreaW, py, "#e5e7eb", 0.5);
+              drawHLine(ctx, qAreaStartX - 4, qAreaStartX, py, "#9ca3af", 0.5);
+              ctx.fillStyle = "#6b7280";
+              ctx.fillText(lvl.toFixed(2), qAreaStartX - 6, py);
+            });
+
+            // Trend line & Points
+            const points = [];
+            for (let q = 1; q <= numQuestions; q++) {
+              const diff = currentMetrics.diffs[q - 1];
+              if (diff !== undefined && diff !== null) {
+                const px = qAreaStartX + (q - 0.5) * qW;
+                const py = levelToY(Math.max(0, Math.min(1, diff)));
+                points.push({ x: px, y: py });
+              }
+            }
+
+            if (points.length > 0) {
+              ctx.strokeStyle = "#374151";
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.moveTo(points[0].x, points[0].y);
+              for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+              }
+              ctx.stroke();
+
+              // Blue dots
+              points.forEach(pt => {
+                ctx.fillStyle = "#2563eb";
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+              });
+            }
+
+            curY += chartH;
+
+            // 4. Metric Rows
+            const ansRow = [];
+            const diffRow = [];
+            const discRow = [];
+            for (let q = 1; q <= numQuestions; q++) {
+              ansRow.push(answerKeyMap[q] || "-");
+              diffRow.push(currentMetrics.diffs[q - 1] !== undefined ? currentMetrics.diffs[q - 1].toFixed(2) : "-");
+              discRow.push(currentMetrics.discs[q - 1] !== undefined ? currentMetrics.discs[q - 1].toFixed(2) : "-");
+            }
+
+            drawTableRow(ctx, curY, metricRowH, "試題指標 (題號)", "", qHeaders, {
+              bg: "#f3f4f6",
+              font: `bold ${numQuestions > 50 ? "7px" : "8px"} sans-serif`
+            });
+            curY += metricRowH;
+
+            drawTableRow(ctx, curY, metricRowH, "正解", "", ansRow, {
+              font: `bold ${numQuestions > 50 ? "7px" : "8px"} sans-serif`
+            });
+            curY += metricRowH;
+
+            drawTableRow(ctx, curY, metricRowH, "正確率", "", diffRow, {
+              col0Color: "#15803d",
+              qColor: "#15803d"
+            });
+            curY += metricRowH;
+
+            drawTableRow(ctx, curY, metricRowH, "鑑別度", "", discRow, {
+              col0Color: "#1d4ed8",
+              qColor: "#1d4ed8"
+            });
+
+            // Embed page
+            const pageDataUrl = canvas.toDataURL("image/png");
+            const pngImg = await pdfDoc.embedPng(pageDataUrl);
+            const pdfPage = pdfDoc.addPage([PAGE_W, PAGE_H]);
+            pdfPage.drawImage(pngImg, { x: 0, y: 0, width: PAGE_W, height: PAGE_H });
+
+          } else {
+            // MODE B: MULTI-PAGE (PAGE 1: STUDENT MATRIX, PAGE 2: CHART + METRICS)
+            // Page 1: Student Matrix
+            {
+              const { canvas, ctx } = createReportCanvas();
+              drawPageHeader(ctx);
+
+              let curY = marginTop + 45;
+              ctx.fillStyle = "#1f2937";
+              ctx.font = "bold 11px system-ui, sans-serif";
+              ctx.textAlign = "left";
+              ctx.textBaseline = "alphabetic";
+              ctx.fillText("一、學生作答矩陣 (Student Answer Matrix)", marginX, curY);
+              curY += 8;
+
+              const qHeaders = [];
+              for (let q = 1; q <= numQuestions; q++) qHeaders.push(String(q));
+              drawTableRow(ctx, curY, rowH, "學號/ID", "總分", qHeaders, {
+                bg: "#dbeafe",
+                font: `bold ${numQuestions > 50 ? "7px" : "8px"} sans-serif`
+              });
+              curY += rowH;
+
+              sortedStudents.forEach(r => {
+                const pid = getStudentId(r);
+                const score = r["總分"] || 0;
+                const ansList = [];
+                for (let q = 1; q <= numQuestions; q++) {
+                  ansList.push((r[`Q${q}`] || "").trim().toUpperCase());
+                }
+                drawTableRow(ctx, curY, rowH, pid, score, ansList, { isAnswerRow: true });
+                curY += rowH;
+              });
+
+              const p1Data = canvas.toDataURL("image/png");
+              const p1Img = await pdfDoc.embedPng(p1Data);
+              const p1Page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+              p1Page.drawImage(p1Img, { x: 0, y: 0, width: PAGE_W, height: PAGE_H });
+            }
+
+            // Page 2: Chart + Metrics
+            {
+              const { canvas, ctx } = createReportCanvas();
+              drawPageHeader(ctx);
+
+              let curY = marginTop + 45;
+              ctx.fillStyle = "#1f2937";
+              ctx.font = "bold 11px system-ui, sans-serif";
+              ctx.textAlign = "left";
+              ctx.textBaseline = "alphabetic";
+              ctx.fillText("二、試題正確率趨勢圖與指標 (Integrated Analysis Report)", marginX, curY);
+              curY += 8;
+
+              const qHeaders = [];
+              for (let q = 1; q <= numQuestions; q++) qHeaders.push(String(q));
+
+              // Chart Header
+              drawTableRow(ctx, curY, metricRowH, "試題指標 (題號)", "", qHeaders, {
+                bg: "#f3f4f6",
+                font: `bold ${numQuestions > 50 ? "7px" : "8px"} sans-serif`
+              });
+              curY += metricRowH;
+
+              // Chart
+              const chartTopY = curY;
+              const chartBottomY = curY + chartH;
+
+              drawHLine(ctx, marginX, marginX + availW, chartTopY, "#9ca3af", 0.5);
+              drawHLine(ctx, marginX, marginX + availW, chartBottomY, "#9ca3af", 0.5);
+              drawVLine(ctx, marginX, chartTopY, chartBottomY, "#9ca3af", 0.5);
+              drawVLine(ctx, marginX + col0W + col1W, chartTopY, chartBottomY, "#9ca3af", 0.5);
+              drawVLine(ctx, marginX + availW, chartTopY, chartBottomY, "#9ca3af", 0.5);
+
+              ctx.fillStyle = "#374151";
+              ctx.font = "bold 9px system-ui, sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("答對率趨勢線", marginX + (col0W + col1W) / 2, chartTopY + chartH / 2);
+
+              const qAreaStartX = marginX + col0W + col1W;
+              const qAreaW = availW - col0W - col1W;
+              for (let q = 1; q < numQuestions; q++) {
+                drawVLine(ctx, qAreaStartX + q * qW, chartTopY, chartBottomY, "#e5e7eb", 0.3);
+              }
+
+              const levels = [0.0, 0.25, 0.50, 0.75, 1.00];
+              const padY = 16;
+              const plotH = chartH - padY * 2;
+
+              function levelToY(lvl) {
+                return chartBottomY - padY - lvl * plotH;
+              }
+
+              ctx.font = "8px sans-serif";
+              ctx.textAlign = "right";
+              ctx.textBaseline = "middle";
+
+              levels.forEach(lvl => {
+                const py = levelToY(lvl);
+                drawHLine(ctx, qAreaStartX, qAreaStartX + qAreaW, py, "#e5e7eb", 0.5);
+                drawHLine(ctx, qAreaStartX - 4, qAreaStartX, py, "#9ca3af", 0.5);
+                ctx.fillStyle = "#6b7280";
+                ctx.fillText(lvl.toFixed(2), qAreaStartX - 6, py);
+              });
+
+              const points = [];
+              for (let q = 1; q <= numQuestions; q++) {
+                const diff = currentMetrics.diffs[q - 1];
+                if (diff !== undefined && diff !== null) {
+                  const px = qAreaStartX + (q - 0.5) * qW;
+                  const py = levelToY(Math.max(0, Math.min(1, diff)));
+                  points.push({ x: px, y: py });
+                }
+              }
+
+              if (points.length > 0) {
+                ctx.strokeStyle = "#374151";
+                ctx.lineWidth = 1.8;
+                ctx.beginPath();
+                ctx.moveTo(points[0].x, points[0].y);
+                for (let i = 1; i < points.length; i++) {
+                  ctx.lineTo(points[i].x, points[i].y);
+                }
+                ctx.stroke();
+
+                points.forEach(pt => {
+                  ctx.fillStyle = "#2563eb";
+                  ctx.beginPath();
+                  ctx.arc(pt.x, pt.y, 3.0, 0, Math.PI * 2);
+                  ctx.fill();
+                  ctx.strokeStyle = "#ffffff";
+                  ctx.lineWidth = 1;
+                  ctx.stroke();
+                });
+              }
+
+              curY += chartH;
+
+              // Metrics
+              const ansRow = [];
+              const diffRow = [];
+              const discRow = [];
+              for (let q = 1; q <= numQuestions; q++) {
+                ansRow.push(answerKeyMap[q] || "-");
+                diffRow.push(currentMetrics.diffs[q - 1] !== undefined ? currentMetrics.diffs[q - 1].toFixed(2) : "-");
+                discRow.push(currentMetrics.discs[q - 1] !== undefined ? currentMetrics.discs[q - 1].toFixed(2) : "-");
+              }
+
+              drawTableRow(ctx, curY, metricRowH, "正解", "", ansRow, {
+                font: `bold ${numQuestions > 50 ? "7px" : "8px"} sans-serif`
+              });
+              curY += metricRowH;
+
+              drawTableRow(ctx, curY, metricRowH, "正確率", "", diffRow, {
+                col0Color: "#15803d",
+                qColor: "#15803d"
+              });
+              curY += metricRowH;
+
+              drawTableRow(ctx, curY, metricRowH, "鑑別度", "", discRow, {
+                col0Color: "#1d4ed8",
+                qColor: "#1d4ed8"
+              });
+
+              const p2Data = canvas.toDataURL("image/png");
+              const p2Img = await pdfDoc.embedPng(p2Data);
+              const p2Page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+              p2Page.drawImage(p2Img, { x: 0, y: 0, width: PAGE_W, height: PAGE_H });
+            }
+          }
+
+          const pdfBytes = await pdfDoc.save();
+          const blob = new Blob([pdfBytes], { type: "application/pdf" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "試題分析整合報表.pdf";
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 150);
+        } catch (err) {
+          console.error(err);
+          alert("產生試題分析整合報表(pdf)失敗：" + err.message);
+        } finally {
+          if (btnTop) { btnTop.disabled = false; btnTop.textContent = origTopText; }
+          if (btnCard) { btnCard.disabled = false; btnCard.textContent = origCardText; }
+          hidePdfLoading();
+        }
+      }
+
+      document.getElementById("btn-dl-analysis-pdf").addEventListener("click", generateIntegratedReportPdf);
+      const btnCardPdf = document.getElementById("btn-dl-analysis-pdf-card");
+      if (btnCardPdf) btnCardPdf.addEventListener("click", generateIntegratedReportPdf);
+
+      // 5. 作答狀況(xlsx)
+      document.getElementById("btn-dl-scores").addEventListener("click", () => {
+        let totalPossible = 0;
+        for (let q = 1; q <= numQuestions; q++) {
+          if (answerKeyMap[q]) {
+            totalPossible += ((pointsMap && pointsMap[q] !== undefined) ? pointsMap[q] : 1);
+          }
+        }
+
+        const rows = [["學號/ID", "得分", "空白數", "滿分", "百分比"]];
+        const sorted = results.slice().sort((a, b) => (b["總分"] || 0) - (a["總分"] || 0));
+
+        sorted.forEach(r => {
+          const pid = getStudentId(r);
+          let blanks = 0;
+          for (let q = 1; q <= numQuestions; q++) {
+            if (!r[`Q${q}`]) blanks++;
+          }
+          const score = r["總分"] || 0;
+          const pct = totalPossible > 0 ? (Math.round((score / totalPossible) * 10000) / 100) + "%" : "";
+          rows.push([pid, score, blanks, totalPossible, pct]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "作答狀況");
+        saveWorkbook(wb, "analysis_scores.xlsx");
+      });
+
+      // 6. 試題分析(xlsx)
+      document.getElementById("btn-dl-analysis-item").addEventListener("click", () => {
+        const rows = [["題號", "正確答案", "難度（正答率）", "鑑別度", "錯誤人數", "空白人數"]];
+        for (let q = 1; q <= numQuestions; q++) {
+          const correct = answerKeyMap[q] || "-";
+          const diff = currentMetrics.diffs[q - 1] !== undefined ? currentMetrics.diffs[q - 1].toFixed(2) : "-";
+          const disc = currentMetrics.discs[q - 1] !== undefined ? currentMetrics.discs[q - 1].toFixed(2) : "-";
+          const wrong = currentMetrics.wrongCounts[q - 1] ?? "-";
+          const blank = currentMetrics.blankCounts[q - 1] ?? "-";
+          rows.push([q, correct, diff, disc, wrong, blank]);
+        }
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "試題分析");
+        saveWorkbook(wb, "analysis_item.xlsx");
+      });
+
+      // 7. 成績分布數據(xlsx)
+      function exportSummaryXlsx() {
+        const scores = results.map(r => r["總分"] || 0).sort((a, b) => a - b);
+        const n = scores.length;
+        if (!n) return;
+
+        const sum = scores.reduce((acc, v) => acc + v, 0);
+        const mean = sum / n;
+        const variance = scores.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / n;
+        const std = Math.sqrt(variance);
+        const max = scores[n - 1];
+        const min = scores[0];
+
+        function percentile(p) {
+          const idx = (n - 1) * p;
+          const low = Math.floor(idx);
+          const high = Math.ceil(idx);
+          if (low === high) return scores[low];
+          return scores[low] + (scores[high] - scores[low]) * (idx - low);
+        }
+
+        const rows = [
+          ["指標", "數值"],
+          ["人數", n],
+          ["平均數", mean.toFixed(2)],
+          ["標準差", std.toFixed(2)],
+          ["最高分", max],
+          ["最低分", min],
+          ["中位數", percentile(0.5).toFixed(2)],
+          ["P12", percentile(0.12).toFixed(2)],
+          ["P25", percentile(0.25).toFixed(2)],
+          ["P75", percentile(0.75).toFixed(2)],
+          ["P88", percentile(0.88).toFixed(2)]
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "成績分布數據");
+        saveWorkbook(wb, "analysis_summary.xlsx");
+      }
+
+      const btnSummary = document.getElementById("btn-dl-summary");
+      if (btnSummary) {
+        btnSummary.addEventListener("click", exportSummaryXlsx);
+      }
+      const btnSummaryTop = document.getElementById("btn-dl-summary-top");
+      if (btnSummaryTop) {
+        btnSummaryTop.addEventListener("click", exportSummaryXlsx);
+      }
+
+      // 8. 試題分析整合檔.xlsx (100% 依據 engine/analysis.py generate_integrated_report 橫向矩陣格式)
+      document.getElementById("btn-dl-integrated-xlsx").addEventListener("click", () => {
+        if (!results || !results.length) return;
+
+        const qNumbers = [];
+        for (let q = 1; q <= numQuestions; q++) qNumbers.push(q);
+
+        const l_id = "學號/ID";
+        const l_score = "總分";
+        const l_ans = "正解";
+        const l_diff = "正確率";
+        const l_disc = "鑑別度";
+
+        const excel_rows = [];
+        // 1. Answers Section Header: [學號/ID, 總分, 1, 2, 3, ...]
+        const header_ans = [l_id, l_score, ...qNumbers.map(String)];
+        excel_rows.push(header_ans);
+
+        // Sort students naturally
+        const sortedStudents = results.slice().sort((a, b) => {
+          const sa = parseInt(a["座號"] || "999", 10);
+          const sb = parseInt(b["座號"] || "999", 10);
+          return sa - sb;
+        });
+
+        // Student Rows
+        sortedStudents.forEach(r => {
+          const pid = getStudentId(r);
+          const score = r["總分"] || 0;
+          const row = [pid, score];
+          for (let q = 1; q <= numQuestions; q++) {
+            row.push((r[`Q${q}`] || "").trim().toUpperCase());
+          }
+          excel_rows.push(row);
+        });
+
+        // Spacer Row
+        excel_rows.push([]);
+
+        // 2. Metrics Section Header: [試題指標 (題號), "", 1, 2, 3, ...]
+        const m_header = ["試題指標 (題號)", "", ...qNumbers.map(String)];
+        excel_rows.push(m_header);
+
+        const ans_row = [l_ans, ""];
+        const diff_row = [l_diff, ""];
+        const disc_row = [l_disc, ""];
+
+        for (let q = 1; q <= numQuestions; q++) {
+          ans_row.push(answerKeyMap[q] || "");
+          diff_row.push(currentMetrics.diffs[q - 1] !== undefined ? Number(currentMetrics.diffs[q - 1].toFixed(2)) : "");
+          disc_row.push(currentMetrics.discs[q - 1] !== undefined ? Number(currentMetrics.discs[q - 1].toFixed(2)) : "");
+        }
+
+        excel_rows.push(ans_row);
+        excel_rows.push(diff_row);
+        excel_rows.push(disc_row);
+
+        const ws = XLSX.utils.aoa_to_sheet(excel_rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "試題分析整合檔");
+        saveWorkbook(wb, "試題分析整合檔.xlsx");
+      });
+
+      // IndexedDB Helper to read large raw PDF ArrayBuffer
+      function loadFromIndexedDB(key) {
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open("OMR_Store", 1);
+          req.onsuccess = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains("files")) {
+              return resolve(null);
+            }
+            const tx = db.transaction("files", "readonly");
+            const store = tx.objectStore("files");
+            const getReq = store.get(key);
+            getReq.onsuccess = () => resolve(getReq.result);
+            getReq.onerror = () => reject(getReq.error);
+          };
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      // 下載 劃記檔案 (pdf)
+      document.getElementById("btn-dl-annotated").addEventListener("click", async () => {
+        const btn = document.getElementById("btn-dl-annotated");
+        const origText = btn ? btn.textContent : "";
+        try {
+          if (btn) { btn.disabled = true; btn.textContent = "檔案正在產生中..."; }
+          showPdfLoading("正在準備劃記檔案 (PDF)，請稍候...");
+          await new Promise(r => setTimeout(r, 60));
+
+          const pdfBuffer = await loadFromIndexedDB("pdfArrayBuffer");
+          if (!pdfBuffer) {
+            alert("無法存取原始上傳的 PDF 檔案以進行劃記。");
+            return;
+          }
+
+          pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+          const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer.slice(0) });
+          const pdfDocPdfjs = await loadingTask.promise;
+
+          const { PDFDocument } = PDFLib;
+          const outPdfDoc = await PDFDocument.create();
+
+          const numQ = payload.numQuestions || 50;
+          const choicesCount = payload.choicesCount || 4;
+          const choices = Array.from({ length: choicesCount }, (_, i) => String.fromCharCode(65 + i));
+          const totalPages = pdfDocPdfjs.numPages;
+
+          for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+            showPdfLoading(`劃記檔案 (PDF) 正在產生中... (處理第 ${pageIdx + 1} / ${totalPages} 頁)`);
+            await new Promise(r => setTimeout(r, 10));
+
+            const page = await pdfDocPdfjs.getPage(pageIdx + 1);
+            const scale = 2.0;
+            const viewport = page.getViewport({ scale });
+
+            const rawCanvas = document.createElement("canvas");
+            rawCanvas.width = viewport.width;
+            rawCanvas.height = viewport.height;
+            const rawCtx = rawCanvas.getContext("2d");
+
+            await page.render({ canvasContext: rawCtx, viewport }).promise;
+
+            let workCanvas = rawCanvas;
+            if (typeof OMREngine !== "undefined" && typeof cv !== "undefined") {
+              try {
+                workCanvas = OMREngine.warpCanvas(rawCanvas);
+              } catch (e) {
+                console.warn("Warp canvas failed, fallback to raw canvas:", e);
+              }
+            }
+            const ctx = workCanvas.getContext("2d");
+
+            const PAGE_W = 595, PAGE_H = 842;
+            const curScale = workCanvas.width / PAGE_W;
+            const LEFT_X = 45;
+            const NAME_LINE_X0 = LEFT_X + 40;
+            const GRADE_STEP_X = 26;
+            const GRADE_CIRCLE_Y = PAGE_H - 174;
+            const GRADE_W = 15.0, GRADE_H = 7.5;
+            const CLASS_STEP_X = 21;
+            const CLASS_CIRCLE_Y = PAGE_H - 199;
+            const CLASS_W = 14.0, CLASS_H = 7.5;
+            const RIGHT_X = PAGE_W - 45;
+            const SEAT_BOX_X0 = RIGHT_X - 200;
+            const SEAT_BOX_Y0 = PAGE_H - 205;
+            const SEAT_START_X = SEAT_BOX_X0 + 38;
+            const SEAT_STEP_X = 16;
+            const SEAT_W = 12.5, SEAT_H = 7.0;
+            const SEAT_TOP_ROW_Y = SEAT_BOX_Y0 + 40;
+            const SEAT_BOTTOM_ROW_Y = SEAT_BOX_Y0 + 18;
+            const BUBBLE_W = 13.0, BUBBLE_H = 7.5;
+
+            function ptToPx(xPt, yPt) {
+              return [xPt * curScale, (PAGE_H - yPt) * curScale];
+            }
+
+            function drawMark(xPt, yPt, wPt, hPt, color, text) {
+              const [cx, cy] = ptToPx(xPt, yPt);
+              const bw = (wPt + 2) * curScale;
+              const bh = (hPt + 2) * curScale;
+              ctx.strokeStyle = color;
+              ctx.lineWidth = 2;
+              ctx.strokeRect(cx - bw / 2, cy - bh / 2, bw, bh);
+              if (text) {
+                ctx.fillStyle = color;
+                ctx.font = `${Math.round(9 * curScale)}px sans-serif`;
+                ctx.fillText(text, cx - bw / 2, cy - bh / 2 - 3);
+              }
+            }
+
+            const row = results[pageIdx] || {};
+            const detectedGrade = row["年級"];
+            const detectedClass = row["班級"];
+            const detectedSeat = String(row["座號"] || "");
+
+            // Grade (7-12)
+            const gradeValues = [7, 8, 9, 10, 11, 12];
+            gradeValues.forEach((val, idx) => {
+              const xPt = NAME_LINE_X0 + idx * GRADE_STEP_X;
+              if (String(detectedGrade) === String(val)) {
+                drawMark(xPt, GRADE_CIRCLE_Y, GRADE_W, GRADE_H, "#00ff00", `G:${val}`);
+              }
+            });
+
+            // Class (0-9)
+            for (let d = 0; d < 10; d++) {
+              const xPt = NAME_LINE_X0 + d * CLASS_STEP_X;
+              if (String(detectedClass) === String(d)) {
+                drawMark(xPt, CLASS_CIRCLE_Y, CLASS_W, CLASS_H, "#00ff00", `C:${d}`);
+              }
+            }
+
+            // Seat tens & units
+            if (detectedSeat.length >= 1) {
+              const tens = parseInt(detectedSeat[0], 10);
+              if (!isNaN(tens)) {
+                const xPt = SEAT_START_X + tens * SEAT_STEP_X;
+                drawMark(xPt, SEAT_TOP_ROW_Y, SEAT_W, SEAT_H, "#00ff00", `T:${tens}`);
+              }
+            }
+            if (detectedSeat.length >= 2) {
+              const ones = parseInt(detectedSeat[1], 10);
+              if (!isNaN(ones)) {
+                const xPt = SEAT_START_X + ones * SEAT_STEP_X;
+                drawMark(xPt, SEAT_BOTTOM_ROW_Y, SEAT_W, SEAT_H, "#00ff00", `O:${ones}`);
+              }
+            }
+
+            // Answer bubbles
+            const BOX_X0 = 25, BOX_X1 = PAGE_W - 25, BOX_Y0a = 55;
+            const DIVIDER_Y = PAGE_H - 220;
+            const BOX_Y1a = DIVIDER_Y - 12;
+            const COLS = 3;
+            const boxW = BOX_X1 - BOX_X0;
+            const colW = boxW / COLS;
+            const rowsPerCol = Math.ceil(100 / COLS);
+            const BOX_PAD = 10;
+            const innerY0a = BOX_Y0a + BOX_PAD;
+            const innerY1a = BOX_Y1a - BOX_PAD;
+            const firstRowY = innerY1a - 30;
+            const bottomLimit = innerY0a + BUBBLE_H / 2;
+            const usable = firstRowY - bottomLimit;
+            const rowStep = rowsPerCol > 1 ? usable / (rowsPerCol - 1) : 0;
+
+            const bubbleXs = [];
+            for (let c = 0; c < COLS; c++) {
+              const cx0 = BOX_X0 + c * colW;
+              const innerLeft = cx0 + BOX_PAD;
+              const innerRight = cx0 + colW - BOX_PAD;
+              const qRight = innerLeft + 30;
+              const xA = qRight + 10 + BUBBLE_W / 2;
+              const xLast = innerRight - BUBBLE_W / 2;
+              const step = (xLast - xA) / (choices.length - 1);
+              const xs = [];
+              for (let i = 0; i < choices.length; i++) xs.push(xA + i * step);
+              bubbleXs.push(xs);
+            }
+
+            for (let q = 1; q <= numQ; q++) {
+              const col = Math.floor((q - 1) / rowsPerCol);
+              const rowInCol = (q - 1) % rowsPerCol;
+              const yPt = firstRowY - rowInCol * rowStep;
+              const xs = bubbleXs[col];
+              const studentAns = row[`Q${q}`] || '';
+
+              choices.forEach((ch, cIdx) => {
+                if (studentAns && studentAns.includes(ch)) {
+                  drawMark(xs[cIdx], yPt, BUBBLE_W, BUBBLE_H, "#00ff00", `${q}:${ch}`);
+                }
+              });
+            }
+
+            const imgDataUrl = workCanvas.toDataURL("image/png");
+            const pngImage = await outPdfDoc.embedPng(imgDataUrl);
+            const outPage = outPdfDoc.addPage([PAGE_W, PAGE_H]);
+            outPage.drawImage(pngImage, { x: 0, y: 0, width: PAGE_W, height: PAGE_H });
+          }
+
+          const pdfBytes = await outPdfDoc.save();
+          const blob = new Blob([pdfBytes], { type: "application/pdf" });
+          const link = document.createElement("a");
+          link.href = URL.createObjectURL(blob);
+          link.download = "annotated.pdf";
+          document.body.appendChild(link);
+          link.click();
+          setTimeout(() => document.body.removeChild(link), 150);
+        } catch (err) {
+          console.error(err);
+          alert("產生劃記 PDF 失敗：" + err.message);
+        } finally {
+          if (btn) { btn.disabled = false; btn.textContent = origText; }
+          hidePdfLoading();
+        }
+      });
+
+      renderTable();
+    })();
+  </script>
+</body>
+
+</html>

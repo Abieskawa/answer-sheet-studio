@@ -1101,7 +1101,7 @@ def _write_showwrong_xlsx(
 
         write_simple_xlsx_multi(Path(out_xlsx_path), sheets=sheets)
     else:
-        write_simple_xlsx(Path(out_xlsx_path), rows=out_rows, sheet_name="showwrong")
+        write_simple_xlsx(Path(out_xlsx_path), rows=out_rows, sheet_name="全部學生")
 
     # Also emit a lightweight JSON for the interactive HTML report.
     try:

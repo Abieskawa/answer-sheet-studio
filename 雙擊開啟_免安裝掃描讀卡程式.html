@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Answer Sheet Studio</title>
+  <link rel="stylesheet" href="./app/static/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script async src="https://docs.opencv.org/4.8.0/opencv.js"></script>
+  <script src="./app/static/js/omr_engine.js"></script>
+  <script src="./app/static/js/pdf_generator.js"></script>
+
+  <style>
+    .nav-links a { padding: 4px 8px; border-radius: 6px; }
+    .nav-links a.active-nav { color: var(--text); font-weight: bold; background: #1f2937; }
+    button.download { cursor: pointer; text-align: left; }
+
+    /* Result Charts Layout & Styles matching result_charts.html */
+    .table-wrap { overflow-x: auto; }
+    .grid-wrap { overflow: auto; max-height: 520px; border: 1px solid var(--line); border-radius: 10px; }
+    table.matrix { width: max-content; min-width: 100%; border-collapse: collapse; font-size: 12px; }
+    table.matrix th, table.matrix td { padding: 6px 8px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: center; }
+    table.matrix th.sticky-left, table.matrix td.sticky-left { position: sticky; left: 0; z-index: 3; background: #0f172a; text-align: left; }
+    table.matrix thead th { background: #1e293b; position: sticky; top: 0; z-index: 2; }
+    table.matrix td.wrong { background: #7f1d1d; color: #fca5a5; font-weight: 600; }
+    table.matrix td.partial { background: #78350f; color: #fef08a; font-weight: 600; }
+    table.matrix td.correct { background: #14532d; color: #86efac; font-weight: 600; }
+    table.matrix td.correct.hidden-correct { background: #0f172a; color: #475569; font-weight: 600; }
+    table.matrix td.blank { background: #334155; color: #94a3b8; font-weight: 600; }
+    table.matrix tr.row-highlight td, table.matrix tr.row-highlight th { background: #1e3a8a; }
+
+    .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
+    .ctrl { padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: #0f172a; font-size: 13px; color: var(--text); }
+    .toggle { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: #0f172a; font-size: 13px; color: var(--muted); user-select: none; cursor: pointer; }
+    .controls .spacer { flex: 1; }
+    .focus-panel { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #0f172a; display: grid; gap: 6px; margin-bottom: 10px; }
+    .focus-line { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; color: var(--text); }
+    .status { padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: #0f172a; font-weight: 700; }
+    .status.correct { background: #14532d; color: #86efac; }
+    .status.partial { background: #78350f; color: #fef08a; }
+    .status.wrong { background: #7f1d1d; color: #fca5a5; }
+    .status.blank { background: #334155; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="brand">Answer Sheet Studio</div>
+      <nav class="nav">
+        <div class="nav-links">
+          <a href="#" id="nav-download" class="active-nav" data-i18n="nav_download">下載答案卡</a>
+          <a href="#" id="nav-upload" data-i18n="nav_upload">上傳處理</a>
+          <a href="#" id="nav-update" data-i18n="nav_update">更新</a>
+        </div>
+        <div class="lang-switch" aria-label="Language">
+          <button type="button" class="lang-tab active" data-lang="zh-Hant">繁體中文</button>
+          <button type="button" class="lang-tab" data-lang="en">English</button>
+        </div>
+      </nav>
+    </header>
+
+    <main class="card">
+      <!-- 1. Download Sheet Page -->
+      <div id="page-download" class="page-content">
+        <h1 data-i18n="download_title">下載答案卡</h1>
+        <form class="form" id="form-download">
+          <label><span data-i18n="download_label_title">標題（預設：定期評量 答案卷）</span>
+            <input type="text" name="title_text" data-i18n-ph="download_ph_title" placeholder="例如：第一次段考" />
+          </label>
+
+          <label><span data-i18n="download_label_subject">科目（可留空）</span>
+            <input type="text" name="subject" data-i18n-ph="download_ph_subject" placeholder="例如：數學" />
+          </label>
+
+          <label><span data-i18n="download_label_num_questions">題數（1–100；上傳辨識時也要填一樣）</span>
+            <input type="number" name="num_questions" min="1" max="100" value="50" />
+          </label>
+
+          <label><span data-i18n="download_label_choices_count">每題選項（ABC/ABCD/ABCDE）</span>
+            <select name="choices_count">
+              <option value="3">ABC</option>
+              <option value="4" selected>ABCD</option>
+              <option value="5">ABCDE</option>
+            </select>
+          </label>
+
+          <div class="downloads">
+            <button type="button" id="btn-download-pdf" data-i18n="download_btn_sheet">下載答案卡 PDF</button>
+            <button type="button" id="btn-download-key" data-i18n="download_btn_answer_key">下載老師答案檔 (Excel)</button>
+          </div>
+
+          <p class="hint" data-i18n="download_hint_sheet">先下載並列印答案卡 PDF（給學生填）。</p>
+          <p class="hint" data-i18n="download_hint_answer_key">需要編輯正確答案/配分時，再下載老師答案檔（Excel）填 correct/points，之後到「上傳處理」上傳即可。</p>
+          <p class="hint" data-i18n="download_hint_support">年級欄位支援 7–12（含 10/11/12），班級支援 1–9（0 保留），座號支援 00–99，選擇題支援 ABC / ABCD / ABCDE，最多 100 題。</p>
+        </form>
+      </div>
+
+      <!-- 2. Upload Processing Page -->
+      <div id="page-upload" class="page-content" style="display:none">
+        <h1 data-i18n="upload_title">上傳處理</h1>
+        <form class="form" id="form-upload">
+          <label><span data-i18n="upload_label_num_questions">題數（1–100；請依每份掃描檔案輸入，需與答案卡一致）</span>
+            <input type="number" name="num_questions" min="1" max="100" data-i18n-ph="upload_ph_num_questions" placeholder="例如：50" required />
+          </label>
+
+          <label><span data-i18n="upload_label_choices_count">每題選項（ABC/ABCD/ABCDE；需與答案卡一致）</span>
+            <select name="choices_count">
+              <option value="3">ABC</option>
+              <option value="4" selected>ABCD</option>
+              <option value="5">ABCDE</option>
+            </select>
+          </label>
+
+          <label><span data-i18n="upload_label_pdf">上傳多頁 PDF（每頁一位）</span>
+            <input type="file" name="pdf" accept="application/pdf" required />
+          </label>
+
+          <label><span data-i18n="upload_label_answer_key">上傳老師答案檔（Excel .xlsx；correct/points）</span>
+            <input type="file" name="answer_key" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required />
+          </label>
+
+          <button type="submit" data-i18n="upload_btn_process">開始辨識並分析</button>
+          <div id="processing" class="hint" style="display:none">
+            <progress style="width:260px"></progress>
+            <span data-i18n="upload_processing">處理中，請稍候…</span>
+          </div>
+
+          <div id="resultLinkWrap" class="downloads" style="display:none">
+            <a id="resultLink" class="download" href="#" data-i18n="upload_open_result">開啟結果頁（含圖表）</a>
+          </div>
+          <p id="resultLinkHint" class="hint" style="display:none" data-i18n="upload_open_result_hint">處理完成後請點上方按鈕開啟結果頁。</p>
+          <p id="resultLinkError" class="hint" style="display:none;color:#fca5a5"></p>
+
+          <p class="hint" data-i18n="upload_hint_output">完成後會輸出 results.xlsx、annotated.pdf，以及答案分析報表/圖表。</p>
+        </form>
+      </div>
+
+      <!-- 3. Result Page (Matches original result_charts.html layout) -->
+      <div id="page-result" class="page-content" style="display:none">
+        <h1 data-i18n="result_plots_title">圖表與作答矩陣結果</h1>
+        <p class="hint"><span data-i18n="result_file">檔案：</span><code id="res-display-filename">input.pdf</code> · <span data-i18n="result_job_id">Job ID：</span><code id="res-job-id">local-job</code></p>
+
+        <div class="downloads">
+          <button type="button" class="download" id="btn-dl-results" data-i18n="result_download_results">下載讀卡結果(xlsx)</button>
+          <button type="button" class="download" id="btn-dl-showwrong" data-i18n="result_download_showwrong">下載 僅顯示錯題 (xlsx)</button>
+          <button type="button" class="download" id="btn-dl-scores-class" data-i18n="result_download_scores_by_class">分數統計(分班)(xlsx)</button>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <p class="hint" data-i18n="result_integrated_title">整合圖表（可用滑鼠懸停查看題號，並與錯題表對照）</p>
+          <p class="hint" data-i18n="result_integrated_hint">滑鼠移到表格/圖表可同步醒目提示題號；點一下可鎖定，再點一次取消。</p>
+
+          <div class="controls" aria-label="Controls">
+            <input id="studentFilter" class="ctrl" type="search" placeholder="搜尋座號或 ID" />
+            <select id="studentSort" class="ctrl">
+              <option value="seat">座號</option>
+              <option value="score_desc">分數（高→低）</option>
+            </select>
+            <label class="toggle">
+              <input id="hideCorrect" type="checkbox" />
+              <span>隱藏正確</span>
+            </label>
+          </div>
+
+          <div id="focusPanel" class="focus-panel">
+            <div class="focus-line">
+              <span>滑鼠移到表格即可檢視作答詳情</span>
+            </div>
+          </div>
+
+          <div id="integratedTable" class="grid-wrap"></div>
+        </div>
+      </div>
+
+      <!-- 4. Update Page -->
+      <div id="page-update" class="page-content" style="display:none">
+        <h1 data-i18n="update_title">更新</h1>
+        <p class="hint" data-i18n="update_hint">下載最新版本或工具說明。</p>
+        <div class="downloads">
+          <a class="download" href="https://github.com/Abieskawa/answer-sheet-studio/releases/latest" target="_blank" rel="noopener noreferrer" data-i18n="update_open_releases">開啟下載頁（GitHub Releases）</a>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div>
+        <span data-i18n="footer_local">本機純網頁運行 / 不上傳到雲端</span> ·
+        <a href="https://answer-sheet-studio.readthedocs.io/zh-tw/latest/" target="_blank" rel="noopener noreferrer" data-i18n="footer_docs">說明文件</a>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const I18N = {
+      "zh-Hant": {
+        nav_download: "下載答案卡",
+        nav_upload: "上傳處理",
+        nav_update: "更新",
+        footer_local: "本機純網頁運行 / 不上傳到雲端",
+        footer_docs: "說明文件",
+        download_title: "下載答案卡",
+        download_label_title: "標題（預設：定期評量 答案卷）",
+        download_ph_title: "例如：第一次段考",
+        download_label_subject: "科目（可留空）",
+        download_ph_subject: "例如：數學",
+        download_label_num_questions: "題數（1–100；上傳辨識時也要填一樣）",
+        download_label_choices_count: "每題選項（ABC/ABCD/ABCDE）",
+        download_btn_sheet: "下載答案卡 PDF",
+        download_btn_answer_key: "下載老師答案檔 (Excel)",
+        download_hint_sheet: "先下載並列印答案卡 PDF（給學生填）。",
+        download_hint_answer_key: "需要編輯正確答案/配分時，再下載老師答案檔（Excel）填 correct/points，之後到「上傳處理」上傳即可。",
+        download_hint_support: "年級欄位支援 7–12（含 10/11/12），班級支援 1–9（0 保留），座號支援 00–99，選擇題支援 ABC / ABCD / ABCDE，最多 100 題。",
+        upload_title: "上傳處理",
+        upload_label_num_questions: "題數（1–100；請依每份掃描檔案輸入，需與答案卡一致）",
+        upload_ph_num_questions: "例如：50",
+        upload_label_choices_count: "每題選項（ABC/ABCD/ABCDE；需與答案卡一致）",
+        upload_label_pdf: "上傳多頁 PDF（每頁一位）",
+        upload_label_answer_key: "上傳老師答案檔（Excel .xlsx；correct/points）",
+        upload_btn_process: "開始辨識並分析",
+        upload_processing: "處理中，請稍候…",
+        upload_open_result: "開啟結果頁（含圖表）",
+        upload_open_result_hint: "處理完成後請點上方按鈕開啟結果頁。",
+        upload_hint_output: "完成後會輸出 results.xlsx、annotated.pdf，以及答案分析報表/圖表。",
+        result_plots_title: "圖表與作答矩陣結果",
+        result_file: "檔案：",
+        result_job_id: "Job ID：",
+        result_download_results: "下載讀卡結果(xlsx)",
+        result_download_showwrong: "下載 僅顯示錯題 (xlsx)",
+        result_download_scores_by_class: "分數統計(分班)(xlsx)",
+        result_integrated_title: "整合圖表（可用滑鼠懸停查看題號，並與錯題表對照）",
+        result_integrated_hint: "滑鼠移到表格/圖表可同步醒目提示題號；點一下可鎖定，再點一次取消。",
+        update_title: "更新",
+        update_hint: "下載最新版本或工具說明。",
+        update_open_releases: "開啟下載頁（GitHub Releases）",
+      },
+      "en": {
+        nav_download: "Download",
+        nav_upload: "Upload",
+        nav_update: "Update",
+        footer_local: "Runs locally / no cloud upload",
+        footer_docs: "Docs",
+        download_title: "Download Answer Sheet",
+        download_label_title: "Title (default: Exam Answer Sheet)",
+        download_ph_title: "e.g., Midterm 1",
+        download_label_subject: "Subject (optional)",
+        download_ph_subject: "e.g., Math",
+        download_label_num_questions: "Number of questions (1–100)",
+        download_label_choices_count: "Choices per question",
+        download_btn_sheet: "Download Answer Sheet PDF",
+        download_btn_answer_key: "Download Teacher Answer Key (Excel)",
+        download_hint_sheet: "Download and print answer sheet PDF for students.",
+        download_hint_answer_key: "Edit answer key Excel and upload on Upload page.",
+        download_hint_support: "Supports Grades 7-12, Classes 1-9, Seats 00-99, Choices A-E, up to 100 questions.",
+        upload_title: "Upload & Process",
+        upload_label_num_questions: "Number of questions (1–100)",
+        upload_ph_num_questions: "e.g., 50",
+        upload_label_choices_count: "Choices per question",
+        upload_label_pdf: "Upload multi-page PDF",
+        upload_label_answer_key: "Upload teacher answer key (.xlsx)",
+        upload_btn_process: "Run recognition + analysis",
+        upload_processing: "Processing…",
+        upload_open_result: "Open result page (with plots)",
+        upload_open_result_hint: "When processing finishes, click the button above to open the result page.",
+        upload_hint_output: "Outputs results.xlsx, annotated.pdf, and analysis reports.",
+        result_plots_title: "Plots & Item Matrix",
+        result_file: "File:",
+        result_job_id: "Job ID:",
+        result_download_results: "Download results.xlsx",
+        result_download_showwrong: "Download showwrong.xlsx",
+        result_download_scores_by_class: "Scores by Class (xlsx)",
+        result_integrated_title: "Integrated Matrix & Charts",
+        result_integrated_hint: "Hover table/charts to highlight questions.",
+        update_title: "Update",
+        update_hint: "Download latest version or docs.",
+        update_open_releases: "GitHub Releases",
+      }
+    };
+
+    let currentLang = "zh-Hant";
+
+    function updateLanguage(lang) {
+      currentLang = lang;
+      const dict = I18N[lang] || I18N["zh-Hant"];
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.getAttribute("data-i18n");
+        if (dict[key]) el.textContent = dict[key];
+      });
+      document.querySelectorAll("[data-i18n-ph]").forEach(el => {
+        const key = el.getAttribute("data-i18n-ph");
+        if (dict[key]) el.setAttribute("placeholder", dict[key]);
+      });
+      document.querySelectorAll(".lang-tab").forEach(tab => {
+        tab.classList.toggle("active", tab.getAttribute("data-lang") === lang);
+      });
+    }
+
+    const navDownload = document.getElementById("nav-download");
+    const navUpload = document.getElementById("nav-upload");
+    const navUpdate = document.getElementById("nav-update");
+    const pageDownload = document.getElementById("page-download");
+    const pageUpload = document.getElementById("page-upload");
+    const pageResult = document.getElementById("page-result");
+    const pageUpdate = document.getElementById("page-update");
+
+    function showPage(pageName) {
+      pageDownload.style.display = pageName === 'download' ? 'block' : 'none';
+      pageUpload.style.display = pageName === 'upload' ? 'block' : 'none';
+      pageResult.style.display = pageName === 'result' ? 'block' : 'none';
+      pageUpdate.style.display = pageName === 'update' ? 'block' : 'none';
+
+      navDownload.classList.toggle('active-nav', pageName === 'download');
+      navUpload.classList.toggle('active-nav', pageName === 'upload');
+      navUpdate.classList.toggle('active-nav', pageName === 'update');
+    }
+
+    navDownload.addEventListener('click', (e) => { e.preventDefault(); showPage('download'); });
+    navUpload.addEventListener('click', (e) => { e.preventDefault(); showPage('upload'); });
+    navUpdate.addEventListener('click', (e) => { e.preventDefault(); showPage('update'); });
+
+    document.querySelectorAll(".lang-tab").forEach(btn => {
+      btn.addEventListener("click", () => updateLanguage(btn.getAttribute("data-lang")));
+    });
+
+    // PDF 生成狀態提示浮窗
+    function showPdfLoading(message = "檔案正在產生中，請稍候...") {
+      let toast = document.getElementById("pdf-loading-toast");
+      if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "pdf-loading-toast";
+        toast.style.cssText = "position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.95);color:#ffffff;padding:12px 24px;border-radius:10px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.5),0 0 0 1px rgba(255,255,255,0.15);z-index:999999;display:flex;align-items:center;gap:12px;font-size:14px;font-weight:600;font-family:system-ui,-apple-system,sans-serif;pointer-events:none;backdrop-filter:blur(6px);";
+        toast.innerHTML = `
+          <svg style="width:20px;height:20px;animation:pdf-loading-spin 0.8s linear infinite;flex-shrink:0;" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.25)" stroke-width="3"></circle>
+            <path d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" fill="#38bdf8"></path>
+          </svg>
+          <span id="pdf-loading-toast-text">${message}</span>
+          <style>@keyframes pdf-loading-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>
+        `;
+        document.body.appendChild(toast);
+      } else {
+        const textEl = document.getElementById("pdf-loading-toast-text");
+        if (textEl) textEl.textContent = message;
+        toast.style.display = "flex";
+      }
+    }
+
+    function hidePdfLoading() {
+      const toast = document.getElementById("pdf-loading-toast");
+      if (toast) toast.style.display = "none";
+    }
+
+    // PDF Generator
+    document.getElementById("btn-download-pdf").addEventListener("click", async () => {
+      const btn = document.getElementById("btn-download-pdf");
+      const origText = btn.textContent;
+      const form = document.getElementById("form-download");
+      const titleText = form.querySelector('[name="title_text"]').value || "定期評量 答案卷";
+      const subject = form.querySelector('[name="subject"]').value || "";
+      const numQuestions = parseInt(form.querySelector('[name="num_questions"]').value, 10) || 50;
+      const choicesCount = parseInt(form.querySelector('[name="choices_count"]').value, 10) || 4;
+
+      try {
+        btn.disabled = true;
+        btn.textContent = "檔案正在產生中...";
+        showPdfLoading("答案卡 PDF 正在產生中，請稍候...");
+        await new Promise(r => setTimeout(r, 60));
+        await generateAnswerSheetPDF(titleText, subject, numQuestions, choicesCount);
+      } catch (err) {
+        console.error(err);
+        alert("PDF 生成失敗：" + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = origText;
+        hidePdfLoading();
+      }
+    });
+
+    // Excel Answer Key Generator (Outputs standard format compatible with Python backend and web app)
+    document.getElementById("btn-download-key").addEventListener("click", () => {
+      const form = document.getElementById("form-download");
+      const numQuestions = parseInt(form.querySelector('[name="num_questions"]').value, 10) || 50;
+
+      const rows = [];
+      for (let i = 1; i <= numQuestions; i++) {
+        rows.push({
+          "number": i,
+          "correct": "",
+          "points": 1
+        });
+      }
+      const sheet = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, sheet, "answer_key");
+      XLSX.writeFile(wb, "answer_key.xlsx");
+    });
+
+    let currentResults = null;
+    let currentAnswerKeyMap = {};
+    let currentPointsMap = {};
+    let currentNumQuestions = 50;
+    let currentChoicesCount = 4;
+    let currentPdfBuffer = null;
+
+    // IndexedDB Helper to store large raw PDF ArrayBuffer safely without size limit
+    function saveToIndexedDB(key, data) {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open("OMR_Store", 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains("files")) {
+            db.createObjectStore("files");
+          }
+        };
+        req.onsuccess = (e) => {
+          const db = e.target.result;
+          const tx = db.transaction("files", "readwrite");
+          const store = tx.objectStore("files");
+          store.put(data, key);
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        };
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    // Open Result Page Button Click (Opens standalone result_charts.html in a new tab)
+    document.getElementById("resultLink").addEventListener("click", (e) => {
+      e.preventDefault();
+      if (!currentResults) return;
+
+      // Save PDF ArrayBuffer asynchronously in background without blocking window.open
+      if (currentPdfBuffer) {
+        saveToIndexedDB("pdfArrayBuffer", currentPdfBuffer).catch(console.error);
+      }
+
+      const payload = {
+        filename: document.getElementById("res-display-filename")?.textContent || "input.pdf",
+        jobId: "job-" + Math.random().toString(36).substring(2, 10),
+        numQuestions: currentNumQuestions,
+        choicesCount: currentChoicesCount,
+        answerKeyMap: currentAnswerKeyMap,
+        pointsMap: currentPointsMap,
+        results: currentResults
+      };
+      localStorage.setItem("answer_sheet_omr_results", JSON.stringify(payload));
+      window.open("result_charts.html", "_blank");
+    });
+
+    document.getElementById("form-upload").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const processing = document.getElementById("processing");
+      const btn = form.querySelector('button[type="submit"]');
+      const resultWrap = document.getElementById("resultLinkWrap");
+      const resultHint = document.getElementById("resultLinkHint");
+      const resultError = document.getElementById("resultLinkError");
+
+      btn.disabled = true;
+      processing.style.display = "block";
+      resultWrap.style.display = "none";
+      resultHint.style.display = "none";
+      resultError.style.display = "none";
+
+      try {
+        const formData = new FormData(form);
+        const numQuestions = parseInt(formData.get("num_questions"), 10);
+        const choicesCount = parseInt(formData.get("choices_count"), 10);
+        const pdfFile = formData.get("pdf");
+        const answerKeyFile = formData.get("answer_key");
+
+        if (!pdfFile || !answerKeyFile) throw new Error("請上傳 PDF 檔與答案 Excel 檔");
+
+        document.getElementById("res-display-filename").textContent = pdfFile.name || "input.pdf";
+        document.getElementById("res-job-id").textContent = "job-" + Math.random().toString(36).substring(2, 10);
+
+        const keyBuffer = await answerKeyFile.arrayBuffer();
+        const workbook = XLSX.read(keyBuffer, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const keyData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+        currentAnswerKeyMap = {};
+        currentPointsMap = {};
+        currentNumQuestions = numQuestions;
+        currentChoicesCount = choicesCount;
+
+        keyData.forEach((row) => {
+          let rawQ = undefined;
+          let rawAns = undefined;
+          let rawPts = undefined;
+
+          // 支援各種欄位別名與大小寫/空白修剪相容
+          for (const k of Object.keys(row)) {
+            const cleanKey = String(k).trim().toLowerCase();
+            if (["number", "no", "num", "q", "question", "題號"].includes(cleanKey)) {
+              rawQ = row[k];
+            } else if (["correct", "ans", "answer", "key", "正確答案", "標準答案", "答案"].includes(cleanKey)) {
+              rawAns = row[k];
+            } else if (["points", "point", "pts", "score", "配分", "分數"].includes(cleanKey)) {
+              rawPts = row[k];
+            }
+          }
+
+          if (rawQ !== undefined && rawQ !== null && String(rawQ).trim() !== "") {
+            // Excel 可能存成 1, "1", 1.0 或帶空白，使用 parseFloat + parseInt 強制轉整數
+            const qNum = parseInt(parseFloat(String(rawQ).trim()), 10);
+            if (!isNaN(qNum) && qNum > 0) {
+              const ansStr = String(rawAns ?? "").trim().toUpperCase();
+              const ptsNum = parseFloat(String(rawPts ?? "1").trim()) || 1;
+              currentAnswerKeyMap[qNum] = ansStr;
+              currentPointsMap[qNum] = ptsNum;
+            }
+          }
+        });
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        const pdfBuffer = await pdfFile.arrayBuffer();
+        currentPdfBuffer = pdfBuffer;
+        await saveToIndexedDB("pdfArrayBuffer", pdfBuffer);
+        const pdfDoc = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
+
+        const results = [];
+        for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+          const page = await pdfDoc.getPage(pageNum);
+          const viewport = page.getViewport({ scale: 2.0 });
+
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          await page.render({ canvasContext: ctx, viewport }).promise;
+
+          const omrResult = await OMREngine.processCanvas(canvas, numQuestions, choicesCount);
+
+          let totalScore = 0;
+          const rowData = {
+            "頁數": pageNum,
+            "年級": omrResult.grade,
+            "班級": omrResult.class,
+            "座號": omrResult.seat,
+          };
+
+          for (let q = 1; q <= numQuestions; q++) {
+            const studentAns = omrResult.answers[q - 1] || "";
+            const correctAns = currentAnswerKeyMap[q] || "";
+            const pts = currentPointsMap[q] !== undefined ? currentPointsMap[q] : 1;
+            totalScore += calcQuestionScore(studentAns, correctAns, pts, choicesCount);
+            rowData[`Q${q}`] = studentAns;
+          }
+          rowData["總分"] = Number.isInteger(totalScore) ? totalScore : Math.round(totalScore * 100) / 100;
+          results.push(rowData);
+        }
+
+        currentResults = results;
+        renderIntegratedMatrix();
+        resultWrap.style.display = "flex";
+        resultHint.style.display = "block";
+      } catch (err) {
+        console.error(err);
+        resultError.textContent = "處理失敗：" + (err.message || "未知錯誤");
+        resultError.style.display = "block";
+      } finally {
+        btn.disabled = false;
+        processing.style.display = "none";
+      }
+    });
+
+    // 高中多選題與單選題計分函式（自動依據正解字元長度判定單選/多選）
+    function calcQuestionScore(studentAns, correctAns, pts = 1, choicesCount = 4) {
+      if (!studentAns || !correctAns) return 0;
+      studentAns = String(studentAns).trim().toUpperCase();
+      correctAns = String(correctAns).trim().toUpperCase();
+      pts = Number(pts) || 1;
+
+      // 單選題（正解只有一個選項）
+      if (correctAns.length <= 1) {
+        return studentAns === correctAns ? pts : 0;
+      }
+
+      // 多選題（正解大於一個選項）
+      const setCorrect = new Set(correctAns.split(""));
+      const setStudent = new Set(studentAns.split(""));
+
+      let wrongCount = 0;
+      const maxChar = Math.max(
+        ...Array.from(setCorrect).map(c => c.charCodeAt(0)),
+        ...Array.from(setStudent).map(c => c.charCodeAt(0)),
+        64 + (choicesCount || 4)
+      );
+      const N = Math.max(4, maxChar - 64);
+
+      for (let i = 0; i < N; i++) {
+        const ch = String.fromCharCode(65 + i);
+        const inCorrect = setCorrect.has(ch);
+        const inStudent = setStudent.has(ch);
+        if (inCorrect !== inStudent) {
+          wrongCount++;
+        }
+      }
+
+      if (wrongCount === 0) return pts;
+
+      // 台灣高中學測/分科測驗標準倒扣公式：錯一個扣 2/N 題分，錯到 0 分為止
+      const ratio = (N - 2 * wrongCount) / N;
+      if (ratio <= 0) return 0;
+      const score = pts * ratio;
+      return Number.isInteger(score) ? score : Math.round(score * 100) / 100;
+    }
+
+    // Render Matrix Table exactly like result_charts.html
+    function renderIntegratedMatrix() {
+      if (!currentResults) return;
+      const container = document.getElementById("integratedTable");
+      const hideCorrect = document.getElementById("hideCorrect").checked;
+
+      let html = '<table class="matrix"><thead><tr>';
+      html += '<th class="sticky-left">座號 / 頁數</th><th>總分</th>';
+      for (let q = 1; q <= currentNumQuestions; q++) {
+        html += `<th>Q${q}<br><small>(${currentAnswerKeyMap[q] || '-'})</small></th>`;
+      }
+      html += '</tr></thead><tbody>';
+
+      currentResults.forEach(row => {
+        html += `<tr><td class="sticky-left">${row["年級"] || ''}${row["班級"] || ''}-${row["座號"] || row["頁數"]}</td>`;
+        html += `<td><strong>${row["總分"]}</strong></td>`;
+
+        for (let q = 1; q <= currentNumQuestions; q++) {
+          const ans = (row[`Q${q}`] || '').trim().toUpperCase();
+          const correctAns = (currentAnswerKeyMap[q] || '').trim().toUpperCase();
+          const pts = currentPointsMap[q] !== undefined ? currentPointsMap[q] : 1;
+          const qScore = calcQuestionScore(ans, correctAns, pts, currentChoicesCount);
+
+          if (!ans) {
+            html += `<td class="blank">-</td>`;
+          } else if (qScore === pts) {
+            html += `<td class="correct ${hideCorrect ? 'hidden-correct' : ''}">${hideCorrect ? '' : ans}</td>`;
+          } else if (qScore > 0) {
+            html += `<td class="partial">${ans} <small>[${correctAns}] (+${qScore})</small></td>`;
+          } else {
+            html += `<td class="wrong">${ans} <small>[${correctAns}]</small></td>`;
+          }
+        }
+        html += '</tr>';
+      });
+
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    document.getElementById("hideCorrect").addEventListener("change", renderIntegratedMatrix);
+
+    // 安全的工作表名稱過濾函式（Excel 嚴格禁止 : \ / ? * [ ]，否則直接引發下載崩潰）
+    function sanitizeSheetName(name, defaultName) {
+      defaultName = defaultName || "Sheet";
+      var clean = String(name || "").replace(/[:\\/?*\[\]]/g, "_").trim();
+      if (!clean) clean = defaultName;
+      return clean.substring(0, 31);
+    }
+
+    // 下載防護函式：支援 XLSX.writeFile，並包含 Blob 萬用降級相容機制
+    function saveWorkbook(wb, filename) {
+      try {
+        XLSX.writeFile(wb, filename);
+      } catch (err) {
+        console.warn("writeFile 降級使用 Blob 下載：", err);
+        var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        var blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 150);
+      }
+    }
+
+    document.getElementById("btn-dl-results").addEventListener("click", () => {
+      if (!currentResults) return;
+      const outSheet = XLSX.utils.json_to_sheet(currentResults);
+      const outWB = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(outWB, outSheet, "讀卡結果");
+      saveWorkbook(outWB, "results.xlsx");
+    });
+
+    document.getElementById("btn-dl-showwrong").addEventListener("click", () => {
+      if (!currentResults || !currentResults.length) return;
+
+      const classMap = new Map();
+      currentResults.forEach(r => {
+        const g = String(r["年級"] || "").trim();
+        const c = String(r["班級"] || "").trim();
+        let clsKey = "未分班";
+        if (g && c) clsKey = `${g}-${c}`;
+        else if (g) clsKey = `${g}`;
+        else if (c) clsKey = `${c}`;
+
+        if (!classMap.has(clsKey)) classMap.set(clsKey, []);
+        classMap.get(clsKey).push(r);
+      });
+
+      function getStudentId(r) {
+        const g = String(r["年級"] || "").trim();
+        const c = String(r["班級"] || "").trim();
+        const s = String(r["座號"] || "").trim();
+        if (g && c && s) return `${g}-${c}-${s.length === 1 ? '0' + s : s}`;
+        if (s) return s.length === 1 ? '0' + s : s;
+        return `page_${r["頁數"] || 1}`;
+      }
+
+      function buildSheetRows(studentRows) {
+        const studentCols = studentRows.map(r => getStudentId(r));
+        const outRows = [["number", "correct", ...studentCols]];
+        const studentScores = new Array(studentRows.length).fill(0);
+
+        for (let q = 1; q <= currentNumQuestions; q++) {
+          const correctAns = currentAnswerKeyMap[q] || "";
+          const pts = (currentPointsMap && currentPointsMap[q] !== undefined) ? currentPointsMap[q] : 1;
+          const rowOut = [q, correctAns];
+
+          studentRows.forEach((r, sIdx) => {
+            const studentAns = (r[`Q${q}`] || "").trim().toUpperCase();
+            if (!correctAns) {
+              rowOut.push("");
+            } else {
+              const qScore = calcQuestionScore(studentAns, correctAns, pts, currentChoicesCount);
+              if (qScore === pts) {
+                studentScores[sIdx] += pts;
+                rowOut.push(""); // 答對留空，完全符合原版規範
+              } else if (qScore > 0) {
+                studentScores[sIdx] += qScore;
+                rowOut.push(`${studentAns} (+${qScore})`);
+              } else {
+                rowOut.push(studentAns === "" ? "空白" : studentAns);
+              }
+            }
+          });
+
+          outRows.push(rowOut);
+        }
+
+        const scoreRow = ["score", ""];
+        studentScores.forEach(sc => {
+          scoreRow.push(Number.isInteger(sc) ? sc : Math.round(sc * 100) / 100);
+        });
+        outRows.push(scoreRow);
+
+        return outRows;
+      }
+
+      const wb = XLSX.utils.book_new();
+
+      if (classMap.size > 1) {
+        Array.from(classMap.keys()).sort().forEach(clsKey => {
+          const studentsInClass = classMap.get(clsKey).slice();
+          studentsInClass.sort((a, b) => {
+            const sa = parseInt(a["座號"] || "999", 10);
+            const sb = parseInt(b["座號"] || "999", 10);
+            return sa - sb;
+          });
+          const sheetRows = buildSheetRows(studentsInClass);
+          const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+          XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(`Class ${clsKey}`, "Class"));
+        });
+        const allRows = buildSheetRows(currentResults);
+        const wsAll = XLSX.utils.aoa_to_sheet(allRows);
+        XLSX.utils.book_append_sheet(wb, wsAll, "showwrong");
+      } else {
+        const sheetRows = buildSheetRows(currentResults);
+        const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+        XLSX.utils.book_append_sheet(wb, ws, "showwrong");
+      }
+
+      saveWorkbook(wb, "showwrong.xlsx");
+    });
+
+    // 分數統計(分班)(xlsx) - 100% 複製 Python 原版 _write_analysis_scores_by_class_xlsx
+    document.getElementById("btn-dl-scores-class").addEventListener("click", () => {
+      if (!currentResults || !currentResults.length) return;
+
+      let totalPossible = 0;
+      for (let q = 1; q <= currentNumQuestions; q++) {
+        if (currentAnswerKeyMap[q]) {
+          totalPossible += ((currentPointsMap && currentPointsMap[q] !== undefined) ? currentPointsMap[q] : 1);
+        }
+      }
+
+      const classMapLocal = new Map();
+      currentResults.forEach(r => {
+        const g = String(r["年級"] || "").trim();
+        const c = String(r["班級"] || "").trim();
+        let clsKey = "未分班";
+        if (g && c) clsKey = `${g}-${c}`;
+        else if (g) clsKey = `${g}`;
+        else if (c) clsKey = `${c}`;
+        if (!classMapLocal.has(clsKey)) classMapLocal.set(clsKey, []);
+        classMapLocal.get(clsKey).push(r);
+      });
+
+      function getStudentIdLocal(r) {
+        const g = String(r["年級"] || "").trim();
+        const c = String(r["班級"] || "").trim();
+        const s = String(r["座號"] || "").trim();
+        if (g && c && s) return `${g}-${c}-${s.length === 1 ? '0' + s : s}`;
+        if (s) return s.length === 1 ? '0' + s : s;
+        return `page_${r["頁數"] || 1}`;
+      }
+
+      const wb = XLSX.utils.book_new();
+      const header = ["座號/ID", "分數", "空白數", "總分", "百分比"];
+
+      Array.from(classMapLocal.keys()).sort().forEach(clsKey => {
+        const students = classMapLocal.get(clsKey).slice();
+        students.sort((a, b) => {
+          const sa = parseInt(a["座號"] || "999", 10);
+          const sb = parseInt(b["座號"] || "999", 10);
+          return sa - sb;
+        });
+
+        const sheetRows = [header];
+        students.forEach(r => {
+          const pid = getStudentIdLocal(r);
+          let blanks = 0;
+          for (let q = 1; q <= currentNumQuestions; q++) {
+            if (!r[`Q${q}`]) blanks++;
+          }
+          const score = r["總分"] || 0;
+          const pct = totalPossible > 0 ? (Math.round((score / totalPossible) * 10000) / 100) + "%" : "";
+          sheetRows.push([pid, score, blanks, totalPossible, pct]);
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+        XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(String(clsKey), "Class"));
+      });
+
+      saveWorkbook(wb, "analysis_scores_by_class.xlsx");
+    });
+  </script>
+</body>
+</html>
